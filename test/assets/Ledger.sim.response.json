@@ -1,0 +1,74 @@
+{
+    "error": [],
+    "result": {
+      "ledger": {
+        "THIS-IS-A-TEST": {
+          "refid": "THIS-IS-A-TEST-REF-ID",
+          "time": 1634811509.9424,        
+          "type": "receive",
+          "subtype": "",
+          "aclass": "currency",
+          "asset": "XXRP2",
+          "amount": "28.90886000",
+          "fee": "0.00000000",
+          "balance": "28.90886000"
+        },
+        "THIS-IS-A-TEST-2": {
+          "refid": "THIS-IS-A-TEST-REF-ID",
+          "time": 1634811509.9377,
+          "type": "deposit",
+          "subtype": "",
+          "aclass": "currency",
+          "asset": "EUR.HOLD",
+          "amount": "38.500",
+          "fee": "0.456",
+          "balance": "0.0000"
+        },
+        "LIFE46-PR22N-BE2O2Y": {
+          "refid": "TSDISBP-U2C5L-B3IFQB",
+          "time": 1634811529.9424,        
+          "type": "receive",
+          "subtype": "",
+          "aclass": "currency",
+          "asset": "XXRP",
+          "amount": "18.90886000",
+          "fee": "0.00000000",
+          "balance": "18.90886000"
+        },
+        "LZUACN-M7ZD7-4UIK7T": {
+          "refid": "TSDISBP-U2C5L-B3IFQB",
+          "time": 1634811529.9377,
+          "type": "spend",
+          "subtype": "",
+          "aclass": "currency",
+          "asset": "EUR.HOLD",
+          "amount": "-18.7100",
+          "fee": "0.2900",
+          "balance": "0.0000"
+        },
+        "LZUACN-M7ZD7-4UIK7T2": {
+          "refid": "TSDISBP-U2C5L-B3IFQB",
+          "time": 1634811528.9377,
+          "type": "spend",
+          "subtype": "",
+          "aclass": "currency",
+          "asset": "EUR.HOLD",
+          "amount": "0",
+          "fee": "0.500",
+          "balance": "0.0000"
+        },
+        "LZFMQH-ICXTZ-S5CUHL": {
+          "refid": "QYT26WV-THLM7S-37HILI",
+          "time": 1634811528.9795,
+          "type": "deposit",
+          "subtype": "",
+          "aclass": "currency",
+          "asset": "EUR.HOLD",
+          "amount": "20.0000",
+          "fee": "1.0000",
+          "balance": "19.0000"
+        }
+      },
+      "count": 3
+    }
+  }
