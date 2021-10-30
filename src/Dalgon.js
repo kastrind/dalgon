@@ -23,10 +23,10 @@ class Dalgon {
 			that.l.i(infoMsg);
 			that.path = path;
 			that.params = paramsObj;
-			that.l.d(`Params ${that.params}`, 1);
+			that.l.d(`Params ${JSON.stringify(that.params, null, 2)}`, 1);
 			if (!that.simulationMode) {
-				that.response = await got(that.host+that.path, that.params).json();
-				that.l.d(`Response: ${JSON.stringify(JSON.parse(that.response.body), null, 2)}`, 1);
+				that.response = await got(that.host+that.path, that.params);
+				that.l.d(`Response: ${JSON.stringify(that.response.body, null, 2)}`, 1);
 				if (isOK(that.response.statusCode)) that.l.suc(`Response status for ${infoMsg}: ${(that.response.statusCode)}`);
 				else that.l.err(`Response status for ${infoMsg}: ${(that.response.statusCode)}`);
 				return that.response;
