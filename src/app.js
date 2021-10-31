@@ -4,6 +4,10 @@ import Logger from './Logger.js';
 import Dalgon from './Dalgon.js';
 import Ledger from './Ledger.js';
 import Ticker from './Ticker.js';
+import OHLC from './OHLC.js';
+import OHLCRange from './OHLCRange.js';
+
+import { isEmpty } from './utils.js';
 
 
 // command line params
@@ -37,26 +41,24 @@ var dalgon = new Dalgon(APIKEY, PRIVATEAPIKEY, l, SIMULATION);
 
 
 var getTicker = dalgon.createPublicFunction('/0/public/Ticker', 'Request for Get Ticker');
+var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHLC Data');
 
-// getTicker({ searchParams: { pair: "ADAEUR" }}).then(function(s) {
-// 	l.i("Back from Ticker: " + JSON.stringify(s, null, 2));
-// });
-
-var sinceDate = new Date("01/01/2021");
+var sinceDate = new Date("10/20/2021");
 l.i("  "+sinceDate.valueOf());
 
 
-var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHLC Data');
-getOHLC({ searchParams: { pair: "XRPEUR", interval: 1440, since: sinceDate.valueOf()/1000 }}).then(function(s) {
-	//l.i("Back from OHLC: " + JSON.stringify(JSON.parse(s.body), null, 2));
+/*
+getOHLC({ searchParams: { pair: "XRPEUR", interval: 5, since: sinceDate.valueOf()/1000 }}).then(function(s) {
+	l.i("Back from OHLC: " + JSON.stringify(JSON.parse(s.body), null, 2));
 	let response = JSON.parse(s.body);
 	l.i("timestamp = " + response.result['XXRPZEUR'][0][0]*60);
 	var date = new Date(response.result['XXRPZEUR'][0][0]*1000);
-	l.i("date = " + date);
-	var date = new Date(response.result['XXRPZEUR'][1][0]*1000);
-	l.i("date = " + date);
+	l.i("dateI = " + date);
+	var date = new Date(response.result['XXRPZEUR'][ response.result['XXRPZEUR'].length - 1 ][0]*1000);
+	l.i("dateF = " + date);
 	l.i("length = " + response.result['XXRPZEUR'].length);
 });
+*/
 
 
 var privateHeaderObj = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'};
@@ -76,7 +78,17 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 	// let ledgerGroups = ledger.groupLedgerEntries();
 	// let ledgerAssetPurchaseInfo = ledger.getAssetPurchaseInfo();
 
-	// let ticker = await (Ticker.request(getTicker, { searchParams: { pair: "XRPEUR" }}, l, SIMULATION));
+	// let ticker = await (Ticker.request(getTicker, { searchParams: { pair: "XRPEUR" } }, l, SIMULATION));
 	// l.d(JSON.stringify(ticker, null, 2));
+
+	// let ohlc = await (OHLC.request(getOHLC, { searchParams: { pair: "XRPEUR" } }, l, SIMULATION));
+	// l.i(JSON.stringify(ohlc, null, 2));
+
+
+	let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
+	//let ohlcRange = new OHLCRange('1800-01-01', maxNumResults);
+	let ohlcRange = OHLCRange.create('2002-01-01', maxNumResults);
+	l.i("  "+isEmpty(ohlcRange));
+	l.i(JSON.stringify(ohlcRange, null, 2));
 	
 })();
