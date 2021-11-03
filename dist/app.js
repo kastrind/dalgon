@@ -74,10 +74,12 @@ var cancelAllOrders = dalgon.createPrivateFunction('/0/private/CancelAll', priva
   // l.d(JSON.stringify(ticker, null, 2));
   // let ohlc = await (OHLC.request(getOHLC, { searchParams: { pair: "XRPEUR" } }, l, SIMULATION));
   // l.i(JSON.stringify(ohlc, null, 2));
-  let maxNumResults = properties.get("ohlc.MAXNUMRESULTS"); //let ohlcRange = new OHLCRange('1800-01-01', maxNumResults);
-
-  let ohlcRange = OHLCRange.create('2002-01-01', maxNumResults);
-  l.i("  " + isEmpty(ohlcRange));
-  l.i(JSON.stringify(ohlcRange, null, 2));
+  //let ohlcRange = new OHLCRange('1800-01-01', maxNumResults);
+  // let ohlcRange = OHLCRange.create('2002-01-01', maxNumResults);
+  // l.i("  "+isEmpty(ohlcRange));
+  // l.i(JSON.stringify(ohlcRange, null, 2));
+  let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
+  let ohlc = await OHLC.request(getOHLC, 'XRPEUR', '2020-10-20', maxNumResults, l, SIMULATION);
+  l.i(JSON.stringify(ohlc, null, 2));
 })();
 //# sourceMappingURL=app.js.map
