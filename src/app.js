@@ -91,7 +91,11 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 	// l.i(JSON.stringify(ohlcRange, null, 2));
 
 	let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
-	let ohlc = await (OHLC.request(getOHLC, 'XRPEUR', '2020-10-20', maxNumResults, l, SIMULATION));
+	let ohlc = await (OHLC.request(getOHLC, 'XRPEUR', '2021-11-06', maxNumResults, l, SIMULATION));
 	l.i(JSON.stringify(ohlc, null, 2));
+	l.i(`ohlc highest:`+ JSON.stringify(ohlc.getHighest(), null, 2));
+	l.i(`ohlc highest close:`+ JSON.stringify(ohlc.getHighestClose(), null, 2));
+	l.i(`ohlc lowest:`+ JSON.stringify(ohlc.getLowest(), null, 2));
+	l.i(`ohlc lowest close:`+ JSON.stringify(ohlc.getLowestClose(), null, 2));
 	
 })();

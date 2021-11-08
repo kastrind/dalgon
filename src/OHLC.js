@@ -17,6 +17,23 @@ class OHLC {
 		)));
 	}
 
+	getHighest() {
+		return this.ticks.reduce((prev, curr) => { if ( parseFloat(curr.high) > parseFloat(prev.high) ) return curr; else return prev;});
+	}
+
+	getHighestClose() {
+		return this.ticks.reduce((prev, curr) => { if ( parseFloat(curr.close) > parseFloat(prev.close) ) return curr; else return prev;});
+	}
+
+	getLowest() {
+		return this.ticks.reduce((prev, curr) => { if ( parseFloat(curr.low) < parseFloat(prev.low) ) return curr; else return prev;});
+	}
+
+	
+	getLowestClose() {
+		return this.ticks.reduce((prev, curr) => { if ( parseFloat(curr.close) < parseFloat(prev.close) ) return curr; else return prev;});
+	}
+
 	static async request(OHLCRequest, paramAsset, paramSince, maxNumResults, loggerObj, simulationMode=false, simObj={}) {
 		let response = {};
 		let ohlcRange = OHLCRange.create(paramSince, maxNumResults);
