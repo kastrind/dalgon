@@ -73,7 +73,6 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 
 (async function () {
 	// let timeTolerance = properties.get("ledger.TIMETOLERANCE");
-
 	// let ledger = await (Ledger.request(getLedgerInfo, {ofs: 0}, timeTolerance, BASE_CURRENCY, l, SIMULATION));
 	// let ledgerGroups = ledger.groupLedgerEntries();
 	// let ledgerAssetPurchaseInfo = ledger.getAssetPurchaseInfo();
@@ -91,11 +90,43 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 	// l.i(JSON.stringify(ohlcRange, null, 2));
 
 	let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
-	let ohlc = await (OHLC.request(getOHLC, 'XRPEUR', '2021-11-06', maxNumResults, l, SIMULATION));
+	// let assets = properties.get("ohlc.ASSETS").split(' ');
+	// for (let i=0; i < assets.length; i++) {
+	// 	let asset = assets[i];
+	// 	let assetPair = `${asset}${BASE_CURRENCY}`;
+	// 	let ohlc = await (OHLC.request(getOHLC, assetPair, '2021-11-12T01:30:00.000Z', maxNumResults, l, SIMULATION));
+	// 	let change = ohlc.getChange();
+	// 	if (change > 0) {
+	// 		l.i(`${assetPair} is up!`);
+	// 	}
+	// 	l.i(`${assetPair} open change: `+ change);
+	// 	setTimeout(async function() {}, 5000);
+
+	// }
+
+	var d = new Date();
+	d.setHours(d.getHours() - 24);
+	console.log(d.toISOString());
+
+	let ohlc = await (OHLC.request(getOHLC, "MANAEUR", d.toISOString(), maxNumResults, l, SIMULATION));
+	let change = ohlc.getChange();
+	l.i(`ohlc first:`+ JSON.stringify(ohlc.ticks[0], null, 2));
+	l.i(`ohlc last:`+ JSON.stringify(ohlc.ticks[ohlc.ticks.length-1], null, 2));
+	l.i(`open change: `+ change);
+	l.i(`length: `+ ohlc.ticks.length);
+
+	/*
+	let ohlc = await (OHLC.request(getOHLC, 'SOLEUR', '2021-11-12T00:35:00.000Z', maxNumResults, l, SIMULATION));
 	l.i(JSON.stringify(ohlc, null, 2));
 	l.i(`ohlc highest:`+ JSON.stringify(ohlc.getHighest(), null, 2));
 	l.i(`ohlc highest close:`+ JSON.stringify(ohlc.getHighestClose(), null, 2));
 	l.i(`ohlc lowest:`+ JSON.stringify(ohlc.getLowest(), null, 2));
 	l.i(`ohlc lowest close:`+ JSON.stringify(ohlc.getLowestClose(), null, 2));
+	l.i(`ohlc max vol:`+ JSON.stringify(ohlc.getMaxVol(), null, 2));
+	l.i(`ohlc min vol:`+ JSON.stringify(ohlc.getMinVol(), null, 2));
+	l.i(`ohlc first:`+ JSON.stringify(ohlc.ticks[0], null, 2));
+	l.i(`ohlc last:`+ JSON.stringify(ohlc.ticks[ohlc.ticks.length-1], null, 2));
+	l.i(`open change: `+ ohlc.getChange());
+	*/
 	
 })();

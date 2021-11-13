@@ -13,25 +13,38 @@ class OHLC {
 		this.assetPairResponse = Object.keys(this.OHLCJsonResponse)[0];
 		var that = this;
 		this.OHLCJsonResponse[this.assetPairResponse].forEach( (el, i, arr)  => that.ticks.push(new Tick(
-			el[0], el[1], el[2], el[3], el[4], el[5], el[6], el[7]
+			el[0], parseFloat(el[1]), parseFloat(el[2]), parseFloat(el[3]), parseFloat(el[4]), parseFloat(el[5]), parseFloat(el[6]), parseInt(el[7])
 		)));
 	}
 
 	getHighest() {
-		return this.ticks.reduce((prev, curr) => { if ( parseFloat(curr.high) > parseFloat(prev.high) ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.high > prev.high ) return curr; else return prev;});
 	}
 
 	getHighestClose() {
-		return this.ticks.reduce((prev, curr) => { if ( parseFloat(curr.close) > parseFloat(prev.close) ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.close > prev.close ) return curr; else return prev;});
 	}
 
 	getLowest() {
-		return this.ticks.reduce((prev, curr) => { if ( parseFloat(curr.low) < parseFloat(prev.low) ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.low < prev.low ) return curr; else return prev;});
 	}
 
-	
 	getLowestClose() {
-		return this.ticks.reduce((prev, curr) => { if ( parseFloat(curr.close) < parseFloat(prev.close) ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.close < prev.close ) return curr; else return prev;});
+	}
+
+	getMinVol() {
+		return this.ticks.reduce((prev, curr) => { if ( curr.vol < prev.vol ) return curr; else return prev;});
+	}
+
+	getMaxVol() {
+		return this.ticks.reduce((prev, curr) => { if ( curr.vol > prev.vol ) return curr; else return prev;});
+	}
+
+	getChange() {
+		this.l.i(""+this.ticks[0].close);
+		this.l.i(""+this.ticks[this.ticks.length - 1].open);
+		return ( ( this.ticks[this.ticks.length - 1].open - this.ticks[0].open ) / this.ticks[0].open ).toPrecision(4);
 	}
 
 	static async request(OHLCRequest, paramAsset, paramSince, maxNumResults, loggerObj, simulationMode=false, simObj={}) {
