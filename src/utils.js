@@ -8,4 +8,10 @@ function isOK(statusCode) {
 	return /^2\d\d/.test(statusCode);
 }
 
-export { isEmpty, isOK };
+function sleep(ms) {
+	return new Promise((resolve) => {
+	  setTimeout(resolve, ms);
+	});
+  }
+
+export { isEmpty, isOK, sleep };
