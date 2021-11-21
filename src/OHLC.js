@@ -42,8 +42,6 @@ class OHLC {
 	}
 
 	getChange() {
-		this.l.i(""+this.ticks[0].close);
-		this.l.i(""+this.ticks[this.ticks.length - 1].open);
 		return ( ( this.ticks[this.ticks.length - 1].open - this.ticks[0].open ) / this.ticks[0].open ).toPrecision(4);
 	}
 
