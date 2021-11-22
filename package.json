@@ -31,9 +31,11 @@
     "command-line-args": "^5.2.0",
     "command-line-usage": "^6.1.1",
     "crypto": "^1.0.1",
+    "express": "^4.17.1",
     "got": "^11.8.2",
     "properties-reader": "^2.2.0",
-    "qs": "^6.10.1"
+    "qs": "^6.10.1",
+    "viber-bot": "^1.0.18"
   },
   "type": "module"
 }

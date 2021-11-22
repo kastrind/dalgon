@@ -10,6 +10,10 @@ import OHLCRange from './OHLCRange.js';
 
 import { isEmpty, sleep, prcnt } from './utils.js';
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
+import fs from 'fs';
 
 // command line params
 var cmdOpts = options;
@@ -72,6 +76,46 @@ var getDepositMethods = dalgon.createPrivateFunction('/0/private/DepositMethods'
 var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',      privateHeaderObj, 'Request for Cancel All Orders');
 
 (async function () {
+
+	const ViberBot = require('viber-bot').Bot;
+	const BotEvents = require('viber-bot').Events;
+	const TextMessage = require('viber-bot').Message.Text;
+	const express = require('express');
+	const app = express();
+
+	const EXPOSE_URL = "https://b5b3-46-103-164-16.ngrok.io";
+
+	const bot = new ViberBot({
+		authToken: '',
+		name: "Dalgon",
+		avatar: "https://dl-media.viber.com/1/share/2/long/vibes/icon/image/0x0/01f9/7267fd510d4b0c1061b3c328693b72e9103e525cec7ca25ed9741726da3b01f9.jpg" // It is recommended to be 720x720, and no more than 100kb.
+	});
+
+	bot.on(BotEvents.SUBSCRIBED, response => {
+		response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${bot.name}! Feel free to ask me about crypto.`));
+	});
+	// bot.on(BotEvents.MESSAGE_RECEIVED, (message, response) => {
+	// 	response.send(new TextMessage(`Message received.`));
+	// });
+
+	// A simple regular expression to answer messages in the form of 'hi' and 'hello'.
+	bot.onTextMessage(/^asset(s)?|price(s)?$/i, (message, response) => {
+		fs.readFile('message.txt', function(err, data) {
+			response.send(new TextMessage(`${data}`));
+		});
+	});
+
+	const port = 3000;
+	app.use("/viber/webhook", bot.middleware());
+	app.listen(port, () => {
+		console.log(`Application running on port: ${port}`);
+		bot.setWebhook(`${EXPOSE_URL}/viber/webhook`).catch(error => {
+			console.log('Can not set webhook on following server. Is it running?');
+			console.error(error);
+			process.exit(1);
+		});
+	});
+
 	let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
 	let assets = properties.get("ohlc.ASSETS").split(' ');
 	let day24h = new Date();
@@ -82,6 +126,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 	month.setHours(month.getHours() - 24*30);
 	let quarter = new Date();
 	quarter.setHours(quarter.getHours() - 24*30*3);
+	var report = "";
 	for (let i=0; i < assets.length; i++) {
 		let asset = assets[i];
 		let assetPair = `${asset}${BASE_CURRENCY}`;
@@ -120,19 +165,25 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			priceOverHighestMonth = ( highestCloseMonth - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / ohlcDay24h.ticks[ohlcDay24h.ticks.length-1].close;
 		}
 
+		report = "";
+
 		if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) {
 			l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week and up ${prcnt(changeMonth)}% in month.`, 1);
 			l.i(`${assetPair} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1);
 			l.i(`${assetPair} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1);
 			l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1);
 			l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1);
+			report += `${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week and up ${prcnt(changeMonth)}% in month.\n`;
 		}else if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0) {
 			l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week, ${prcnt(changeMonth)}% in month and ${prcnt(changeQuarter)}% up in quarter.`, 1);
+			report += `${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week, ${prcnt(changeMonth)}% in month and ${prcnt(changeQuarter)}% up in quarter.\n`;
 			l.i(`${assetPair} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1);
 			l.i(`${assetPair} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1);
 			l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1);
 			l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1);
 		}
+		fs.appendFile('message.txt', report, function (err) { if (err) throw err; });
+
 	}
 
 })();
