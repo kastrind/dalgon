@@ -14,4 +14,8 @@ function sleep(ms) {
 	});
 }
 
-export { isEmpty, isOK, sleep };
+function prcnt(num) {
+	return (num * 100).toPrecision(3);
+}
+
+export { isEmpty, isOK, sleep, prcnt };

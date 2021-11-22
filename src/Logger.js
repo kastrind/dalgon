@@ -39,15 +39,15 @@ class Logger {
 
 	getLogMsg(msg, indentation=0, colorResume="") {
 		msg = ""+msg.replace(/(\n)/g, "$1"+'  '.repeat(indentation)).replace(new RegExp('(\\n)(\\s{'+(indentation*2)+'})', 'g'), "$1"+this.reset+"$2"+colorResume);
-		return this.verbose ? msg : "";
+		return msg;
 	}
 	
 	l(msg, indentation=0) {
-		return this.verbose ? console.log(`${'  '.repeat(indentation)}${this.getLogMsg(msg, indentation)}`) : 0;
+		return console.log(`${'  '.repeat(indentation)}${this.getLogMsg(msg, indentation)}`);
 	}
 	
 	i(msg, indentation=0) {
-		return this.verbose ? console.info(`${'  '.repeat(indentation)}${this.bgBlue}${this.fgWhite}(i) [INFO]     ${this.getLogMsg(msg, indentation, `${this.bgBlue}${this.fgWhite}`)} ${this.reset}`) : 0;
+		return console.info(`${'  '.repeat(indentation)}${this.bgBlue}${this.fgWhite}(i) [INFO]     ${this.getLogMsg(msg, indentation, `${this.bgBlue}${this.fgWhite}`)} ${this.reset}`);
 	}
 
 	d(msg, indentation=0) {
@@ -58,7 +58,7 @@ class Logger {
 		return this.verbose ? console.warn(`${'  '.repeat(indentation)}${this.bgYellow}${this.fgBlack}(!) [WARN]     ${this.getLogMsg(msg, indentation, `${this.bgYellow}${this.fgBlack}`)} ${this.reset}`) : 0;
 	}
 	suc(msg, indentation=0) {
-		return this.verbose ? console.info(`${'  '.repeat(indentation)}${this.bgGreen}${this.fgBlack}(v) [SUCCESS] ${this.getLogMsg(msg, indentation, `${this.bgGreen}${this.fgBlack}`)} ${this.reset}`) : 0;
+		return this.verbose ? console.info(`${'  '.repeat(indentation)}${this.bgGreen}${this.fgBlack}(v) [SUCCESS]  ${this.getLogMsg(msg, indentation, `${this.bgGreen}${this.fgBlack}`)} ${this.reset}`) : 0;
 	}
 	
 	err(msg, indentation=0) {

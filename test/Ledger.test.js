@@ -38,6 +38,15 @@ var getLedgerInfo = dalgon.createPrivateFunction('/0/private/Ledgers', privateHe
 			const ledgerSimResponseJson = require('./assets/Ledger.sim.response.json');
 			ledger = await (Ledger.request(getLedgerInfo, {ofs: 0}, timeTolerance, BASE_CURRENCY, l, SIMULATION, { body: JSON.stringify(ledgerSimResponseJson) } ));
 			assert.equal(isEmpty(ledger), false);
+			let firstKey = Object.keys(ledger.ledgerJsonResponse.result.ledger)[0];
+			let ledgerPropsExpected = ['refid', 'time', 'type', 'subtype', 'aclass', 'asset', 'amount', 'fee', 'balance'];
+			ledgerPropsExpected.forEach( elem => { assert.equal(ledger.ledgerJsonResponse.result.ledger[firstKey].hasOwnProperty(elem), true); } );
+		});
+
+		it('should have the expected properties in a ledger entry', async () => {
+			let firstKey = Object.keys(ledger.ledgerJsonResponse.result.ledger)[0];
+			let ledgerPropsExpected = ['refid', 'time', 'type', 'subtype', 'aclass', 'asset', 'amount', 'fee', 'balance'];
+			ledgerPropsExpected.forEach( elem => { assert.equal(ledger.ledgerJsonResponse.result.ledger[firstKey].hasOwnProperty(elem), true); } );
 		});
 	});
 

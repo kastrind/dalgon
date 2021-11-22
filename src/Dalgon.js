@@ -20,7 +20,7 @@ class Dalgon {
 	createPublicFunction(path, infoMsg) {
 		var that = this;
 		return async function (paramsObj, simObj={}) {
-			that.l.i(infoMsg);
+			if (that.l.verbose) that.l.i(infoMsg);
 			that.path = path;
 			that.params = paramsObj;
 			that.l.d(`Params ${JSON.stringify(that.params, null, 2)}`, 1);
@@ -39,7 +39,7 @@ class Dalgon {
 	createPrivateFunction(path, headerObj, infoMsg) {
 		var that = this;
 		return async function (paramsObj, simObj={}) {
-			that.l.i(infoMsg);
+			if (that.l.verbose) that.l.i(infoMsg);
 			that.nonce = new Date() * 1000;
 			that.params = { nonce: that.nonce };
 			for (var key in paramsObj) {

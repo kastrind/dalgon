@@ -57,6 +57,11 @@ var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHL
 			//console.log(ohlcSim);
 			assert.equal(ohlcSim.getChange(), -0.06129);
 			assert.equal(ohlcSim.getHighest().high, 3.87468);
+			assert.equal(ohlcSim.getHighestClose().close, 3.8619);
+			assert.equal(ohlcSim.getLowest().low, 3.41753);
+			assert.equal(ohlcSim.getLowestClose().close, 3.42484);
+			assert.equal(ohlcSim.getMinVol().vol, 0);
+			assert.equal(ohlcSim.getMaxVol().vol, 87344.26547723);
 		});
 
 	});

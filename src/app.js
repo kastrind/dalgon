@@ -8,7 +8,7 @@ import Ticker from './Ticker.js';
 import OHLC from './OHLC.js';
 import OHLCRange from './OHLCRange.js';
 
-import { isEmpty, sleep } from './utils.js';
+import { isEmpty, sleep, prcnt } from './utils.js';
 
 
 // command line params
@@ -39,17 +39,8 @@ var l = new Logger(VERBOSE, DEBUG);
 
 // coingecko instance
 var coingecko = new CoinGecko(l, SIMULATION);
-
-// dalgon instance
-var dalgon = new Dalgon(APIKEY, PRIVATEAPIKEY, l, SIMULATION);
-
-
-var getTicker = dalgon.createPublicFunction('/0/public/Ticker', 'Request for Get Ticker');
-var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHLC Data');
-
 var getCoinGeckoOHLC = coingecko.createPublicFunction('/coins/{id}/ohlc', 'Request for CoinGecko OHLC');
 var getCoinGeckoCoinList = coingecko.createPublicFunction('/coins/list', 'Request for CoinGecko Coins List');
-
 // (async function () {
 // 	//let coinGeckoOHLC = await getCoinGeckoOHLC({'{id}': 'bitcoin', searchParams: { vs_currency: 'eur', days: '1'}, headers: {accept: 'application/json'}}, {});
 // 	//l.i(""+coinGeckoOHLC.body);
@@ -68,9 +59,11 @@ var getCoinGeckoCoinList = coingecko.createPublicFunction('/coins/list', 'Reques
 // 	}
 // })();
 
+// dalgon instance
+var dalgon = new Dalgon(APIKEY, PRIVATEAPIKEY, l, SIMULATION);
+var getTicker = dalgon.createPublicFunction('/0/public/Ticker', 'Request for Get Ticker');
+var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHLC Data');
 var privateHeaderObj = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'};
-
-
 var getLedgerInfo     = dalgon.createPrivateFunction('/0/private/Ledgers',        privateHeaderObj, 'Request for Get Ledger Info');
 var getBalance        = dalgon.createPrivateFunction('/0/private/Balance',        privateHeaderObj, 'Request for Get Balance');
 var getTradeBalance   = dalgon.createPrivateFunction('/0/private/TradeBalance',   privateHeaderObj, 'Request for Trade Balance');
@@ -80,18 +73,66 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 
 (async function () {
 	let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
-	// let assets = properties.get("ohlc.ASSETS").split(' ');
-	// for (let i=0; i < assets.length; i++) {
-	// 	let asset = assets[i];
-	// 	let assetPair = `${asset}${BASE_CURRENCY}`;
-	// 	let ohlc = await (OHLC.request(getOHLC, assetPair, '2021-11-12T01:30:00.000Z', maxNumResults, l, SIMULATION));
-	// 	let change = ohlc.getChange();
-	// 	if (change > 0) {
-	// 		l.i(`${assetPair} is up!`);
-	// 	}
-	// 	l.i(`${assetPair} open change: `+ change);
-	// 	setTimeout(async function() {}, 5000);
+	let assets = properties.get("ohlc.ASSETS").split(' ');
+	let day24h = new Date();
+	day24h.setHours(day24h.getHours() - 24);
+	let week = new Date();
+	week.setHours(week.getHours() - 24*7);
+	let month = new Date();
+	month.setHours(month.getHours() - 24*30);
+	let quarter = new Date();
+	quarter.setHours(quarter.getHours() - 24*30*3);
+	for (let i=0; i < assets.length; i++) {
+		let asset = assets[i];
+		let assetPair = `${asset}${BASE_CURRENCY}`;
+		l.i(`Asset ${asset}:`);
+		let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), maxNumResults, l, SIMULATION));
+		let changeDay24h = ohlcDay24h.getChange();
+		sleep(1000);
+		let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), maxNumResults, l, SIMULATION));
+		let changeWeek = ohlcWeek.getChange();
+		sleep(1000);
+		let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), maxNumResults, l, SIMULATION));
+		let changeMonth = ohlcMonth.getChange();
+		sleep(1000);
+		let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), maxNumResults, l, SIMULATION));
+		let changeQuarter = ohlcQuarter.getChange();
+		sleep(1000);
 
-	// }
+		let lowestCloseWeek = ohlcWeek.getLowestClose().close;
+		let priceOverLowestWeek = 0;
+		if ( lowestCloseWeek > 0) {
+			priceOverLowestWeek = ( ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close - lowestCloseWeek ) / lowestCloseWeek;
+		}
+		let highestCloseWeek = ohlcWeek.getHighestClose().close;
+		let priceOverHighestWeek = 0;
+		if ( highestCloseWeek > 0) {
+			priceOverHighestWeek = ( highestCloseWeek - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / ohlcDay24h.ticks[ohlcDay24h.ticks.length-1].close;
+		}
+		let lowestCloseMonth = ohlcMonth.getLowestClose().close;
+		let priceOverLowestMonth = 0;
+		if ( lowestCloseMonth > 0) {
+			priceOverLowestMonth = ( ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close - lowestCloseMonth ) / lowestCloseMonth;
+		}
+		let highestCloseMonth = ohlcMonth.getHighestClose().close;
+		let priceOverHighestMonth = 0;
+		if ( highestCloseMonth > 0) {
+			priceOverHighestMonth = ( highestCloseMonth - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / ohlcDay24h.ticks[ohlcDay24h.ticks.length-1].close;
+		}
+
+		if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) {
+			l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week and up ${prcnt(changeMonth)}% in month.`, 1);
+			l.i(`${assetPair} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1);
+			l.i(`${assetPair} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1);
+			l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1);
+			l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1);
+		}else if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0) {
+			l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week, ${prcnt(changeMonth)}% in month and ${prcnt(changeQuarter)}% up in quarter.`, 1);
+			l.i(`${assetPair} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1);
+			l.i(`${assetPair} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1);
+			l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1);
+			l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1);
+		}
+	}
 
 })();
