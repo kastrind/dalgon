@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { options } from './command.js';
 import PropertiesReader from 'properties-reader';
 import Logger from './Logger.js';
@@ -7,13 +8,12 @@ import Ledger from './Ledger.js';
 import Ticker from './Ticker.js';
 import OHLC from './OHLC.js';
 import OHLCRange from './OHLCRange.js';
+import DalgonViberBot from './DalgonViberBot.js';
 
 import { isEmpty, sleep, prcnt } from './utils.js';
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-
-import fs from 'fs';
 
 // command line params
 var cmdOpts = options;
@@ -77,45 +77,18 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 
 (async function () {
 
-	const ViberBot = require('viber-bot').Bot;
-	const BotEvents = require('viber-bot').Events;
-	const TextMessage = require('viber-bot').Message.Text;
-	const express = require('express');
-	const app = express();
+	let reportFilePath = properties.get('main.ASSETREPORTFILE');
+	fs.writeFile(reportFilePath, '', function (err) { if (err) throw err; });
 
-	const EXPOSE_URL = "https://b5b3-46-103-164-16.ngrok.io";
-
-	const bot = new ViberBot({
-		authToken: '',
-		name: "Dalgon",
-		avatar: "https://dl-media.viber.com/1/share/2/long/vibes/icon/image/0x0/01f9/7267fd510d4b0c1061b3c328693b72e9103e525cec7ca25ed9741726da3b01f9.jpg" // It is recommended to be 720x720, and no more than 100kb.
-	});
-
-	bot.on(BotEvents.SUBSCRIBED, response => {
-		response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${bot.name}! Feel free to ask me about crypto.`));
-	});
-	// bot.on(BotEvents.MESSAGE_RECEIVED, (message, response) => {
-	// 	response.send(new TextMessage(`Message received.`));
-	// });
-
-	// A simple regular expression to answer messages in the form of 'hi' and 'hello'.
-	bot.onTextMessage(/^asset(s)?|price(s)?$/i, (message, response) => {
-		fs.readFile('message.txt', function(err, data) {
-			response.send(new TextMessage(`${data}`));
-		});
-	});
-
-	const port = 3000;
-	app.use("/viber/webhook", bot.middleware());
-	app.listen(port, () => {
-		console.log(`Application running on port: ${port}`);
-		bot.setWebhook(`${EXPOSE_URL}/viber/webhook`).catch(error => {
-			console.log('Can not set webhook on following server. Is it running?');
-			console.error(error);
-			process.exit(1);
-		});
-	});
-
+	if (cmdOpts.botAuthToken) {
+		let viberBotExposeUrl = properties.get("viberBot.EXPOSEURL");
+		let viberBotPort = properties.get("viberBot.PORT");
+		let viberBotName = properties.get("viberBot.BOTNAME");
+		let viberBotAvatarUrl = properties.get("viberBot.AVATARURL");
+		let viberBotAuthToken = cmdOpts.botAuthToken;
+		let viberBot = new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken);
+	}
+	
 	let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
 	let assets = properties.get("ohlc.ASSETS").split(' ');
 	let day24h = new Date();
@@ -182,8 +155,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1);
 			l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1);
 		}
-		fs.appendFile('message.txt', report, function (err) { if (err) throw err; });
-
+		fs.appendFile(reportFilePath, report, function (err) { if (err) throw err; });
 	}
 
 })();

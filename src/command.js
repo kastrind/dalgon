@@ -7,6 +7,7 @@ const optionDefinitions = [
 	{ name: 'debug', alias: 'd', type: Boolean, description: "Produce output for debugging"},
 	{ name: 'setEnv', type: String, defaultOption: 'default',  typeLabel: '<env>', description: "Load settings for environment by the name prepending the .properties file in the env directory"},
 	{ name: 'privAPIKey', alias: 'p', type: String, typeLabel: '<key>', description: "The private API key" },
+	{ name: 'botAuthToken', alias: 'b', type: String, typeLabel: '<key>', description: "The Viber bot auth token" },
 	{ name: 'simulation', alias: 's', type: Boolean, description: "Simulation mode"},
 ];
 
