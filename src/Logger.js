@@ -43,26 +43,40 @@ class Logger {
 	}
 	
 	l(msg, indentation=0) {
-		return console.log(`${'  '.repeat(indentation)}${this.getLogMsg(msg, indentation)}`);
+		console.log(`${'  '.repeat(indentation)}${this.getLogMsg(msg, indentation)}`);
+		return msg;
 	}
 	
 	i(msg, indentation=0) {
-		return console.info(`${'  '.repeat(indentation)}${this.bgBlue}${this.fgWhite}(i) [INFO]     ${this.getLogMsg(msg, indentation, `${this.bgBlue}${this.fgWhite}`)} ${this.reset}`);
+		console.info(`${'  '.repeat(indentation)}${this.bgBlue}${this.fgWhite}(i) [INFO]     ${this.getLogMsg(msg, indentation, `${this.bgBlue}${this.fgWhite}`)} ${this.reset}`);
+		return msg;
 	}
 
 	d(msg, indentation=0) {
-		return this.debug ? console.debug(`${'  '.repeat(indentation)}${this.bgGrey}${this.fgDarkGreen}(*) [DEBUG]    ${this.getLogMsg(msg, indentation, `${this.bgGrey}${this.fgDarkGreen}`)} ${this.reset}`): 0;
+		if (this.debug) {
+			console.debug(`${'  '.repeat(indentation)}${this.bgGrey}${this.fgDarkGreen}(*) [DEBUG]    ${this.getLogMsg(msg, indentation, `${this.bgGrey}${this.fgDarkGreen}`)} ${this.reset}`);
+			return msg;
+		} else return "";
 	}
 	
 	w(msg, indentation=0) {
-		return this.verbose ? console.warn(`${'  '.repeat(indentation)}${this.bgYellow}${this.fgBlack}(!) [WARN]     ${this.getLogMsg(msg, indentation, `${this.bgYellow}${this.fgBlack}`)} ${this.reset}`) : 0;
+		if (this.verbose) {
+			console.warn(`${'  '.repeat(indentation)}${this.bgYellow}${this.fgBlack}(!) [WARN]     ${this.getLogMsg(msg, indentation, `${this.bgYellow}${this.fgBlack}`)} ${this.reset}`);
+			return msg;
+		}else return "";
 	}
 	suc(msg, indentation=0) {
-		return this.verbose ? console.info(`${'  '.repeat(indentation)}${this.bgGreen}${this.fgBlack}(v) [SUCCESS]  ${this.getLogMsg(msg, indentation, `${this.bgGreen}${this.fgBlack}`)} ${this.reset}`) : 0;
+		if (this.verbose) {
+			console.info(`${'  '.repeat(indentation)}${this.bgGreen}${this.fgBlack}(v) [SUCCESS]  ${this.getLogMsg(msg, indentation, `${this.bgGreen}${this.fgBlack}`)} ${this.reset}`);
+			return msg;
+		}else return "";
 	}
 	
 	err(msg, indentation=0) {
-		return this.verbose ? console.error(`${'  '.repeat(indentation)}${this.bgRed}${this.fgWhite}(x) [ERROR]    ${this.getLogMsg(msg, indentation, `${this.bgRed}${this.fgYellow}`)} ${this.reset}`) : 0;
+		if (this.verbose) {
+			console.error(`${'  '.repeat(indentation)}${this.bgRed}${this.fgWhite}(x) [ERROR]    ${this.getLogMsg(msg, indentation, `${this.bgRed}${this.fgYellow}`)} ${this.reset}`);
+			return msg;
+		}else return "";
 	}
 
 }

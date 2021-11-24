@@ -99,7 +99,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 	month.setHours(month.getHours() - 24*30);
 	let quarter = new Date();
 	quarter.setHours(quarter.getHours() - 24*30*3);
-	var report = "";
+	let report = "";
 	for (let i=0; i < assets.length; i++) {
 		let asset = assets[i];
 		let assetPair = `${asset}${BASE_CURRENCY}`;
@@ -138,24 +138,24 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			priceOverHighestMonth = ( highestCloseMonth - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / ohlcDay24h.ticks[ohlcDay24h.ticks.length-1].close;
 		}
 
+		let isCandidate = false;
 		report = "";
+		if ((changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) ||
+			(changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0)) {
+			isCandidate = true;
 
-		if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) {
-			l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week and up ${prcnt(changeMonth)}% in month.`, 1);
-			l.i(`${assetPair} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1);
-			l.i(`${assetPair} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1);
-			l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1);
-			l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1);
-			report += `${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week and up ${prcnt(changeMonth)}% in month.\n`;
-		}else if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0) {
-			l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week, ${prcnt(changeMonth)}% in month and ${prcnt(changeQuarter)}% up in quarter.`, 1);
-			report += `${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week, ${prcnt(changeMonth)}% in month and ${prcnt(changeQuarter)}% up in quarter.\n`;
-			l.i(`${assetPair} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1);
-			l.i(`${assetPair} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1);
-			l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1);
-			l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1);
+			if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) {
+				report += l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week and up ${prcnt(changeMonth)}% in month.`, 1) + '\n';
+
+			}else if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0) {
+				report += l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week, ${prcnt(changeMonth)}% in month and ${prcnt(changeQuarter)}% up in quarter.`, 1) + '\n';
+			}
+			report += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1) + '\n';
+			report += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1) + '\n';
+			report += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1) + '\n';
+			report += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1) + '\n\n';
+			fs.appendFile(reportFilePath, report, function (err) { if (err) throw err; });
 		}
-		fs.appendFile(reportFilePath, report, function (err) { if (err) throw err; });
 	}
 
 })();
