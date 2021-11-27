@@ -1,5 +1,7 @@
 import fs from 'fs';
 import { createRequire } from 'module';
+import { sleep } from './utils.js';
+//import { sleep as sleep2 } from './utils';
 const require = createRequire(import.meta.url);
 
 const ViberBot = require('viber-bot').Bot;
@@ -27,13 +29,18 @@ class DalgonViberBot {
 		// 	response.send(new TextMessage(`Message received.`));
 		// });
 
-		this.bot.onTextMessage(/^asset(s)?|price(s)?$/i, (message, response) => {
+		this.bot.onTextMessage(/^asset(s)?|price(s)?$/i, async (message, response) => {
 			let that = this;
-			fs.readFile(reportFilePath, function(err, data) {
+			fs.readFile(reportFilePath, async function(err, data) {
 				if (!data.length) {
 					response.send(new TextMessage(`No results yet.`)).catch(err => { that.l.err(JSON.stringify(err, null, 2)); });
 				}else {
-					response.send(new TextMessage(`${data}`)).catch(err => { that.l.err(JSON.stringify(err, null, 2)); });
+					let chunkSize=1000;
+					let i = 0;
+					for (i=0; i < data.length; i+=chunkSize) {
+						await response.send(new TextMessage(`${data.slice(i, i+chunkSize)}`)).catch(err => { that.l.err(JSON.stringify(err, null, 2)); });
+						await sleep(3000);
+					}
 				}
 			});
 		});

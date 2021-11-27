@@ -26,3 +26,6 @@ creds.js
 
 # Dist files
 dist/
+
+assets/asset_report.txt
+env/default.properties

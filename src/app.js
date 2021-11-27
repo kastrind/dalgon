@@ -88,74 +88,100 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 		let viberBotAuthToken = cmdOpts.botAuthToken;
 		let viberBot = new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken);
 	}
+
+	while(true) {
 	
-	let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
-	let assets = properties.get("ohlc.ASSETS").split(' ');
-	let day24h = new Date();
-	day24h.setHours(day24h.getHours() - 24);
-	let week = new Date();
-	week.setHours(week.getHours() - 24*7);
-	let month = new Date();
-	month.setHours(month.getHours() - 24*30);
-	let quarter = new Date();
-	quarter.setHours(quarter.getHours() - 24*30*3);
-	let report = "";
-	for (let i=0; i < assets.length; i++) {
-		let asset = assets[i];
-		let assetPair = `${asset}${BASE_CURRENCY}`;
-		l.i(`Asset ${asset}:`);
-		let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), maxNumResults, l, SIMULATION));
-		let changeDay24h = ohlcDay24h.getChange();
-		sleep(1000);
-		let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), maxNumResults, l, SIMULATION));
-		let changeWeek = ohlcWeek.getChange();
-		sleep(1000);
-		let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), maxNumResults, l, SIMULATION));
-		let changeMonth = ohlcMonth.getChange();
-		sleep(1000);
-		let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), maxNumResults, l, SIMULATION));
-		let changeQuarter = ohlcQuarter.getChange();
-		sleep(1000);
+		let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
+		let assets = properties.get("ohlc.ASSETS").split(' ');
+		let day24h = new Date();
+		day24h.setHours(day24h.getHours() - 24);
+		let week = new Date();
+		week.setHours(week.getHours() - 24*7);
+		let month = new Date();
+		month.setHours(month.getHours() - 24*30);
+		let quarter = new Date();
+		quarter.setHours(quarter.getHours() - 24*30*3);
+		let report = "";
+		let assetResults = [];
+		for (let i=0; i < assets.length; i++) {
+			let asset = assets[i];
+			let assetPair = `${asset}${BASE_CURRENCY}`;
+			l.i(`Asset ${asset}:`);
+			let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), maxNumResults, l, SIMULATION));
+			let changeDay24h = ohlcDay24h.getChange();
+			sleep(1000);
+			let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), maxNumResults, l, SIMULATION));
+			let changeWeek = ohlcWeek.getChange();
+			sleep(1000);
+			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), maxNumResults, l, SIMULATION));
+			let changeMonth = ohlcMonth.getChange();
+			sleep(1000);
+			let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), maxNumResults, l, SIMULATION));
+			let changeQuarter = ohlcQuarter.getChange();
+			sleep(1000);
 
-		let lowestCloseWeek = ohlcWeek.getLowestClose().close;
-		let priceOverLowestWeek = 0;
-		if ( lowestCloseWeek > 0) {
-			priceOverLowestWeek = ( ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close - lowestCloseWeek ) / lowestCloseWeek;
-		}
-		let highestCloseWeek = ohlcWeek.getHighestClose().close;
-		let priceOverHighestWeek = 0;
-		if ( highestCloseWeek > 0) {
-			priceOverHighestWeek = ( highestCloseWeek - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / ohlcDay24h.ticks[ohlcDay24h.ticks.length-1].close;
-		}
-		let lowestCloseMonth = ohlcMonth.getLowestClose().close;
-		let priceOverLowestMonth = 0;
-		if ( lowestCloseMonth > 0) {
-			priceOverLowestMonth = ( ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close - lowestCloseMonth ) / lowestCloseMonth;
-		}
-		let highestCloseMonth = ohlcMonth.getHighestClose().close;
-		let priceOverHighestMonth = 0;
-		if ( highestCloseMonth > 0) {
-			priceOverHighestMonth = ( highestCloseMonth - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / ohlcDay24h.ticks[ohlcDay24h.ticks.length-1].close;
-		}
-
-		let isCandidate = false;
-		report = "";
-		if ((changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) ||
-			(changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0)) {
-			isCandidate = true;
-
-			if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) {
-				report += l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week and up ${prcnt(changeMonth)}% in month.`, 1) + '\n';
-
-			}else if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0) {
-				report += l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week, ${prcnt(changeMonth)}% in month and ${prcnt(changeQuarter)}% up in quarter.`, 1) + '\n';
+			let lowestCloseWeek = ohlcWeek.getLowestClose().close;
+			let priceOverLowestWeek = 0;
+			if ( lowestCloseWeek > 0) {
+				priceOverLowestWeek = ( ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close - lowestCloseWeek ) / lowestCloseWeek;
 			}
-			report += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1) + '\n';
-			report += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1) + '\n';
-			report += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1) + '\n';
-			report += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1) + '\n\n';
-			fs.appendFile(reportFilePath, report, function (err) { if (err) throw err; });
+			let highestCloseWeek = ohlcWeek.getHighestClose().close;
+			let priceOverHighestWeek = 0;
+			if ( highestCloseWeek > 0) {
+				priceOverHighestWeek = ( highestCloseWeek - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / ohlcDay24h.ticks[ohlcDay24h.ticks.length-1].close;
+			}
+			let lowestCloseMonth = ohlcMonth.getLowestClose().close;
+			let priceOverLowestMonth = 0;
+			if ( lowestCloseMonth > 0) {
+				priceOverLowestMonth = ( ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close - lowestCloseMonth ) / lowestCloseMonth;
+			}
+			let highestCloseMonth = ohlcMonth.getHighestClose().close;
+			let priceOverHighestMonth = 0;
+			if ( highestCloseMonth > 0) {
+				priceOverHighestMonth = ( highestCloseMonth - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / ohlcDay24h.ticks[ohlcDay24h.ticks.length-1].close;
+			}
+
+			let isCandidate = false;
+			let currAssetReport = "";
+			let currAssetResult = {};
+			if ((changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) ||
+				(changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0)) {
+				isCandidate = true;
+				currAssetResult = {name: assetPair, score: 0, report: ""};
+
+				if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) {
+					currAssetReport = l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week and up ${prcnt(changeMonth)}% in month.`, 1) + '\n';
+					currAssetResult.score = 0.5 * Math.abs(changeDay24h) + 0.3 * Math.abs(changeWeek) + 0.2 * Math.abs(changeMonth);
+
+				}else if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0) {
+					currAssetReport = l.i(`${assetPair} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week, ${prcnt(changeMonth)}% in month and ${prcnt(changeQuarter)}% up in quarter.`, 1) + '\n';
+					currAssetResult.score = 0.5 * Math.abs(changeDay24h) + 0.25 * Math.abs(changeWeek) + 0.15 * Math.abs(changeMonth) + 0.1 * Math.abs(changeQuarter);
+				}
+				currAssetReport += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1) + '\n';
+				currAssetReport += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1) + '\n';
+				currAssetReport += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1) + '\n';
+				currAssetReport += '  ' + l.i(`${assetPair} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1) + '\n\n';
+
+				currAssetResult.report = currAssetReport;
+				report += currAssetReport;
+				currAssetReport = "";
+				assetResults.push(currAssetResult);
+				//fs.appendFile(reportFilePath, report, function (err) { if (err) throw err; });
+
+				assetResults.sort(function (a, b) {
+					return a.score - b.score;
+				});
+				report = "";
+				assetResults.forEach(element => {
+					report += element.report;
+				});
+				fs.writeFile(reportFilePath, report, function (err) { if (err) throw err; });
+			}
 		}
+
+		l.i("Sleeping...");
+		await sleep(10 * 60000);
+
 	}
 
 })();
