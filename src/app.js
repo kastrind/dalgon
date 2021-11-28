@@ -77,16 +77,29 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 
 (async function () {
 
+	// clean asset report file
 	let reportFilePath = properties.get('main.ASSETREPORTFILE');
 	fs.writeFile(reportFilePath, '', function (err) { if (err) throw err; });
 
+	// prepare viber bot
 	if (cmdOpts.botAuthToken) {
 		let viberBotExposeUrl = properties.get("viberBot.EXPOSEURL");
 		let viberBotPort = properties.get("viberBot.PORT");
 		let viberBotName = properties.get("viberBot.BOTNAME");
 		let viberBotAvatarUrl = properties.get("viberBot.AVATARURL");
 		let viberBotAuthToken = cmdOpts.botAuthToken;
-		let viberBot = new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken);
+		let recipientProfiles = [], profs;
+		if (profs = properties.get("viberBot.RECIPIENTPROFILES")) {
+			recipientProfiles = JSON.parse(profs);
+		}
+		let viberBot = new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
+
+		viberBot.getBot().onTextMessage(/^ticker\s+([A-Za-z]+?)$/i, async (message, response) => {
+			let asset = message.text.match(/^ticker\s+([A-Za-z]+?)$/i)[1].toUpperCase();
+			// get ticker
+			let ticker = await (Ticker.request(getTicker, { searchParams: { pair: asset+BASE_CURRENCY } }, l, SIMULATION));
+			viberBot.sendTextMessage(response, ticker.toString());
+		});
 	}
 
 	while(true) {
@@ -109,16 +122,16 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			l.i(`Asset ${asset}:`);
 			let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), maxNumResults, l, SIMULATION));
 			let changeDay24h = ohlcDay24h.getChange();
-			sleep(1000);
+			await sleep(1000);
 			let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), maxNumResults, l, SIMULATION));
 			let changeWeek = ohlcWeek.getChange();
-			sleep(1000);
+			await sleep(1000);
 			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), maxNumResults, l, SIMULATION));
 			let changeMonth = ohlcMonth.getChange();
-			sleep(1000);
+			await sleep(1000);
 			let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), maxNumResults, l, SIMULATION));
 			let changeQuarter = ohlcQuarter.getChange();
-			sleep(1000);
+			await sleep(1000);
 
 			let lowestCloseWeek = ohlcWeek.getLowestClose().close;
 			let priceOverLowestWeek = 0;
@@ -180,7 +193,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 		}
 
 		l.i("Sleeping...");
-		await sleep(10 * 60000);
+		await sleep(5 * 60000);
 
 	}
 

@@ -47,6 +47,29 @@ class Ticker {
 		return null;
 	}
 
+	toString() {
+		return `\t\t${this.assetPair} ticker info:
+		askPrice: ${this.askPrice}
+		askVol: ${this.askWLotVol}
+		askLotVol: ${this.askLotVol}
+		bidPrice: ${this.bidPrice}
+		bidWLotVol: ${this.bidWLotVol}
+		bidLotVol: ${this.bidLotVol}
+		lastTradeClosedPrice: ${this.lastTradeClosedPrice}
+		lastTradeClosedLotVol: ${this.lastTradeClosedLotVol}
+		volToday: ${this.volToday}
+		volLast24h: ${this.volLast24h}
+		volWAvgPriceToday: ${this.volWAvgPriceToday}
+		volWAvgPriceLast24h: ${this.volWAvgPriceLast24h}
+		numTradesToday: ${this.numTradesToday}
+		numTradesLast24h: ${this.numTradesLast24h}
+		lowToday: ${this.lowToday}
+		lowLast24h: ${this.lowLast24h}
+		highToday: ${this.highToday}
+		highLast24h: ${this.highLast24h}
+		openingPriceToday: ${this.openingPriceToday}`;
+	}
+
 }
 
 export default Ticker;

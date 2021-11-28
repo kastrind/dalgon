@@ -1,7 +1,6 @@
 import fs from 'fs';
 import { createRequire } from 'module';
-import { sleep } from './utils.js';
-//import { sleep as sleep2 } from './utils';
+import { isEmpty, sleep } from './utils.js';
 const require = createRequire(import.meta.url);
 
 const ViberBot = require('viber-bot').Bot;
@@ -11,7 +10,7 @@ const express = require('express');
 
 class DalgonViberBot {
 
-	constructor(loggerObj, reportFilePath, exposeUrl, port, botName, avatarUrl, authToken) {
+	constructor(loggerObj, reportFilePath, exposeUrl, port, botName, avatarUrl, authToken, recipientProfiles) {
 		this.l = loggerObj;
 		this.app = express();
 
@@ -21,8 +20,20 @@ class DalgonViberBot {
 			avatar: avatarUrl // It is recommended to be 720x720, and no more than 100kb.
 		});
 
+		this.userProfiles = recipientProfiles;
+		if (!isEmpty(this.userProfiles)) {
+			this.userProfiles.forEach(async (userProfile) => {
+				this.bot.sendMessage(userProfile, new TextMessage("I rise again."));
+				await sleep(1000);
+			});
+		}
+
+		this.bot.onTextMessage(/^hi|hello/i, async (message, response) => {
+			response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${this.bot.name}. Feel free to ask me about crypto.`));
+		});
+
 		this.bot.on(BotEvents.SUBSCRIBED, response => {
-			response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${bot.name}! Feel free to ask me about crypto.`));
+			response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${this.bot.name}. Feel free to ask me about crypto.`));
 		});
 		
 		// bot.on(BotEvents.MESSAGE_RECEIVED, (message, response) => {
@@ -55,6 +66,16 @@ class DalgonViberBot {
 			});
 		});
 	}
+
+	getBot() {
+		return this.bot;
+	}
+
+	sendTextMessage(response, message) {
+		response.send(new TextMessage(`${message}`));
+	}
+
+
 }
 
 export default DalgonViberBot;
