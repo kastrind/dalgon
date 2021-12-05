@@ -15,6 +15,10 @@ import { isEmpty, sleep, prcnt } from './utils.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
+import { promisify } from 'util';
+const got = require('got');
+const { CookieJar } = require('tough-cookie');
+
 // command line params
 var cmdOpts = options;
 
@@ -77,19 +81,29 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 
 (async function () {
 
+	//curl "" -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:95.0) Gecko/20100101 Firefox/95.0" -H "Accept: */*" -H "Accept-Language: en-US,en;q=0.5" -H "Cookie: is_dark=true; selected_iso=eur; remember_user_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IlcxczFPVGs0T0RZMVhTd2lKREpoSkRFd0pFWlRkRTEzU1hSTGVuZE5NMkoxTG5sWVNGSnlWUzRpTENJeE5qTTJPVEU0TlRJekxqSXdOREkyTmpNaVhRPT0iLCJleHAiOiIyMDIxLTEyLTEyVDE5OjM1OjIzLjIwNFoiLCJwdXIiOm51bGx9fQ"%"3D"%"3D--b2f4d7eac932228197f871f970eea0c2c482e691;" -H "TE: trailers" --output temp.json	
+
+	const cookieJar = new CookieJar();
+	const setCookie = promisify(cookieJar.setCookie.bind(cookieJar));
+
+	await setCookie('remember_user_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IlcxczFPVGs0T0RZMVhTd2lKREpoSkRFd0pFWlRkRTEzU1hSTGVuZE5NMkoxTG5sWVNGSnlWUzRpTENJeE5qTTJPVEU0TlRJekxqSXdOREkyTmpNaVhRPT0iLCJleHAiOiIyMDIxLTEyLTEyVDE5OjM1OjIzLjIwNFoiLCJwdXIiOm51bGx9fQ%3D%3D--b2f4d7eac932228197f871f970eea0c2c482e691', 'https://www.coingecko.com');
+	let response = await got('https://www.coingecko.com/en/portfolios/6813145/overview?vs_currency=EUR', {cookieJar});
+	//l.i(JSON.stringify(JSON.parse(response.body), null, 2));
+	
+
 	// clean asset report file
 	let reportFilePath = properties.get('main.ASSETREPORTFILE');
 	fs.writeFile(reportFilePath, '', function (err) { if (err) throw err; });
 
 	// prepare viber bot
 	if (cmdOpts.botAuthToken) {
-		let viberBotExposeUrl = properties.get("viberBot.EXPOSEURL");
+		let viberBotExposeUrl = properties.get("viberBot.EXPOSE_URL");
 		let viberBotPort = properties.get("viberBot.PORT");
-		let viberBotName = properties.get("viberBot.BOTNAME");
-		let viberBotAvatarUrl = properties.get("viberBot.AVATARURL");
+		let viberBotName = properties.get("viberBot.BOT_NAME");
+		let viberBotAvatarUrl = properties.get("viberBot.AVATAR_URL");
 		let viberBotAuthToken = cmdOpts.botAuthToken;
 		let recipientProfiles = [], profs;
-		if (profs = properties.get("viberBot.RECIPIENTPROFILES")) {
+		if (profs = properties.get("viberBot.RECIPIENT_PROFILES")) {
 			recipientProfiles = JSON.parse(profs);
 		}
 		let viberBot = new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
@@ -99,6 +113,11 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			// get ticker
 			let ticker = await (Ticker.request(getTicker, { searchParams: { pair: asset+BASE_CURRENCY } }, l, SIMULATION));
 			viberBot.sendTextMessage(response, ticker.toString());
+		});
+
+		viberBot.getBot().onTextMessage(/^(my )?portfolio$/i, async (message, response) => {
+			let portfolio = await coingecko.getPortfolio(properties.get('coingecko.REMEMBER_USER_TOKEN'), properties.get('coingecko.PORTFOLIO_ID'), BASE_CURRENCY);
+			viberBot.sendTextMessage(response, JSON.stringify(portfolio, null, 2));
 		});
 	}
 

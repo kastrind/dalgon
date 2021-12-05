@@ -1,6 +1,12 @@
 import got from 'got';
 import { isEmpty, isOK } from './utils.js';
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
+import { promisify } from 'util';
+const { CookieJar } = require('tough-cookie');
+
 class CoinGecko {
 
 	constructor(loggerObj, simulationMode) {
@@ -42,6 +48,16 @@ class CoinGecko {
 
 	async test() {
 		return this.greeting = await Promise.resolve("Hello, just a test.");
+	}
+
+	async getPortfolio(rememberUserToken, portfolioId, baseCurrency) {
+		const cookieJar = new CookieJar();
+		const setCookie = promisify(cookieJar.setCookie.bind(cookieJar));
+	
+		await setCookie(`remember_user_token=${rememberUserToken}`, 'https://www.coingecko.com');
+		let response = await got(`https://www.coingecko.com/en/portfolios/${portfolioId}/overview?vs_currency=${baseCurrency}`, {cookieJar});
+		this.l.i(""+response.statusCode);
+		return JSON.parse(response.body);
 	}
 
 }
