@@ -125,7 +125,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			timestampSecondsF = Math.floor(Date.now() / 1000);
 			if (viberBot && timestampSecondsF - timestampSecondsI >= 3 * 60 * 60) {
 				let canStartTradingMsg = viberBot.canStartTrading ? " I am permitted to trade." : " I am not permitted to trade.";
-				await viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
+				viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
 

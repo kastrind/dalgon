@@ -34,6 +34,13 @@ class DalgonViberBot {
 			response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${this.bot.name}. Feel free to ask me about crypto.`));
 		});
 
+		this.bot.onTextMessage(/^help/i, async (message, response) => {
+			response.send(new TextMessage(`"recommend assets": return potential profitable assets\n
+			"start|stop trading": permission to purchase potential profitable assets\n
+			"portfolio|holdings": holdings on CoinGecko\n
+			"ticker ASSETNAME": return ticker info on given asset id`));
+		});
+
 		this.bot.on(BotEvents.SUBSCRIBED, response => {
 			response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${this.bot.name}. Feel free to ask me about crypto.`));
 		});
@@ -42,7 +49,7 @@ class DalgonViberBot {
 		// 	response.send(new TextMessage(`Message received.`));
 		// });
 
-		this.bot.onTextMessage(/^recommended assets$/i, async (message, response) => {
+		this.bot.onTextMessage(/^recommend(ed)? assets$/i, async (message, response) => {
 			let that = this;
 			fs.readFile(reportFilePath, async function(err, data) {
 				if (!data.length) {
