@@ -56,8 +56,16 @@ class CoinGecko {
 	
 		await setCookie(`remember_user_token=${rememberUserToken}`, 'https://www.coingecko.com');
 		let response = await got(`https://www.coingecko.com/en/portfolios/${portfolioId}/overview?vs_currency=${baseCurrency}`, {cookieJar});
-		this.l.i(""+response.statusCode);
-		return JSON.parse(response.body);
+		if (response.statusCode == 200) {
+			let portfolio = JSON.parse(response.body);
+			return { 
+				"total_holdings_value": portfolio.total_holdings_value,
+				"total_cost": portfolio.total_cost,
+				"profit_loss": portfolio.profit_loss,
+				"profit_loss_change_percentage": portfolio.profit_loss_change_percentage
+			 };
+		}
+		return { "errorMsg": "request failed" };
 	}
 
 }

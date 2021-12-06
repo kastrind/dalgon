@@ -20,10 +20,12 @@ class DalgonViberBot {
 			avatar: avatarUrl // It is recommended to be 720x720, and no more than 100kb.
 		});
 
+		this.canStartTrading = false;
+
 		this.userProfiles = recipientProfiles;
 		if (!isEmpty(this.userProfiles)) {
 			this.userProfiles.forEach(async (userProfile) => {
-				this.bot.sendMessage(userProfile, new TextMessage("I rise again."));
+				await this.bot.sendMessage(userProfile, new TextMessage("I rise again."));
 				await sleep(1000);
 			});
 		}
@@ -40,7 +42,7 @@ class DalgonViberBot {
 		// 	response.send(new TextMessage(`Message received.`));
 		// });
 
-		this.bot.onTextMessage(/^asset(s)?|price(s)?$/i, async (message, response) => {
+		this.bot.onTextMessage(/^recommended assets$/i, async (message, response) => {
 			let that = this;
 			fs.readFile(reportFilePath, async function(err, data) {
 				if (!data.length) {
@@ -54,6 +56,16 @@ class DalgonViberBot {
 					}
 				}
 			});
+		});
+
+		this.bot.onTextMessage(/^start trading$/i, async (message, response) => {
+			response.send(new TextMessage(`Ok, I will start trading.`));
+			this.canStartTrading = true;
+		});
+
+		this.bot.onTextMessage(/^stop trading$/i, async (message, response) => {
+			response.send(new TextMessage(`Ok, I will stop trading.`));
+			this.canStartTrading = false;
 		});
 
 		this.app.use("/viber/webhook", this.bot.middleware());
@@ -71,10 +83,14 @@ class DalgonViberBot {
 		return this.bot;
 	}
 
-	sendTextMessage(response, message) {
-		response.send(new TextMessage(`${message}`));
+	sendTextMessage(message) {
+		if (!isEmpty(this.userProfiles)) {
+			this.userProfiles.forEach(async (userProfile) => {
+				this.bot.sendMessage(userProfile, new TextMessage(message));
+				await sleep(1000);
+			});
+		}
 	}
-
 
 }
 

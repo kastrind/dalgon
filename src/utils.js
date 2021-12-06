@@ -15,7 +15,7 @@ function sleep(ms) {
 }
 
 function prcnt(num) {
-	return (num * 100).toPrecision(3);
+	return (num * 100).toFixed(2);
 }
 
 export { isEmpty, isOK, sleep, prcnt };
