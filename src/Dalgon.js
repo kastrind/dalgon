@@ -25,11 +25,15 @@ class Dalgon {
 			that.params = paramsObj;
 			that.l.d(`Params ${JSON.stringify(that.params, null, 2)}`, 1);
 			if (!that.simulationMode) {
-				that.response = await got(that.host+that.path, that.params);
-				that.l.d(`Response: ${JSON.stringify(that.response.body, null, 2)}`, 1);
-				if (isOK(that.response.statusCode)) that.l.suc(`Response status for ${infoMsg}: ${(that.response.statusCode)}`);
-				else that.l.err(`Response status for ${infoMsg}: ${(that.response.statusCode)}`);
-				return that.response;
+				try {
+					that.response = await got(that.host+that.path, that.params);
+					that.l.d(`Response: ${JSON.stringify(that.response.body, null, 2)}`, 1);
+					if (isOK(that.response.statusCode)) that.l.suc(`Response status for ${infoMsg}: ${(that.response.statusCode)}`);
+					return that.response;
+				}catch(error) {
+					that.l.err(`Request failed with status ${error.response.statusCode} and body ${error.response.body}`, 0, true);
+					return error.response;
+			}
 			} else {
 				return simObj;
 			}
@@ -63,11 +67,15 @@ class Dalgon {
 			}
 			that.l.d(`Params: ${that.options.body}`, 1);
 			if (!that.simulationMode) {
-				that.response = await got.post(that.host + that.path, that.options);
-				that.l.d(`Response: ${JSON.stringify(JSON.parse(that.response.body), null, 2)}`, 1);
-				if (isOK(that.response.statusCode)) that.l.suc(`Response status for ${infoMsg}: ${(that.response.statusCode)}`);
-				else that.l.err(`Response status for ${infoMsg}: ${(that.response.statusCode)}`);
-				return that.response;
+				try {
+					that.response = await got.post(that.host + that.path, that.options);
+					that.l.d(`Response: ${JSON.stringify(JSON.parse(that.response.body), null, 2)}`, 1);
+					if (isOK(that.response.statusCode)) that.l.suc(`Response status for ${infoMsg}: ${(that.response.statusCode)}`);
+					return that.response;
+				}catch(error) {
+					that.l.err(`Request failed with status ${error.response.statusCode} and body ${error.response.body}`, 0, true);
+					return error.response;
+				}
 			}else {
 				that.l.i(`Simulated response for ${infoMsg}: ${simObj}`, 1);
 				return simObj;

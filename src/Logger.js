@@ -59,21 +59,21 @@ class Logger {
 		} else return "";
 	}
 	
-	w(msg, indentation=0) {
-		if (this.verbose) {
+	w(msg, indentation=0, forceVerbose=false) {
+		if (this.verbose || forceVerbose) {
 			console.warn(`${'  '.repeat(indentation)}${this.bgYellow}${this.fgBlack}(!) [WARN]     ${this.getLogMsg(msg, indentation, `${this.bgYellow}${this.fgBlack}`)} ${this.reset}`);
 			return msg;
 		}else return "";
 	}
-	suc(msg, indentation=0) {
-		if (this.verbose) {
+	suc(msg, indentation=0, forceVerbose=false) {
+		if (this.verbose || forceVerbose) {
 			console.info(`${'  '.repeat(indentation)}${this.bgGreen}${this.fgBlack}(v) [SUCCESS]  ${this.getLogMsg(msg, indentation, `${this.bgGreen}${this.fgBlack}`)} ${this.reset}`);
 			return msg;
 		}else return "";
 	}
 	
-	err(msg, indentation=0) {
-		if (this.verbose) {
+	err(msg, indentation=0, forceVerbose=false) {
+		if (this.verbose || forceVerbose) {
 			console.error(`${'  '.repeat(indentation)}${this.bgRed}${this.fgWhite}(x) [ERROR]    ${this.getLogMsg(msg, indentation, `${this.bgRed}${this.fgYellow}`)} ${this.reset}`);
 			return msg;
 		}else return "";

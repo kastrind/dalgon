@@ -38,7 +38,8 @@ class DalgonViberBot {
 			response.send(new TextMessage(`"recommend assets": return potential profitable assets\n
 			"start|stop trading": permission to purchase potential profitable assets\n
 			"portfolio|holdings": holdings on CoinGecko\n
-			"ticker ASSETNAME": return ticker info on given asset id`));
+			"ticker ASSET_SYMBOL": return ticker info on given asset symbol, e.g. BTC\n
+			"trending": return trending coins from CoinGecko\n`));
 		});
 
 		this.bot.on(BotEvents.SUBSCRIBED, response => {

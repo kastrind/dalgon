@@ -30,11 +30,14 @@ var VERBOSE = cmdOpts.verbose || false;
 var DEBUG = cmdOpts.debug || false;
 var SIMULATION = cmdOpts.simulation || false;
 
+// logger
+var l = new Logger(VERBOSE, DEBUG);
+
 // validate command line params
-if (!cmdOpts.privAPIKey) { console.error('Private API Key is mandatory.'); process.exit(-1); }
+if (!cmdOpts.privAPIKey) { l.err('Private API Key is mandatory.', 0, true); process.exit(-1); }
 else { PRIVATEAPIKEY = cmdOpts.privAPIKey; }
 
-if (!cmdOpts.setEnv) { console.warn('Environment not provided; setting env to \'default\'.'); }
+if (!cmdOpts.setEnv) { l.w('Environment not provided; setting env to \'default\'.', 0, true); }
 else { ENV = cmdOpts.setenv; }
 
 // load config file
@@ -43,13 +46,11 @@ var properties = new PropertiesReader(`env/${ENV}.properties`);
 var APIKEY = properties.get("main.APIKEY");
 var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
 
-// logger
-var l = new Logger(VERBOSE, DEBUG);
-
 // coingecko instance
 var coingecko = new CoinGecko(l, SIMULATION);
 var getCoinGeckoOHLC = coingecko.createPublicFunction('/coins/{id}/ohlc', 'Request for CoinGecko OHLC');
 var getCoinGeckoCoinList = coingecko.createPublicFunction('/coins/list', 'Request for CoinGecko Coins List');
+var getTrendingCoinList = coingecko.createPublicFunction('/search/trending', 'Request for CoinGecko Trending Coins List');
 // (async function () {
 // 	//let coinGeckoOHLC = await getCoinGeckoOHLC({'{id}': 'bitcoin', searchParams: { vs_currency: 'eur', days: '1'}, headers: {accept: 'application/json'}}, {});
 // 	//l.i(""+coinGeckoOHLC.body);
@@ -86,7 +87,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 
 	// clean asset report file
 	let reportFilePath = properties.get('main.ASSETREPORTFILE');
-	fs.writeFile(reportFilePath, '', function (err) { if (err) throw err; });
+	fs.writeFile(reportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
 
 	let viberBot;
 	// prepare viber bot
@@ -102,16 +103,33 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 		}
 		viberBot = await new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
 
+		// Ticker
 		viberBot.getBot().onTextMessage(/^ticker\s+([A-Za-z]+?)$/i, async (message, response) => {
 			let asset = message.text.match(/^ticker\s+([A-Za-z]+?)$/i)[1].toUpperCase();
-			// get ticker
 			let ticker = await (Ticker.request(getTicker, { searchParams: { pair: asset+BASE_CURRENCY } }, l, SIMULATION));
-			viberBot.sendTextMessage(response, ticker.toString());
+			if (ticker) viberBot.sendTextMessage(ticker.toString());
+			else viberBot.sendTextMessage("Failed to get ticker information.");
 		});
 
+		// Portfolio
 		viberBot.getBot().onTextMessage(/^(my )?(portfolio|holdings)$/i, async (message, response) => {
-			let portfolio = await coingecko.getPortfolio(properties.get('coingecko.REMEMBER_USER_TOKEN'), properties.get('coingecko.PORTFOLIO_ID'), BASE_CURRENCY);
-			viberBot.sendTextMessage(response, JSON.stringify(portfolio, null, 2));
+			await coingecko.getPortfolio(properties.get('coingecko.REMEMBER_USER_TOKEN'), properties.get('coingecko.PORTFOLIO_ID'), BASE_CURRENCY).then(cgportfolioResponse => {
+				if (cgportfolioResponse.statusCode>=200 && cgportfolioResponse.statusCode<300) {
+					viberBot.sendTextMessage(coingecko.getPortfolioReport(cgportfolioResponse));
+				}else {
+					let suggestTokenExpired = cgportfolioResponse.statusCode==200 ? ' Perhaps user token cookie expired?' : '';
+					viberBot.sendTextMessage(`Request failed with status ${cgportfolioResponse.statusCode} and body\n${cgportfolioResponse.body}.${suggestTokenExpired}`);
+				}
+			});
+		});
+
+		// Trending
+		viberBot.getBot().onTextMessage(/^(trending( coins)?)$/i, async (message, response) => {
+			await getTrendingCoinList({searchParams: {}, headers: {accept: 'application/json'}}).then(cgResponse => {
+				if (cgResponse.statusCode>=200 && cgResponse.statusCode<300) {
+					viberBot.sendTextMessage(coingecko.getTrendingCoinsReport(cgResponse));
+				}else { viberBot.sendTextMessage(`Request failed.`); }
+			});
 		});
 	}
 
@@ -125,7 +143,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			timestampSecondsF = Math.floor(Date.now() / 1000);
 			if (viberBot && timestampSecondsF - timestampSecondsI >= 3 * 60 * 60) {
 				let canStartTradingMsg = viberBot.canStartTrading ? " I am permitted to trade." : " I am not permitted to trade.";
-				viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
+				await viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
 
@@ -217,7 +235,6 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 					report += currAssetReport;
 					currAssetReport = "";
 					assetResults.push(currAssetResult);
-					//fs.appendFile(reportFilePath, report, function (err) { if (err) throw err; });
 
 					assetResults.sort(function (a, b) {
 						return a.score - b.score;
@@ -226,7 +243,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 					assetResults.forEach(element => {
 						report += element.report;
 					});
-					fs.writeFile(reportFilePath, report, function (err) { if (err) throw err; });
+					fs.writeFile(reportFilePath, report, function(err) { if (err) l.err(err, 0, true); } );
 
 				}
 				l.i(`EVALUATING ASSET: ${asset} - END`);
@@ -238,7 +255,11 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 				let buyReport;
 				let buyOrderSent;
 				let assetToInvestIn;
+				let buyWith = properties.get("main.BUY_WITH");
 				let buyExceptions = properties.get("main.BUY_EXCEPTIONS").split(' ');
+				let buyWhiteList  = properties.get("main.BUY_WHITELIST");
+				let buyBudget     = properties.get("main.BUY_BUDGET");
+				let totalBought = 0;
 				for (let i=0; i<assetResultsReversed.length; i++) {
 
 					buyReport = "";
@@ -248,19 +269,29 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 					// Do not buy excepted currency
 					if (buyExceptions.includes(assetToInvestIn)) continue;
 
+					// Buy only whitelisted currency, if defined
+					if (buyWhiteList && !buyWhiteList.split(' ').includes(assetToInvestIn)) {l.i("test: "+isEmpty(buyWhiteList));continue;}
+
+					// Stay within budget
+					if (totalBought >= buyBudget && buyBudget>0) {
+						buyReport += l.w(`Spent budget of ${buyBudget} ${buyWith}. Will not proceed to order ${assetToInvestIn}.`, 1, true) + '\n';
+						await viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${buyReport}`);
+						break;
+					}
+
+					// Only if allowed to trade
 					if (!viberBot.canStartTrading) break;
 
 					// Get balance of the currency to purchase with
 					buyReport += l.i(`BUY ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - START`) + '\n';
 					let balanceResponse = await getBalance({}, {});
 					let balanceResult = JSON.parse(balanceResponse.body).result;
-					let buyWith = properties.get("main.BUY_WITH");
 					let balance = parseFloat(balanceResult[buyWith]);
 					buyReport += l.i(`Current ${buyWith} balance is ${balance}.`, 1) + '\n';
 
 					let buyTotalMin = parseFloat(properties.get("main.BUY_TOTAL_MIN"));
 					if (balance < buyTotalMin) {
-						l.verbose = true; buyReport += l.err(`Not enough balance. Order cancelled.`, 1) + '\n'; l.verbose = VERBOSE;
+						buyReport += l.err(`Not enough balance. Order cancelled.`, 1, true) + '\n';
 						continue;
 					}
 
@@ -279,6 +310,13 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 						let ticker = await (Ticker.request(getTicker, { searchParams: { pair: assetPairId } }, l, SIMULATION));
 						let buyTotalBalPercent = parseFloat(properties.get("main.BUY_TOTAL_BALANCE_PERCENT"));
 						let buyPriceTotal = Math.max( buyTotalMin, balance * buyTotalBalPercent / 100 );
+
+						// Stay within budget
+						if (totalBought + buyPriceTotal >= buyBudget && buyBudget>0) {
+							buyPriceTotal = buyBudget - totalBought;
+							buyReport += l.w(`Reducing amount to buy to ${buyPriceTotal} ${buyWith} to prevent overspending the budget.`, 1, true) + '\n';
+						}
+
 						let buyPriceUnit = parseFloat(ticker.askPrice);
 						let buyVolume = buyPriceTotal / buyPriceUnit;
 						buyReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
@@ -295,14 +333,16 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 						let orderResponse = await addOrder({ userref: 1, ordertype: 'limit', type: 'buy', pair: assetPairId, price: buyPriceUnit, volume: buyVolume, 'close[ordertype]': 'take-profit', 'close[price]': profitPrice }, {});
 						let orderResponseBody = JSON.parse(orderResponse.body);
 						// Order failed
-						if (orderResponse.statusCode != 200 && isEmpty(orderResponseBody.result)) { l.verbose = true; buyReport += l.err(`Order failed with error: ${orderResponseBody.error}`, 1) + '\n'; l.verbose = VERBOSE; }
+						if (orderResponse.statusCode != 200 && isEmpty(orderResponseBody.result)) { buyReport += l.err(`Order failed with error: ${orderResponseBody.error}`, 1, true) + '\n'; }
 						// Order succeeded
-						else { buyOrderSent = true; l.verbose = true; buyReport += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 1) + '\n'; l.verbose = VERBOSE; }
+						else { 
+							buyOrderSent = true;
+							totalBought += buyPriceTotal;
+							buyReport += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 1, true) + '\n'; 
+						}
 						await sleep(1000);
 					} else {
-						l.verbose = true;
-						buyReport += l.err(`Unsupported pair: ${assetPairQuery}.`, 1) + '\n';
-						l.verbose = VERBOSE;
+						buyReport += l.err(`Unsupported pair: ${assetPairQuery}.`, 1, true) + '\n';
 					}
 					buyReport += l.i(`BUY ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - END`);
 					if (buyOrderSent)	await viberBot.sendTextMessage(`I just bought ${assetToInvestIn}. Buy Order report:\n${buyReport}`);
@@ -314,10 +354,8 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			await sleep(5 * 60000);
 
 		}catch(e) {
-			l.verbose = true;
-			let exceptionMsg = l.err(`Exception caught: ${e}`);
+			let exceptionMsg = l.err(`Exception caught: ${e}`, 0, true);
 			if (viberBot) await viberBot.sendTextMessage(`${exceptionMsg}`);
-			l.verbose = VERBOSE;
 			await sleep(3000);
 		}
 
