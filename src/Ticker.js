@@ -39,10 +39,10 @@ class Ticker {
 	}
 
 	static async request(tickerRequest, tickerRequestParamsObj, loggerObj, simulationMode=false, simObj={}) {
-		let response = {};
-		await tickerRequest(tickerRequestParamsObj, simObj).then(s => response = JSON.parse(s.body));
-		if (!isEmpty(response) && response.result && Object.keys(response.result).length > 0) {
-			return new Ticker(tickerRequestParamsObj.searchParams.pair, loggerObj, simulationMode, response.result);
+		let responseBody = {};
+		await tickerRequest(tickerRequestParamsObj, simObj).then(s => responseBody = JSON.parse(s.body));
+		if (!isEmpty(responseBody) && responseBody.result && Object.keys(responseBody.result).length > 0) {
+			return new Ticker(tickerRequestParamsObj.searchParams.pair, loggerObj, simulationMode, responseBody.result);
 		}
 		return null;
 	}

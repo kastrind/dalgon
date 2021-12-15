@@ -6,9 +6,13 @@ import Dalgon from './Dalgon.js';
 import CoinGecko from './CoinGecko.js';
 import Ledger from './Ledger.js';
 import Ticker from './Ticker.js';
+import Balance from './Balance.js';
+import TradeableAssetPair from './TradeableAssetPair.js';
 import OHLC from './OHLC.js';
 import OHLCRange from './OHLCRange.js';
 import DalgonViberBot from './DalgonViberBot.js';
+import Analysis from './Analysis.js';
+import Order from './Order.js';
 
 import { isEmpty, sleep, prcnt } from './utils.js';
 
@@ -51,6 +55,7 @@ var coingecko = new CoinGecko(l, SIMULATION);
 var getCoinGeckoOHLC = coingecko.createPublicFunction('/coins/{id}/ohlc', 'Request for CoinGecko OHLC');
 var getCoinGeckoCoinList = coingecko.createPublicFunction('/coins/list', 'Request for CoinGecko Coins List');
 var getTrendingCoinList = coingecko.createPublicFunction('/search/trending', 'Request for CoinGecko Trending Coins List');
+var getStatusUpdates = coingecko.createPublicFunction('/status_updates', 'Request for CoinGecko Status Updates');
 // (async function () {
 // 	//let coinGeckoOHLC = await getCoinGeckoOHLC({'{id}': 'bitcoin', searchParams: { vs_currency: 'eur', days: '1'}, headers: {accept: 'application/json'}}, {});
 // 	//l.i(""+coinGeckoOHLC.body);
@@ -89,6 +94,16 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 	let reportFilePath = properties.get('main.ASSETREPORTFILE');
 	fs.writeFile(reportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
 
+	let buyWith = properties.get("main.BUY_WITH");
+	let buyExceptions = properties.get("main.BUY_EXCEPTIONS").split(' ');
+	let buyWhiteList = properties.get("main.BUY_WHITELIST");
+	let buyBudget = parseFloat(properties.get("main.BUY_BUDGET"));
+	let buyTotalMin = parseFloat(properties.get("main.BUY_TOTAL_MIN"));
+	let buyTotalBalPercent = parseFloat(properties.get("main.BUY_TOTAL_BALANCE_PERCENT"));
+	let buyWithQuery = properties.get("main.BUY_WITH_QUERY");
+	let profitPercent = parseFloat(properties.get("main.PROFIT_PERCENT"));
+	let totalBought = 0;
+
 	let viberBot;
 	// prepare viber bot
 	if (cmdOpts.botAuthToken) {
@@ -101,6 +116,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 		if (profs = properties.get("viberBot.RECIPIENT_PROFILES")) {
 			recipientProfiles = JSON.parse(profs);
 		}
+
 		viberBot = await new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
 
 		// Ticker
@@ -115,7 +131,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 		viberBot.getBot().onTextMessage(/^(my )?(portfolio|holdings)$/i, async (message, response) => {
 			await coingecko.getPortfolio(properties.get('coingecko.REMEMBER_USER_TOKEN'), properties.get('coingecko.PORTFOLIO_ID'), BASE_CURRENCY).then(cgportfolioResponse => {
 				if (cgportfolioResponse.statusCode>=200 && cgportfolioResponse.statusCode<300) {
-					viberBot.sendTextMessage(coingecko.getPortfolioReport(cgportfolioResponse));
+					viberBot.sendTextMessage(coingecko.reportPortfolio(cgportfolioResponse));
 				}else {
 					let suggestTokenExpired = cgportfolioResponse.statusCode==200 ? ' Perhaps user token cookie expired?' : '';
 					viberBot.sendTextMessage(`Request failed with status ${cgportfolioResponse.statusCode} and body\n${cgportfolioResponse.body}.${suggestTokenExpired}`);
@@ -127,229 +143,84 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 		viberBot.getBot().onTextMessage(/^(trending( coins)?)$/i, async (message, response) => {
 			await getTrendingCoinList({searchParams: {}, headers: {accept: 'application/json'}}).then(cgResponse => {
 				if (cgResponse.statusCode>=200 && cgResponse.statusCode<300) {
-					viberBot.sendTextMessage(coingecko.getTrendingCoinsReport(cgResponse));
+					viberBot.sendTextMessage(coingecko.reportTrendingCoins(cgResponse));
 				}else { viberBot.sendTextMessage(`Request failed.`); }
 			});
+		});
+
+		// Status updates
+		viberBot.getBot().onTextMessage(/^((status\s+)?updates)|(news)$/i, async (message, response) => {
+			await getStatusUpdates({searchParams: {}, headers: {accept: 'application/json'}}).then(async cgResponse => {
+				if (cgResponse.statusCode>=200 && cgResponse.statusCode<300) {
+					let updates = coingecko.reportStatusUpdates(cgResponse);
+					for (let i=0; i < updates.length; i++) {
+						await viberBot.sendTextMessage(updates[i]);
+						await sleep(1000);
+					}
+				}else { viberBot.sendTextMessage(`Request failed.`); }
+			});
+		});
+
+		// Trade ASSET_SYMBOL BUY_TOTAL
+		viberBot.getBot().onTextMessage(/^trade ([A-Z]+)$/i, async (message, response) => {
+			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1];
+			if (assetToInvestIn) {
+				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
+				order.setAutoTradeTotalBought(totalBought);
+				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyWith, buyWithQuery, buyExceptions, buyWhiteList, buyBudget, buyTotalMin)) {
+					await order.autoTrade(assetToInvestIn, getTicker, addOrder, buyWith, buyBudget, buyTotalBalPercent, buyTotalMin, profitPercent);
+					totalBought += order.getAutoTradeTotalBought();
+				}
+			}
 		});
 	}
 
 	let timestampSecondsI=0, timestampSecondsF;
+	let maxNumOHLCResults = properties.get("ohlc.MAXNUMRESULTS");
+	let assets = properties.get("ohlc.ASSETS").split(' ');
 
 	while(true) {
 
 		try {
-
+			
 			// Send message to the subscribers every 3 hours that the script is running
 			timestampSecondsF = Math.floor(Date.now() / 1000);
 			if (viberBot && timestampSecondsF - timestampSecondsI >= 3 * 60 * 60) {
-				let canStartTradingMsg = viberBot.canStartTrading ? " I am permitted to trade." : " I am not permitted to trade.";
+				let canStartTradingMsg = viberBot.canStartTrading ? " I am permitted to auto-trade." : " I am not permitted to auto-trade.";
 				await viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
+			// Analyse assets to recommend for trading
+			let analysis = new Analysis(assets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION);
+			let recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
-			let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
-			let assets = properties.get("ohlc.ASSETS").split(' ');
-			let pastHour = new Date();
-			pastHour.setHours(pastHour.getHours() - 1);
-			let day24h = new Date();
-			day24h.setHours(day24h.getHours() - 24);
-			let week = new Date();
-			week.setHours(week.getHours() - 24*7);
-			let month = new Date();
-			month.setHours(month.getHours() - 24*30);
-			let quarter = new Date();
-			quarter.setHours(quarter.getHours() - 24*30*3);
-			let report = "";
-			let assetResults = [];
-			for (let i=0; i < assets.length; i++) {
-				let asset = assets[i];
-				let assetPair = `${asset}${BASE_CURRENCY}`;
-				l.i(`EVALUATING ASSET: ${asset} - START`);
-				let ohlcPastHour = await (OHLC.request(getOHLC, assetPair, pastHour.toISOString(), maxNumResults, l, SIMULATION));
-				let changePastHour = ohlcPastHour.getChange();
-				await sleep(1000);
-				let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), maxNumResults, l, SIMULATION));
-				let changeDay24h = ohlcDay24h.getChange();
-				await sleep(1000);
-				let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), maxNumResults, l, SIMULATION));
-				let changeWeek = ohlcWeek.getChange();
-				await sleep(1000);
-				let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), maxNumResults, l, SIMULATION));
-				let changeMonth = ohlcMonth.getChange();
-				await sleep(1000);
-				let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), maxNumResults, l, SIMULATION));
-				let changeQuarter = ohlcQuarter.getChange();
-				await sleep(1000);
-
-				let lowestCloseWeek = ohlcWeek.getLowestClose().close;
-				let priceOverLowestWeek = 0;
-				if ( lowestCloseWeek > 0) {
-					priceOverLowestWeek = ( ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close - lowestCloseWeek ) / lowestCloseWeek;
-				}
-				let highestCloseWeek = ohlcWeek.getHighestClose().close;
-				let priceOverHighestWeek = 0;
-				if ( highestCloseWeek > 0) {
-					priceOverHighestWeek = ( highestCloseWeek - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / highestCloseWeek;
-				}
-				let lowestCloseMonth = ohlcMonth.getLowestClose().close;
-				let priceOverLowestMonth = 0;
-				if ( lowestCloseMonth > 0) {
-					priceOverLowestMonth = ( ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close - lowestCloseMonth ) / lowestCloseMonth;
-				}
-				let highestCloseMonth = ohlcMonth.getHighestClose().close;
-				let priceOverHighestMonth = 0;
-				if ( highestCloseMonth > 0) {
-					priceOverHighestMonth = ( highestCloseMonth - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / highestCloseMonth;
-				}
-
-				let isCandidate = false;
-				let currAssetReport = "";
-				let currAssetResult = {};
-				if (
-					((changePastHour <= 0 && changeDay24h <= -5 && changeWeek > 0 ) ||
-					(changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) ||
-					(changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0)) &&
-					(priceOverHighestWeek > 0.2 || priceOverHighestMonth > 0.3)
-					) {
-					isCandidate = true;
-					currAssetResult = {name: asset, score: 0, report: "", changePastHour: changePastHour, changeDay24h: changeDay24h, changeWeek: changeWeek, changeMonth: changeMonth, changeQuarter: changeQuarter, priceOverHighestWeek: priceOverHighestWeek, priceOverHighestMonth: priceOverHighestMonth};
-
-					if (changePastHour <= 0 && changeDay24h <= -5 && changeWeek > 0) {
-						currAssetReport = l.i(`${asset} is down ${prcnt(changePastHour)}$ in 1h, ${prcnt(changeDay24h)}% in 24h and up ${prcnt(changeWeek)}% in week.`, 1) + '\n';
-						currAssetResult.score = 0.5 * Math.abs(changePastHour) + 0.3 * Math.abs(changeDay24h) + 0.2 * Math.abs(changeWeek);
-
-					}else if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth > 0) {
-						currAssetReport = l.i(`${asset} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week and up ${prcnt(changeMonth)}% in month.`, 1) + '\n';
-						currAssetResult.score = 0.5 * Math.abs(changeDay24h) + 0.3 * Math.abs(changeWeek) + 0.2 * Math.abs(changeMonth);
-
-					}else if (changeDay24h <= 0 && changeWeek <= 0 && changeMonth <= 0 && changeQuarter > 0) {
-						currAssetReport = l.i(`${asset} is down ${prcnt(changeDay24h)}% in 24h, ${prcnt(changeWeek)}% week, ${prcnt(changeMonth)}% in month and ${prcnt(changeQuarter)}% up in quarter.`, 1) + '\n';
-						currAssetResult.score = 0.5 * Math.abs(changeDay24h) + 0.25 * Math.abs(changeWeek) + 0.15 * Math.abs(changeMonth) + 0.1 * Math.abs(changeQuarter);
-					}
-					currAssetReport += '  ' + l.i(`${asset} price is ${prcnt(priceOverLowestWeek)}% up over the lowest in week.`, 1) + '\n';
-					currAssetReport += '  ' + l.i(`${asset} price is ${prcnt(priceOverHighestWeek)}% down over the highest in week.`, 1) + '\n';
-					currAssetReport += '  ' + l.i(`${asset} price is ${prcnt(priceOverLowestMonth)}% up over the lowest in month.`, 1) + '\n';
-					currAssetReport += '  ' + l.i(`${asset} price is ${prcnt(priceOverHighestMonth)}% down over the highest in month.`, 1) + '\n\n';
-
-					currAssetResult.report = currAssetReport;
-					report += currAssetReport;
-					currAssetReport = "";
-					assetResults.push(currAssetResult);
-
-					assetResults.sort(function (a, b) {
-						return a.score - b.score;
-					});
-					report = "";
-					assetResults.forEach(element => {
-						report += element.report;
-					});
-					fs.writeFile(reportFilePath, report, function(err) { if (err) l.err(err, 0, true); } );
-
-				}
-				l.i(`EVALUATING ASSET: ${asset} - END`);
-			}
-
+			// If allowed to auto-trade
 			if (viberBot && viberBot.canStartTrading) {
-
-				let assetResultsReversed = assetResults.reverse();
-				let buyReport;
-				let buyOrderSent;
+				//let assetResultsReversed = [{name: "ANT"}, {name: "MATIC"}];
+				let assetResultsReversed = recommendedAssets.reverse();
 				let assetToInvestIn;
-				let buyWith = properties.get("main.BUY_WITH");
-				let buyExceptions = properties.get("main.BUY_EXCEPTIONS").split(' ');
-				let buyWhiteList  = properties.get("main.BUY_WHITELIST");
-				let buyBudget     = properties.get("main.BUY_BUDGET");
-				let totalBought = 0;
+				// Attempt to auto-trade each recommended asset, starting from the best recommendation
 				for (let i=0; i<assetResultsReversed.length; i++) {
 
-					buyReport = "";
-					buyOrderSent = false;
 					assetToInvestIn = assetResultsReversed[i].name;
 
-					// Do not buy excepted currency
-					if (buyExceptions.includes(assetToInvestIn)) continue;
-
-					// Buy only whitelisted currency, if defined
-					if (buyWhiteList && !buyWhiteList.split(' ').includes(assetToInvestIn)) {l.i("test: "+isEmpty(buyWhiteList));continue;}
-
-					// Stay within budget
-					if (totalBought >= buyBudget && buyBudget>0) {
-						buyReport += l.w(`Spent budget of ${buyBudget} ${buyWith}. Will not proceed to order ${assetToInvestIn}.`, 1, true) + '\n';
-						await viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${buyReport}`);
-						break;
-					}
-
-					// Only if allowed to trade
-					if (!viberBot.canStartTrading) break;
-
-					// Get balance of the currency to purchase with
-					buyReport += l.i(`BUY ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - START`) + '\n';
-					let balanceResponse = await getBalance({}, {});
-					let balanceResult = JSON.parse(balanceResponse.body).result;
-					let balance = parseFloat(balanceResult[buyWith]);
-					buyReport += l.i(`Current ${buyWith} balance is ${balance}.`, 1) + '\n';
-
-					let buyTotalMin = parseFloat(properties.get("main.BUY_TOTAL_MIN"));
-					if (balance < buyTotalMin) {
-						buyReport += l.err(`Not enough balance. Order cancelled.`, 1, true) + '\n';
-						continue;
-					}
-
-					// Find the asset pair id and decimals
-					let buyWithQuery = properties.get("main.BUY_WITH_QUERY");
-					let assetPairQuery = assetToInvestIn + buyWithQuery;
-					let tradeableAssetPairInfoResponse = await getTradeableAssetPairs({ searchParams: { pair: assetPairQuery } }, {});
-					let tradeableAssetPairInfoResponseBody = JSON.parse(tradeableAssetPairInfoResponse.body);
-					if (!isEmpty(tradeableAssetPairInfoResponseBody.result)) {
-						let tradeableAssetPairInfoResult = tradeableAssetPairInfoResponseBody.result;
-						let assetPairId = Object.keys(tradeableAssetPairInfoResult)[0];
-						let assetPairDecimals = tradeableAssetPairInfoResult[assetPairId].pair_decimals;
-						buyReport += l.i(`Asset pair id is ${assetPairId} with ${assetPairDecimals} decimals.`, 1) + '\n';
-
-						// Determine amount to buy
-						let ticker = await (Ticker.request(getTicker, { searchParams: { pair: assetPairId } }, l, SIMULATION));
-						let buyTotalBalPercent = parseFloat(properties.get("main.BUY_TOTAL_BALANCE_PERCENT"));
-						let buyPriceTotal = Math.max( buyTotalMin, balance * buyTotalBalPercent / 100 );
-
-						// Stay within budget
-						if (totalBought + buyPriceTotal >= buyBudget && buyBudget>0) {
-							buyPriceTotal = buyBudget - totalBought;
-							buyReport += l.w(`Reducing amount to buy to ${buyPriceTotal} ${buyWith} to prevent overspending the budget.`, 1, true) + '\n';
+					// Create a new Order
+					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);
+					order.setAutoTradeTotalBought(totalBought);
+					// If prerequisites to auto-trade are met, submit the limit Order with conditional take-profit
+					if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyWith, buyWithQuery, buyExceptions, buyWhiteList, buyBudget, buyTotalMin)) {
+						let autoTradeResult = await order.autoTrade(assetToInvestIn, getTicker, addOrder, buyWith, buyBudget, buyTotalBalPercent, buyTotalMin, profitPercent);
+						if (autoTradeResult) {
+							totalBought += order.getAutoTradeTotalBought();
+						}else {
+							viberBot.canStartTrading = false;
+							await viberBot.sendTextMessage(`I stopped auto-trading. Awaiting instructions.`);
+							break;
 						}
-
-						let buyPriceUnit = parseFloat(ticker.askPrice);
-						let buyVolume = buyPriceTotal / buyPriceUnit;
-						buyReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
-						buyReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
-
-						// Set the desired selling price for profit
-						let profitPercent = parseFloat(properties.get("main.PROFIT_PERCENT"));
-						let profitPrice = buyPriceUnit + profitPercent * buyPriceUnit / 100;
-						profitPrice = profitPrice.toFixed(assetPairDecimals);
-						buyReport += l.i(`Conditional close to take ${profitPercent}% profit: ${profitPrice} ${buyWith} price per unit.`, 1) + '\n';
-
-						// Post Order
-						buyReport += l.i(`Adding order...`, 1) + '\n';
-						let orderResponse = await addOrder({ userref: 1, ordertype: 'limit', type: 'buy', pair: assetPairId, price: buyPriceUnit, volume: buyVolume, 'close[ordertype]': 'take-profit', 'close[price]': profitPrice }, {});
-						let orderResponseBody = JSON.parse(orderResponse.body);
-						// Order failed
-						if (orderResponse.statusCode != 200 && isEmpty(orderResponseBody.result)) { buyReport += l.err(`Order failed with error: ${orderResponseBody.error}`, 1, true) + '\n'; }
-						// Order succeeded
-						else { 
-							buyOrderSent = true;
-							totalBought += buyPriceTotal;
-							buyReport += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 1, true) + '\n'; 
-						}
-						await sleep(1000);
-					} else {
-						buyReport += l.err(`Unsupported pair: ${assetPairQuery}.`, 1, true) + '\n';
 					}
-					buyReport += l.i(`BUY ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - END`);
-					if (buyOrderSent)	await viberBot.sendTextMessage(`I just bought ${assetToInvestIn}. Buy Order report:\n${buyReport}`);
-					else 				await viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${buyReport}`);
+					await sleep(1000);
 				}
 			}
-
 			l.i("Sleeping...");
 			await sleep(5 * 60000);
 

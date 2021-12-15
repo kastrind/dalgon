@@ -1,4 +1,4 @@
-
+import { getDateTime } from './utils.js';
 
 class Logger {
 
@@ -48,33 +48,33 @@ class Logger {
 	}
 	
 	i(msg, indentation=0) {
-		console.info(`${'  '.repeat(indentation)}${this.bgBlue}${this.fgWhite}(i) [INFO]     ${this.getLogMsg(msg, indentation, `${this.bgBlue}${this.fgWhite}`)} ${this.reset}`);
+		console.info(`${'  '.repeat(indentation)}${this.bgBlue}${this.fgWhite}(i) [INFO] ${getDateTime()}    ${this.getLogMsg(msg, indentation, `${this.bgBlue}${this.fgWhite}`)} ${this.reset}`);
 		return msg;
 	}
 
 	d(msg, indentation=0) {
 		if (this.debug) {
-			console.debug(`${'  '.repeat(indentation)}${this.bgGrey}${this.fgDarkGreen}(*) [DEBUG]    ${this.getLogMsg(msg, indentation, `${this.bgGrey}${this.fgDarkGreen}`)} ${this.reset}`);
+			console.debug(`${'  '.repeat(indentation)}${this.bgGrey}${this.fgDarkGreen}(*) [DEBUG] ${getDateTime()}   ${this.getLogMsg(msg, indentation, `${this.bgGrey}${this.fgDarkGreen}`)} ${this.reset}`);
 			return msg;
 		} else return "";
 	}
 	
 	w(msg, indentation=0, forceVerbose=false) {
 		if (this.verbose || forceVerbose) {
-			console.warn(`${'  '.repeat(indentation)}${this.bgYellow}${this.fgBlack}(!) [WARN]     ${this.getLogMsg(msg, indentation, `${this.bgYellow}${this.fgBlack}`)} ${this.reset}`);
+			console.warn(`${'  '.repeat(indentation)}${this.bgYellow}${this.fgBlack}(!) [WARN] ${getDateTime()}    ${this.getLogMsg(msg, indentation, `${this.bgYellow}${this.fgBlack}`)} ${this.reset}`);
 			return msg;
 		}else return "";
 	}
 	suc(msg, indentation=0, forceVerbose=false) {
 		if (this.verbose || forceVerbose) {
-			console.info(`${'  '.repeat(indentation)}${this.bgGreen}${this.fgBlack}(v) [SUCCESS]  ${this.getLogMsg(msg, indentation, `${this.bgGreen}${this.fgBlack}`)} ${this.reset}`);
+			console.info(`${'  '.repeat(indentation)}${this.bgGreen}${this.fgBlack}(v) [SUCCESS] ${getDateTime()} ${this.getLogMsg(msg, indentation, `${this.bgGreen}${this.fgBlack}`)} ${this.reset}`);
 			return msg;
 		}else return "";
 	}
 	
 	err(msg, indentation=0, forceVerbose=false) {
 		if (this.verbose || forceVerbose) {
-			console.error(`${'  '.repeat(indentation)}${this.bgRed}${this.fgWhite}(x) [ERROR]    ${this.getLogMsg(msg, indentation, `${this.bgRed}${this.fgYellow}`)} ${this.reset}`);
+			console.error(`${'  '.repeat(indentation)}${this.bgRed}${this.fgWhite}(x) [ERROR] ${getDateTime()}   ${this.getLogMsg(msg, indentation, `${this.bgRed}${this.fgYellow}`)} ${this.reset}`);
 			return msg;
 		}else return "";
 	}

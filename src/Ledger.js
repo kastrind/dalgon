@@ -13,25 +13,25 @@ class Ledger {
 	}
 
 	static async request(ledgerInfoRequest, ledgerInfoRequestParamsObj, timeTolerance, baseCurrency, loggerObj, simulationMode=false, simObj={}) {
-		let response = {};
+		let responseBody = {};
 		let requestNext = (function () {
 			return async function () {
-				await ledgerInfoRequest(ledgerInfoRequestParamsObj, simObj).then(s => response = JSON.parse(s.body));				
-				if (!isEmpty(response) && response.result.ledger && Object.keys(response.result.ledger).length > 0)  {
-					ledgerInfoRequestParamsObj.ofs += Object.keys(response.result.ledger).length;
-					return response;
+				await ledgerInfoRequest(ledgerInfoRequestParamsObj, simObj).then(s => responseBody = JSON.parse(s.body));				
+				if (!isEmpty(responseBody) && responseBody.result.ledger && Object.keys(responseBody.result.ledger).length > 0)  {
+					ledgerInfoRequestParamsObj.ofs += Object.keys(responseBody.result.ledger).length;
+					return responseBody;
 				}
 				return;
 			};
 		})();
 		let mergedResponse = {};
 		let isFirstRequest = true;
-		while ((response = await requestNext())) {
-			if (simulationMode) { mergedResponse = response; break; }
+		while ((responseBody = await requestNext())) {
+			if (simulationMode) { mergedResponse = responseBody; break; }
 
-			if (isFirstRequest) { isFirstRequest = false; mergedResponse = response; continue; }
+			if (isFirstRequest) { isFirstRequest = false; mergedResponse = responseBody; continue; }
 
-			mergedResponse.result.ledger = Object.assign(mergedResponse.result.ledger, response.result.ledger);
+			mergedResponse.result.ledger = Object.assign(mergedResponse.result.ledger, responseBody.result.ledger);
 
 		}
 		return new Ledger(timeTolerance, baseCurrency, loggerObj, simulationMode, mergedResponse);

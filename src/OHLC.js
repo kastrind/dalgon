@@ -42,18 +42,18 @@ class OHLC {
 	}
 
 	getChange() {
-		return ( ( this.ticks[this.ticks.length - 1].open - this.ticks[0].open ) / this.ticks[0].open ).toPrecision(4);
+		return ( ( this.ticks[this.ticks.length - 1].open - this.ticks[0].open ) / this.ticks[0].open );
 	}
 
 	static async request(OHLCRequest, paramAsset, paramSince, maxNumResults, loggerObj, simulationMode=false, simObj={}) {
-		let response = {};
+		let responseBody = {};
 		let ohlcRange = OHLCRange.create(paramSince, maxNumResults);
 		let since = ohlcRange.dateSinceSeconds;
 		let interval = ohlcRange.interval;
 		let OHLCRequestParamsObj = { searchParams: { pair: paramAsset, since: since, interval: interval } };
-		await OHLCRequest(OHLCRequestParamsObj, simObj).then(s => response = JSON.parse(s.body));
-		if (!isEmpty(response) && response.result && Object.keys(response.result).length > 0) {
-			return new OHLC(OHLCRequestParamsObj.searchParams.pair, loggerObj, simulationMode, response.result);
+		await OHLCRequest(OHLCRequestParamsObj, simObj).then(s => responseBody = JSON.parse(s.body));
+		if (!isEmpty(responseBody) && responseBody.result && Object.keys(responseBody.result).length > 0) {
+			return new OHLC(OHLCRequestParamsObj.searchParams.pair, loggerObj, simulationMode, responseBody.result);
 		}
 		return null;
 	}

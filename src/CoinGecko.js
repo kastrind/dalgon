@@ -66,12 +66,12 @@ class CoinGecko {
 		}
 	}
 
-	getPortfolioReport(response) {
+	reportPortfolio(response) {
 		let portfolio = JSON.parse(response.body);
 		return `Total holdings value: ${parseFloat(portfolio.total_holdings_value).toFixed(2)},\nTotal cost: ${parseFloat(portfolio.total_cost).toFixed(2)},\nProfit/Loss: ${parseFloat(portfolio.profit_loss).toFixed(2)},\nProfit/Loss Change %: ${parseFloat(portfolio.profit_loss_change_percentage).toFixed(2)}`;
 	}
 
-	getTrendingCoinsReport(response) {
+	reportTrendingCoins(response) {
 		let coins = JSON.parse(response.body).coins;
 		let report = `Trending coins name/id/symbol: \n`;
 		for (let i=0; i < coins.length; i++) {
@@ -81,6 +81,22 @@ class CoinGecko {
 			report += `Score: ${coins[i].item.score}\n`;
 		}
 		return report;
+	}
+
+	reportStatusUpdates(response) {
+		let updates = JSON.parse(response.body).status_updates;
+		let reportArray = [];
+		let report = '';
+		let currUpd;
+		for (let i=0; i < updates.length; i++) {
+			currUpd = updates[i];
+			if (Date.now() - new Date(currUpd.created_at).getTime() >= 24* 60 * 60 * 1000) continue;
+			report += `\nProject Type & Name: ${currUpd.project.type} ${currUpd.project.name}\n`;
+			report += `\n${currUpd.description}`;
+			reportArray.push(report);
+			report = '';
+		}
+		return reportArray;
 	}
 
 }

@@ -39,16 +39,13 @@ class DalgonViberBot {
 			"start|stop trading": permission to purchase potential profitable assets\n
 			"portfolio|holdings": holdings on CoinGecko\n
 			"ticker ASSET_SYMBOL": return ticker info on given asset symbol, e.g. BTC\n
-			"trending": return trending coins from CoinGecko\n`));
+			"trending": return trending coins from CoinGecko\n
+			"trade ASSET_SYMBOL": buy ASSET_SYMBOL with the existing auto-trading configuration\n`));
 		});
 
 		this.bot.on(BotEvents.SUBSCRIBED, response => {
 			response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${this.bot.name}. Feel free to ask me about crypto.`));
 		});
-		
-		// bot.on(BotEvents.MESSAGE_RECEIVED, (message, response) => {
-		// 	response.send(new TextMessage(`Message received.`));
-		// });
 
 		this.bot.onTextMessage(/^recommend(ed)? assets$/i, async (message, response) => {
 			let that = this;
@@ -80,8 +77,8 @@ class DalgonViberBot {
 		this.app.listen(port, () => {
 			this.l.i(`Application running on port: ${port}`);
 			this.bot.setWebhook(`${exposeUrl}/viber/webhook`).catch(error => {
-				this.l.err('Can not set webhook on following server. Is it running?');
-				this.l.err(JSON.stringify(error, null, 2));
+				this.l.err('Can not set webhook on following server. Is it running?', 0, true);
+				this.l.err(JSON.stringify(error, null, 2), 0, true);
 				process.exit(1);
 			});
 		});
