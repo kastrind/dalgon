@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd dalgon
+#cd dalgon
 rm ngrok.log
 nohup ngrok http 3000 --authtoken NGROK_TOKEN_HERE --log=stdout > ngrok.log &
 sleep 5
