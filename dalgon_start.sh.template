@@ -1,0 +1,10 @@
+#!/bin/bash
+
+cd dalgon
+rm ngrok.log
+nohup ngrok http 3000 --authtoken NGROK_TOKEN_HERE --log=stdout > ngrok.log &
+sleep 5
+exposeUrl=$(cat ngrok.log | grep -Eoh "https://.*?")
+#echo $exposeUrl
+sed -iE "s%EXPOSE_URL=.*$%EXPOSE_URL=$exposeUrl%g" env/default.properties
+nohup node dist/app.js -p PRIVATE_KRAKEN_API_KEY -b VIBERBOT_AUTH_TOKEN &

@@ -29,3 +29,4 @@ dist/
 
 assets/asset_report.txt
 env/default.properties
+dalgon_start.sh
