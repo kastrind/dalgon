@@ -70,10 +70,10 @@ class Order {
 			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
 			return false;
 		}
-		let balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]);
-		this.autoTradeReport += l.i(`Current ${buyWith} balance is ${balance}.`, 1) + '\n';
+		this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]);
+		this.autoTradeReport += l.i(`Current ${buyWith} balance is ${this.balance}.`, 1) + '\n';
 
-		if (balance < buyTotalMin) {
+		if (this.balance < buyTotalMin) {
 			this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: not enough balance.`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
 			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
@@ -107,11 +107,11 @@ class Order {
 			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
 			return false;
 		}
-		let buyPriceTotal = Math.max( buyTotalMin, balance * buyTotalBalPercent / 100 );
+		let buyPriceTotal = Math.max( buyTotalMin, this.balance * buyTotalBalPercent / 100 );
 
 		// Stay within budget
 		if (this.autoTradeTotalBought + buyPriceTotal >= buyBudget) {
-			buyPriceTotal = buyBudget - totalBought;
+			buyPriceTotal = buyBudget - this.autoTradeTotalBought;
 			this.autoTradeReport += l.w(`Reducing amount to buy to ${buyPriceTotal} ${buyWith} to prevent overspending the budget.`, 1, true) + '\n';
 		}
 
@@ -126,8 +126,9 @@ class Order {
 		profitPrice = profitPrice.toFixed(this.tradeableAssetPairDecimals);
 		this.autoTradeReport += l.i(`Conditional close to take ${profitPercent}% profit: ${profitPrice} ${buyWith} price per unit.`, 1) + '\n';
 
-		let orderResponse = addOrder(this.prepareOrderParamsObj(this.tradeAbleAssetPairId, { price: buyPriceUnit, volume: buyVolume, 'close[ordertype]': 'take-profit', 'close[price]': profitPrice } ), this.orderSimObj);
+		let orderResponse = await addOrder(this.prepareOrderParamsObj(this.tradeAbleAssetPairId, { price: buyPriceUnit, volume: buyVolume, 'close[ordertype]': 'take-profit', 'close[price]': profitPrice } ), this.orderSimObj);
 		let orderResponseBody = JSON.parse(orderResponse.body);
+
 		// Order failed
 		if (!isEmpty(orderResponseBody.error)) {
 			this.autoTradeReport += l.err(`Order failed with error: ${orderResponseBody.error}`, 1, true) + '\n';

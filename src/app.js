@@ -181,7 +181,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 
 	while(true) {
 
-		//try {
+		try {
 			
 			// Send message to the subscribers every 3 hours that the script is running
 			timestampSecondsF = Math.floor(Date.now() / 1000);
@@ -224,11 +224,11 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			l.i("Sleeping...");
 			await sleep(5 * 60000);
 
-		// }catch(e) {
-		// 	let exceptionMsg = l.err(`Exception caught: ${e}`, 0, true);
-		// 	if (viberBot) await viberBot.sendTextMessage(`${exceptionMsg}`);
-		// 	await sleep(3000);
-		// }
+		}catch(e) {
+			let exceptionMsg = l.err(`Exception caught: ${e}`, 0, true);
+			if (viberBot) await viberBot.sendTextMessage(`${exceptionMsg}`);
+			await sleep(3000);
+		}
 
 	}
 

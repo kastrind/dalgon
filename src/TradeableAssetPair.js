@@ -32,7 +32,7 @@ class TradeableAssetPair {
 		await tradeableAssetPairRequest(requestParamsObj, simObj).then(s => responseBody = JSON.parse(s.body));
 		if (!isEmpty(responseBody) && responseBody.result && Object.keys(responseBody.result).length > 0) {
 			let pairs = [];
-			for (let assetPair in response.result) {
+			for (let assetPair in responseBody.result) {
 				pairs.push(new TradeableAssetPair(assetPair, loggerObj, simulationMode, responseBody.result[assetPair]));
 			}
 			return pairs;
