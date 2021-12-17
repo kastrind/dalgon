@@ -10,11 +10,21 @@ class OHLC {
 		this.simulationMode = simulationMode;
 		this.OHLCJsonResponse = response;
 		this.ticks = [];
-		this.assetPairResponse = Object.keys(this.OHLCJsonResponse)[0];
+		this.assetPairResponse = !isEmpty(this.OHLCJsonResponse) ? Object.keys(this.OHLCJsonResponse)[0] : null;
 		var that = this;
-		this.OHLCJsonResponse[this.assetPairResponse].forEach( (el, i, arr)  => that.ticks.push(new Tick(
-			el[0], parseFloat(el[1]), parseFloat(el[2]), parseFloat(el[3]), parseFloat(el[4]), parseFloat(el[5]), parseFloat(el[6]), parseInt(el[7])
-		)));
+		if (!isEmpty(this.OHLCJsonResponse)) {
+			this.OHLCJsonResponse[this.assetPairResponse].forEach( (el, i, arr)  => that.ticks.push(new Tick(
+				el[0], parseFloat(el[1]), parseFloat(el[2]), parseFloat(el[3]), parseFloat(el[4]), parseFloat(el[5]), parseFloat(el[6]), parseInt(el[7])
+			)));
+		}
+	}
+
+	setTicks(ticks) {
+		this.ticks = ticks;
+	}
+
+	getTicks() {
+		return this.ticks;
 	}
 
 	getHighest() {
