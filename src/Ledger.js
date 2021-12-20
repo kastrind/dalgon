@@ -102,6 +102,30 @@ class Ledger {
 		return assetPurchaseInfo;
 	}
 
+	reportPurchaseInfo() {
+		let report = '';
+		let sumAmount;
+		let sumBaseFees;
+		let sumBaseDeposit;
+		let sumBaseFeesAllAssets = 0;
+		let sumBaseDepositAllAssets = 0;
+		for (let asset in this.assetPurchaseInfo) {
+			sumAmount = 0;
+			sumBaseFees = 0;
+			sumBaseDeposit = 0;
+			this.assetPurchaseInfo[asset].forEach(purchase => {
+				sumAmount += purchase.amount;
+				sumBaseFees += purchase.baseFees;
+				sumBaseDeposit += purchase.baseDeposit;
+			});
+			report += `${asset}: purchased total ${sumAmount} for ${sumBaseDeposit}${this.baseCurrency} and ${sumBaseFees}${this.baseCurrency} in fees.\n`;
+			sumBaseFeesAllAssets += sumBaseFees;
+			sumBaseDepositAllAssets += sumBaseDeposit;
+		}
+		report += `\nSpent total: ${sumBaseDepositAllAssets}${this.baseCurrency} and ${sumBaseFeesAllAssets}${this.baseCurrency} in fees.`;
+		return report;
+	}
+
 }
 
 export default Ledger;

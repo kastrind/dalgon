@@ -17,6 +17,14 @@ class Balance {
 		return null;
 	}
 
+	toString() {
+		let report = '';
+		for (let asset in this.balanceJsonResponse) {
+			report += `${asset}: ${this.balanceJsonResponse[asset]}\n`;
+		}
+		return report;
+	}
+
 }
 
 export default Balance;

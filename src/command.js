@@ -9,6 +9,7 @@ const optionDefinitions = [
 	{ name: 'privAPIKey', alias: 'p', type: String, typeLabel: '<key>', description: "The private API key" },
 	{ name: 'botAuthToken', alias: 'b', type: String, typeLabel: '<key>', description: "The Viber bot auth token" },
 	{ name: 'simulation', alias: 's', type: Boolean, description: "Simulation mode"},
+	{ name: 'budget', type: Number, description: "Set available budget to spend in auto-trading"},
 ];
 
 const options = commandLineArgs(optionDefinitions);

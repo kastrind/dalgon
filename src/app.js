@@ -76,6 +76,7 @@ var getStatusUpdates = coingecko.createPublicFunction('/status_updates', 'Reques
 
 // dalgon instance
 var dalgon = new Dalgon(APIKEY, PRIVATEAPIKEY, l, SIMULATION);
+var getAssetInfo = dalgon.createPublicFunction('/0/public/Assets', 'Request for Get Asset Info');
 var getTradeableAssetPairs = dalgon.createPublicFunction('/0/public/AssetPairs', 'Request for Get Tradeable Asset Pairs');
 var getTicker = dalgon.createPublicFunction('/0/public/Ticker', 'Request for Get Ticker');
 var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHLC Data');
@@ -90,6 +91,21 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 
 (async function () {
 
+	// let quarter = new Date();
+	// quarter.setHours(quarter.getHours() - 24*30*3);
+	// let assetPair = "QTUMEUR";
+	// let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), 720, l, SIMULATION));
+	// let changeQuarter = ohlcQuarter.getChange();
+
+	// let ohlcQuarterHalf = new OHLC(assetPair, l, {});
+	// ohlcQuarterHalf.setTicks(ohlcQuarter.ticks.slice(0, Math.ceil(ohlcQuarter.getTicks().length/2)));
+	// let changeQuarterHalf = ohlcQuarterHalf.getChange();
+	// l.i(`${ohlcQuarter.getTicks().length} ${changeQuarter} ${ohlcQuarterHalf.getTicks().length} ${changeQuarterHalf}`);
+	// l.i(`${ohlcQuarter.getTicks()[0].open} ${ohlcQuarter.getTicks()[539].open}`);
+	// l.i(`${ohlcQuarter.getTicks()[0].open} ${ohlcQuarter.getTicks()[269].open}`);
+	// l.i(`${JSON.stringify(ohlcQuarterHalf.getTicks()[0])} ${JSON.stringify(ohlcQuarterHalf.getTicks()[269])}`);
+	// return;
+
 	// clean asset report file
 	let reportFilePath = properties.get('main.ASSETREPORTFILE');
 	fs.writeFile(reportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
@@ -97,7 +113,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 	let buyWith = properties.get("main.BUY_WITH");
 	let buyExceptions = properties.get("main.BUY_EXCEPTIONS").split(' ');
 	let buyWhiteList = properties.get("main.BUY_WHITELIST");
-	let buyBudget = parseFloat(properties.get("main.BUY_BUDGET"));
+	let buyBudget = parseFloat(cmdOpts.budget) || parseFloat(properties.get("main.BUY_BUDGET"));
 	let buyTotalMin = parseFloat(properties.get("main.BUY_TOTAL_MIN"));
 	let buyTotalBalPercent = parseFloat(properties.get("main.BUY_TOTAL_BALANCE_PERCENT"));
 	let buyWithQuery = properties.get("main.BUY_WITH_QUERY");
@@ -119,6 +135,8 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 
 		viberBot = await new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
 
+		// Kraken features:
+
 		// Ticker
 		viberBot.getBot().onTextMessage(/^ticker\s+([A-Za-z]+?)$/i, async (message, response) => {
 			let asset = message.text.match(/^ticker\s+([A-Za-z]+?)$/i)[1].toUpperCase();
@@ -127,6 +145,78 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			else viberBot.sendTextMessage("Failed to get ticker information.");
 		});
 
+		// Balance
+		viberBot.getBot().onTextMessage(/^(my )?(kraken )?balance$/i, async (message, response) => {
+			let balance = await (Balance.request(getBalance, {}, l, SIMULATION));
+			if (balance) viberBot.sendTextMessage(balance.toString());
+			else viberBot.sendTextMessage("Failed to get balance.");
+		});
+
+		// Portfolio value
+		viberBot.getBot().onTextMessage(/^(my )?(kraken )?portfolio value$/i, async (message, response) => {
+			viberBot.sendTextMessage('Please wait.');
+			let balance = await (Balance.request(getBalance, {}, l, SIMULATION));
+			if (balance)  {
+				let assets = [];
+				for (let asset in balance.balanceJsonResponse) {
+					assets.push(asset);
+				}
+				let assetInfoResponseBody;
+				await getAssetInfo({searchParams: { asset: assets.join(',') } }).then(s => assetInfoResponseBody = JSON.parse(s.body));
+				if (!isEmpty(assetInfoResponseBody) && assetInfoResponseBody.result && Object.keys(assetInfoResponseBody.result).length > 0) {
+					let holdings = {};
+					for (let assetInfo in assetInfoResponseBody.result) {
+						let assetAltName = assetInfoResponseBody.result[assetInfo].altname || assetInfo;
+						let ticker = await (Ticker.request(getTicker, { searchParams: { pair: assetAltName+BASE_CURRENCY } }, l, SIMULATION));
+						if (ticker) {
+							holdings[assetAltName] = (ticker.askPrice * parseFloat(balance.balanceJsonResponse[assetInfo])).toFixed(2);
+							if (holdings[assetAltName] == '0.00') delete holdings[assetAltName];
+							else holdings[assetAltName] += BASE_CURRENCY;
+						}
+					}
+					let report = '';
+					Object.keys(holdings).reduce( (prev, curr, i) => { let elem = i==1 ? prev : curr; report += `${elem}: ${holdings[elem]}\n`; });
+					viberBot.sendTextMessage(report);
+				}
+			}
+			else viberBot.sendTextMessage("Failed to get portfolio value.");
+		});
+
+		// Open Orders
+		viberBot.getBot().onTextMessage(/^(my )?(open orders)$/i, async (message, response) => {
+			let openOrdersResponseBody = await (Order.request(getOpenOrders, {}));
+			if (openOrdersResponseBody && openOrdersResponseBody.result) {
+				viberBot.sendTextMessage(Order.reportOpenOrders(openOrdersResponseBody));
+			}else if (openOrdersResponseBody && openOrdersResponseBody.error) {
+				viberBot.sendTextMessage(`${openOrdersResponseBody.error}`);
+			}else viberBot.sendTextMessage("Failed to get open orders.");
+		});
+
+		// Purchases
+		viberBot.getBot().onTextMessage(/^(my )?(purchases)$/i, async (message, response) => {
+			let timeTolerance = properties.get("ledger.TIMETOLERANCE");
+			let ledger = await (Ledger.request(getLedgerInfo, {ofs: 0}, timeTolerance, BASE_CURRENCY, l, SIMULATION));
+			ledger.groupLedgerEntries();
+			ledger.getAssetPurchaseInfo();
+			if (ledger) viberBot.sendTextMessage(ledger.reportPurchaseInfo());
+			else viberBot.sendTextMessage("Failed to get purchase history.");
+		});
+
+		// Trade ASSET_SYMBOL BUY_TOTAL
+		viberBot.getBot().onTextMessage(/^trade ([A-Z]+)$/i, async (message, response) => {
+			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1].toUpperCase();
+			if (assetToInvestIn) {
+				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
+				order.setAutoTradeTotalBought(totalBought);
+				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyWith, buyWithQuery, buyExceptions, buyWhiteList, buyBudget, buyTotalMin)) {
+					await order.autoTrade(assetToInvestIn, getTicker, addOrder, buyWith, buyBudget, buyTotalBalPercent, buyTotalMin, profitPercent);
+					totalBought += order.getAutoTradeTotalBought();
+				}
+			}
+		});
+
+		// Coingecko Features:
+
 		// Portfolio
 		viberBot.getBot().onTextMessage(/^(my )?(portfolio|holdings)$/i, async (message, response) => {
 			await coingecko.getPortfolio(properties.get('coingecko.REMEMBER_USER_TOKEN'), properties.get('coingecko.PORTFOLIO_ID'), BASE_CURRENCY).then(cgportfolioResponse => {
@@ -134,8 +224,11 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 					viberBot.sendTextMessage(coingecko.reportPortfolio(cgportfolioResponse));
 				}else {
 					let suggestTokenExpired = cgportfolioResponse.statusCode==200 ? ' Perhaps user token cookie expired?' : '';
-					viberBot.sendTextMessage(`Request failed with status ${cgportfolioResponse.statusCode} and body\n${cgportfolioResponse.body}.${suggestTokenExpired}`);
+					viberBot.sendTextMessage(`Request failed with status ${cgportfolioResponse.statusCode} and body\n${cgportfolioResponse.body.substring(0, 100)}....\n${suggestTokenExpired}`);
 				}
+			}).catch(cgportfolioResponse => {
+				let suggestTokenExpired = cgportfolioResponse.statusCode==200 ? ' Perhaps user token cookie expired?' : '';
+				viberBot.sendTextMessage(`Request failed with status ${cgportfolioResponse.statusCode} and body\n${cgportfolioResponse.body}.${suggestTokenExpired}`);
 			});
 		});
 
@@ -159,19 +252,6 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 					}
 				}else { viberBot.sendTextMessage(`Request failed.`); }
 			});
-		});
-
-		// Trade ASSET_SYMBOL BUY_TOTAL
-		viberBot.getBot().onTextMessage(/^trade ([A-Z]+)$/i, async (message, response) => {
-			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1];
-			if (assetToInvestIn) {
-				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
-				order.setAutoTradeTotalBought(totalBought);
-				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyWith, buyWithQuery, buyExceptions, buyWhiteList, buyBudget, buyTotalMin)) {
-					await order.autoTrade(assetToInvestIn, getTicker, addOrder, buyWith, buyBudget, buyTotalBalPercent, buyTotalMin, profitPercent);
-					totalBought += order.getAutoTradeTotalBought();
-				}
-			}
 		});
 	}
 

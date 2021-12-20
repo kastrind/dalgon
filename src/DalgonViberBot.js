@@ -31,20 +31,26 @@ class DalgonViberBot {
 		}
 
 		this.bot.onTextMessage(/^hi|hello/i, async (message, response) => {
-			response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${this.bot.name}. Feel free to ask me about crypto.`));
+			response.send(new TextMessage(`You are ${response.userProfile.name}. I am ${this.bot.name}. You may ask me about crypto. Type help.`));
 		});
 
 		this.bot.onTextMessage(/^help/i, async (message, response) => {
 			response.send(new TextMessage(`"recommend assets": return potential profitable assets\n
 			"start|stop trading": permission to purchase potential profitable assets\n
-			"portfolio|holdings": holdings on CoinGecko\n
 			"ticker ASSET_SYMBOL": return ticker info on given asset symbol, e.g. BTC\n
+			"balance": current balance in Kraken exchange\n
+			"portfolio value": view current value for each asset balance, in base currency \n
+			"open orders": view current open orders\n
+			"purchases": view purchased asset amounts and costs\n
+			"trade ASSET_SYMBOL": buy ASSET_SYMBOL with the existing auto-trading configuration\n
+			"portfolio|holdings": holdings on CoinGecko\n
 			"trending": return trending coins from CoinGecko\n
-			"trade ASSET_SYMBOL": buy ASSET_SYMBOL with the existing auto-trading configuration\n`));
+			"updates|status updates|news": return news from CoinGecko\n`
+			));
 		});
 
 		this.bot.on(BotEvents.SUBSCRIBED, response => {
-			response.send(new TextMessage(`Hi there ${response.userProfile.name}. I am ${this.bot.name}. Feel free to ask me about crypto.`));
+			response.send(new TextMessage(`You are ${response.userProfile.name}. I am ${this.bot.name}. You may ask me about crypto. Type help.`));
 		});
 
 		this.bot.onTextMessage(/^recommend(ed)? assets$/i, async (message, response) => {
@@ -64,12 +70,12 @@ class DalgonViberBot {
 		});
 
 		this.bot.onTextMessage(/^start trading$/i, async (message, response) => {
-			response.send(new TextMessage(`Ok, I will start trading.`));
+			response.send(new TextMessage(`I will start trading.`));
 			this.canStartTrading = true;
 		});
 
 		this.bot.onTextMessage(/^stop trading$/i, async (message, response) => {
-			response.send(new TextMessage(`Ok, I will stop trading.`));
+			response.send(new TextMessage(`I will stop trading.`));
 			this.canStartTrading = false;
 		});
 

@@ -165,6 +165,23 @@ class Order {
 		return this.autoTradeTotalBought;
 	}
 
+	static async request(orderRequest, orderParamsObj, simObj={}) {
+		let responseBody = {};
+		await orderRequest(orderParamsObj, simObj).then(s => responseBody = JSON.parse(s.body));
+		if (!isEmpty(responseBody) && (responseBody.result && Object.keys(responseBody.result).length > 0 || responseBody.error)) {
+			return responseBody;
+		}
+		return null;
+	}
+
+	static reportOpenOrders(openOrdersResponseBody) {
+		let report = "";
+		for(let key in openOrdersResponseBody.result.open) {
+			report += (new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[key].opentm)*1000))).toISOString()) +': '+ openOrdersResponseBody.result.open[key].descr.order + '\n';
+		}
+		return report;
+	}
+
 }
 
 export default Order;
