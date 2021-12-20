@@ -31,7 +31,7 @@ class DalgonViberBot {
 		}
 
 		this.bot.onTextMessage(/^hi|hello/i, async (message, response) => {
-			response.send(new TextMessage(`You are ${response.userProfile.name}. I am ${this.bot.name}. You may ask me about crypto. Type help.`));
+			response.send(new TextMessage(`Greetings, ${response.userProfile.name}. I am ${this.bot.name}, an autonomous cryptocurrency trading agent. Type help to learn more.`));
 		});
 
 		this.bot.onTextMessage(/^help/i, async (message, response) => {
@@ -43,6 +43,8 @@ class DalgonViberBot {
 			"open orders": view current open orders\n
 			"purchases": view purchased asset amounts and costs\n
 			"trade ASSET_SYMBOL": buy ASSET_SYMBOL with the existing auto-trading configuration\n
+			"set budget ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL budget to the given amount\n
+			"[get] [auto-]trading config[uration]": get auto trading configuration\n
 			"portfolio|holdings": holdings on CoinGecko\n
 			"trending": return trending coins from CoinGecko\n
 			"updates|status updates|news": return news from CoinGecko\n`

@@ -110,15 +110,10 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 	let reportFilePath = properties.get('main.ASSETREPORTFILE');
 	fs.writeFile(reportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
 
-	let buyWith = properties.get("main.BUY_WITH");
+	let autoTradeCurrencies = JSON.parse(properties.get("main.AUTOTRADE_CURRENCIES"));
 	let buyExceptions = properties.get("main.BUY_EXCEPTIONS").split(' ');
 	let buyWhiteList = properties.get("main.BUY_WHITELIST");
-	let buyBudget = parseFloat(cmdOpts.budget) || parseFloat(properties.get("main.BUY_BUDGET"));
-	let buyTotalMin = parseFloat(properties.get("main.BUY_TOTAL_MIN"));
-	let buyTotalBalPercent = parseFloat(properties.get("main.BUY_TOTAL_BALANCE_PERCENT"));
-	let buyWithQuery = properties.get("main.BUY_WITH_QUERY");
-	let profitPercent = parseFloat(properties.get("main.PROFIT_PERCENT"));
-	let totalBought = 0;
+	let totalBought = {};
 
 	let viberBot;
 	// prepare viber bot
@@ -165,17 +160,20 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 				await getAssetInfo({searchParams: { asset: assets.join(',') } }).then(s => assetInfoResponseBody = JSON.parse(s.body));
 				if (!isEmpty(assetInfoResponseBody) && assetInfoResponseBody.result && Object.keys(assetInfoResponseBody.result).length > 0) {
 					let holdings = {};
+					let total = 0;
 					for (let assetInfo in assetInfoResponseBody.result) {
 						let assetAltName = assetInfoResponseBody.result[assetInfo].altname || assetInfo;
 						let ticker = await (Ticker.request(getTicker, { searchParams: { pair: assetAltName+BASE_CURRENCY } }, l, SIMULATION));
 						if (ticker) {
 							holdings[assetAltName] = (ticker.askPrice * parseFloat(balance.balanceJsonResponse[assetInfo])).toFixed(2);
+							total += parseFloat(holdings[assetAltName]);
 							if (holdings[assetAltName] == '0.00') delete holdings[assetAltName];
 							else holdings[assetAltName] += BASE_CURRENCY;
 						}
 					}
 					let report = '';
 					Object.keys(holdings).reduce( (prev, curr, i) => { let elem = i==1 ? prev : curr; report += `${elem}: ${holdings[elem]}\n`; });
+					report += `Total: ${total}${BASE_CURRENCY}`;
 					viberBot.sendTextMessage(report);
 				}
 			}
@@ -208,11 +206,29 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			if (assetToInvestIn) {
 				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
 				order.setAutoTradeTotalBought(totalBought);
-				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyWith, buyWithQuery, buyExceptions, buyWhiteList, buyBudget, buyTotalMin)) {
-					await order.autoTrade(assetToInvestIn, getTicker, addOrder, buyWith, buyBudget, buyTotalBalPercent, buyTotalMin, profitPercent);
-					totalBought += order.getAutoTradeTotalBought();
+				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
+					await order.autoTrade(assetToInvestIn, getTicker, addOrder);
+					totalBought = order.getAutoTradeTotalBought();
 				}
 			}
+		});
+
+		// Set Budget ASSET_SYMBOL AMOUNT
+		viberBot.getBot().onTextMessage(/^(set )?budget (\S)+( |=)(\S)+$/i, async (message, response) => {
+			let matches = message.text.match(/^(set )?budget (\S+)( |=)(\S+)$/i);
+			let assetName = matches[2].toUpperCase();
+			let budget = parseFloat(matches[4]);
+			if (!autoTradeCurrencies[assetName]) {
+				viberBot.sendTextMessage(`Failed to set budget: auto-trading currency ${assetName} not found.`);
+			}else {
+				autoTradeCurrencies[assetName].budget = budget;
+				viberBot.sendTextMessage(`${assetName} budget set to ${budget}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
+			}
+		});
+
+		// Get Auto-Trading Configuration
+		viberBot.getBot().onTextMessage(/^(get )?(auto)?( |-)?trading config(uration)?$/i, async (message, response) => {
+			viberBot.sendTextMessage(`${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
 		});
 
 		// Coingecko Features:
@@ -288,10 +304,10 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);
 					order.setAutoTradeTotalBought(totalBought);
 					// If prerequisites to auto-trade are met, submit the limit Order with conditional take-profit
-					if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyWith, buyWithQuery, buyExceptions, buyWhiteList, buyBudget, buyTotalMin)) {
-						let autoTradeResult = await order.autoTrade(assetToInvestIn, getTicker, addOrder, buyWith, buyBudget, buyTotalBalPercent, buyTotalMin, profitPercent);
+					if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
+						let autoTradeResult = await order.autoTrade(assetToInvestIn, getTicker, addOrder);
 						if (autoTradeResult) {
-							totalBought += order.getAutoTradeTotalBought();
+							totalBought = order.getAutoTradeTotalBought();
 						}else {
 							viberBot.canStartTrading = false;
 							await viberBot.sendTextMessage(`I stopped auto-trading. Awaiting instructions.`);

@@ -15,7 +15,7 @@ class Order {
 		this.tradeAbleAssetPairId = '';
 		this.tradeableAssetPairDecimals = -1;
 		this.autoTradeReport = "";
-		this.autoTradeTotalBought = 0;
+		this.autoTradeTotalBought = {};
 		this.balanceSimObj = {};
 		this.tickerSimObj = {};
 		this.tradeableAssetPairSimObj = {};
@@ -30,34 +30,28 @@ class Order {
 		this.orderSimObj = orderSimObj;
 	}
 
-	async autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyWith, buyWithQuery, buyExceptions, buyWhiteList, buyBudget, buyTotalMin) {
+	async autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies) {
 		let l = this.l;
+		this.autoTradeCurrencies = autoTradeCurrencies;
 		this.autoTradeReport += l.i(`BUY ${assetToInvestIn} ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - START`) + '\n';
 		let autoTradeReportEnd = `BUY ${assetToInvestIn} ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - END`;
 
 		// Only if allowed to trade
 		if (!this.viberBot.canStartTrading && !this.forceAllowTrade) {
-			this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: auto-trading not permitted.`, 1, true) + '\n';
+			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: auto-trading not permitted.`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
 			return false;
 		}
 		// Do not buy excepted asset
 		if (buyExceptions.includes(assetToInvestIn)) {
-			this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: asset excepted.`, 1, true) + '\n';
+			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: asset excepted.`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
 			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
 			return false;
 		}
 		// Buy only whitelisted currency, if defined
 		if (buyWhiteList && !buyWhiteList.split(' ').includes(assetToInvestIn)) {
-			this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: asset not in whitelist.`, 1, true) + '\n';
-			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
-			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
-			return false;
-		}
-		// Stay within budget
-		if (this.autoTradeTotalBought >= buyBudget) {
-			this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: spent budget of ${buyBudget} ${buyWith}.`, 1, true) + '\n';
+			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: asset not in whitelist.`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
 			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
 			return false;
@@ -65,53 +59,83 @@ class Order {
 		// Get balance of the currency to purchase with
 		let AccBalance = await Balance.request(getBalance, l, this.simulationMode, this.balanceSimObj);
 		if (isEmpty(AccBalance)) {
-			this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: failed to get Balance.`, 1, true) + '\n';
+			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: failed to get Balance.`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
 			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
 			return false;
 		}
-		this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]);
-		this.autoTradeReport += l.i(`Current ${buyWith} balance is ${this.balance}.`, 1) + '\n';
 
-		if (this.balance < buyTotalMin) {
-			this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: not enough balance.`, 1, true) + '\n';
-			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
-			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
-			return false;
+		for(let buyWith in autoTradeCurrencies) {
+			let autoTradeCurrency = autoTradeCurrencies[buyWith];
+			let queryAssetName = autoTradeCurrency.queryAssetName;
+			let minBuyAmount = autoTradeCurrency.minBuyAmount;
+			let budget = autoTradeCurrency.budget;
+
+			this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]) || 0;
+			this.autoTradeReport += l.i(`Attempt to order with ${buyWith}. Current ${buyWith} balance is ${this.balance}.`, 1) + '\n';
+
+			// Must have enough balance
+			if (this.balance < minBuyAmount) {
+				this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: not enough balance.`, 1, true) + '\n';
+				continue;
+			}
+
+			// Stay within budget
+			if (this.autoTradeTotalBought[buyWith] >= budget) {
+				this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: spent budget of ${budget} ${buyWith}.`, 1, true) + '\n';
+				continue;
+			}
+
+			// Find the asset pair id and decimals
+			let assetPairQuery = assetToInvestIn + queryAssetName;
+			let tradeableAssetPairs = await TradeableAssetPair.request(getTradeableAssetPairs, { searchParams: { pair: assetPairQuery } }, l, this.simulationMode, this.tradeableAssetPairSimObj);
+			if (!isEmpty(tradeableAssetPairs)) {
+				this.tradeAbleAssetPairId = tradeableAssetPairs[0].assetPair;
+				this.tradeableAssetPairDecimals = tradeableAssetPairs[0].pairDecimals;
+				this.autoTradeReport += l.i(`Asset pair id is ${this.tradeAbleAssetPairId} with ${this.tradeableAssetPairDecimals} decimals.`, 1) + '\n';
+				this.autoTradeCurrency = autoTradeCurrency;
+				return true;
+			}else {
+				this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: unsupported pair ${assetPairQuery}.`, 1, true) + '\n';
+				continue;
+			}
 		}
-		// Find the asset pair id and decimals
-		let assetPairQuery = assetToInvestIn + buyWithQuery;
-		let tradeableAssetPairs = await TradeableAssetPair.request(getTradeableAssetPairs, { searchParams: { pair: assetPairQuery } }, l, this.simulationMode, this.tradeableAssetPairSimObj);
-		if (!isEmpty(tradeableAssetPairs)) {
-			this.tradeAbleAssetPairId = tradeableAssetPairs[0].assetPair;
-			this.tradeableAssetPairDecimals = tradeableAssetPairs[0].pairDecimals;
-			this.autoTradeReport += l.i(`Asset pair id is ${this.tradeAbleAssetPairId} with ${this.tradeableAssetPairDecimals} decimals.`, 1) + '\n';
-			return true;
-		}else {
-			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: unsupported pair ${assetPairQuery}.`, 1, true) + '\n';
-			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
-			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
-			return false;
-		}
+		this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: no eligible currency found to trade with.`, 1, true) + '\n';
+		this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
+		await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
+		return false;
 	}
 
-	async autoTrade(assetToInvestIn, getTicker, addOrder, buyWith, buyBudget, buyTotalBalPercent, buyTotalMin, profitPercent) {
+	async autoTrade(assetToInvestIn, getTicker, addOrder) {
 		let l = this.l;
 		let autoTradeReportEnd = `BUY ${assetToInvestIn} ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - END`;
+
+		if (!this.autoTradeCurrency) {
+			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: no currency to trade with. Should call method autoTradePreConditions first, to meet preconditions. `, 1, true) + '\n';
+			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
+			return false;
+		}
 
 		// Determine amount to buy
 		let ticker = await (Ticker.request(getTicker, { searchParams: { pair: this.tradeAbleAssetPairId } }, l, this.simulationMode, this.tickerSimObj));
 		if (isEmpty(ticker)) {
-			this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: failed to get Ticker.`, 1, true) + '\n';
+			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: failed to get Ticker.`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
 			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
+			this.autoTradeCurrency = undefined;
 			return false;
 		}
-		let buyPriceTotal = Math.max( buyTotalMin, this.balance * buyTotalBalPercent / 100 );
+
+		let buyWith = this.autoTradeCurrency.name;
+		let minBuyAmount = this.autoTradeCurrency.minBuyAmount;
+		let buyBalancePercent = this.autoTradeCurrency.buyPercent;
+		let budget = this.autoTradeCurrency.budget;
+
+		let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
 
 		// Stay within budget
-		if (this.autoTradeTotalBought + buyPriceTotal >= buyBudget) {
-			buyPriceTotal = buyBudget - this.autoTradeTotalBought;
+		if (this.autoTradeTotalBought[buyWith] + buyPriceTotal > budget) {
+			buyPriceTotal = budget - this.autoTradeTotalBought[buyWith];
 			this.autoTradeReport += l.w(`Reducing amount to buy to ${buyPriceTotal} ${buyWith} to prevent overspending the budget.`, 1, true) + '\n';
 		}
 
@@ -120,6 +144,8 @@ class Order {
 		let buyVolume = buyPriceTotal / buyPriceUnit;
 		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
 		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
+
+		let profitPercent = this.autoTradeCurrency.profitPercent;
 
 		// Set the desired selling price for profit
 		let profitPrice = buyPriceUnit + profitPercent * buyPriceUnit / 100;
@@ -134,14 +160,16 @@ class Order {
 			this.autoTradeReport += l.err(`Order failed with error: ${orderResponseBody.error}`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
 			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
+			this.autoTradeCurrency = undefined;
 			return false;
 		}
 		// Order succeeded
 		else {
-			this.autoTradeTotalBought += buyPriceTotal;
+			this.autoTradeTotalBought[buyWith] += buyPriceTotal;
 			this.autoTradeReport += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 1, true) + '\n'; 
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
 			await this.viberBot.sendTextMessage(`I just bought ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
+			this.autoTradeCurrency = undefined;
 			return true;
 		}
 
