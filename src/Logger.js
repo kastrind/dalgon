@@ -74,7 +74,7 @@ class Logger {
 	
 	err(msg, indentation=0, forceVerbose=false) {
 		if (this.verbose || forceVerbose) {
-			console.error(`${'  '.repeat(indentation)}${this.bgRed}${this.fgWhite}(x) [ERROR] ${getDateTime()}   ${this.getLogMsg(msg, indentation, `${this.bgRed}${this.fgYellow}`)} ${this.reset}`);
+			console.error(`${'  '.repeat(indentation)}${this.bgRed}${this.fgWhite}(x) [ERROR] ${getDateTime()}   ${this.getLogMsg(msg, indentation, `${this.bgRed}${this.fgWhite}`)} ${this.reset}`);
 			return msg;
 		}else return "";
 	}

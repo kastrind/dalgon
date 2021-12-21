@@ -133,9 +133,11 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 		// Kraken features:
 
 		// Ticker
-		viberBot.getBot().onTextMessage(/^ticker\s+([A-Za-z]+?)$/i, async (message, response) => {
-			let asset = message.text.match(/^ticker\s+([A-Za-z]+?)$/i)[1].toUpperCase();
-			let ticker = await (Ticker.request(getTicker, { searchParams: { pair: asset+BASE_CURRENCY } }, l, SIMULATION));
+		viberBot.getBot().onTextMessage(/^ticker\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i, async (message, response) => {
+			let matches = message.text.match(/^ticker\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i);
+			let asset = matches[1].toUpperCase();
+			let baseCurrency = matches[3] ? matches[3].toUpperCase() : BASE_CURRENCY;
+			let ticker = await (Ticker.request(getTicker, { searchParams: { pair: asset + baseCurrency } }, l, SIMULATION));
 			if (ticker) viberBot.sendTextMessage(ticker.toString());
 			else viberBot.sendTextMessage("Failed to get ticker information.");
 		});
