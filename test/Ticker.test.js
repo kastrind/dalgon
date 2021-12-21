@@ -4,8 +4,6 @@ import Ticker from '../src/Ticker.js';
 import Logger from '../src/Logger.js';
 import { isEmpty } from '../src/utils.js';
 import assert from 'assert';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
 
 // constants
 var ENV = 'default';

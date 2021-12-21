@@ -31,7 +31,7 @@ var privateHeaderObj = {'Content-Type': 'application/x-www-form-urlencoded; char
 var getLedgerInfo = dalgon.createPrivateFunction('/0/private/Ledgers', privateHeaderObj, 'Request for Get Ledger Info');
 
 (async function () {
-	let timeTolerance = properties.get("ledger.TIMETOLERANCE");
+	let timeTolerance = properties.get("ledger.TIME_TOLERANCE");
 	let ledger;
 	describe('Ledger Test', () => {
 		it('should create Ledger instance', async () => {

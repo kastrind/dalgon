@@ -7,22 +7,12 @@ import CoinGecko from './CoinGecko.js';
 import Ledger from './Ledger.js';
 import Ticker from './Ticker.js';
 import Balance from './Balance.js';
-import TradeableAssetPair from './TradeableAssetPair.js';
-import OHLC from './OHLC.js';
-import OHLCRange from './OHLCRange.js';
+import AssetInfo from './AssetInfo.js';
 import DalgonViberBot from './DalgonViberBot.js';
 import Analysis from './Analysis.js';
 import Order from './Order.js';
 
-import { isEmpty, sleep, prcnt } from './utils.js';
-
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
-import { promisify } from 'util';
-import { timeStamp } from 'console';
-const got = require('got');
-const { CookieJar } = require('tough-cookie');
+import { isEmpty, sleep } from './utils.js';
 
 // command line params
 var cmdOpts = options;
@@ -49,30 +39,12 @@ var properties = new PropertiesReader(`env/${ENV}.properties`);
 // load config properties
 var APIKEY = properties.get("main.APIKEY");
 var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
+var TIMEZONE = properties.get("main.TIMEZONE");
 
 // coingecko instance
 var coingecko = new CoinGecko(l, SIMULATION);
-var getCoinGeckoOHLC = coingecko.createPublicFunction('/coins/{id}/ohlc', 'Request for CoinGecko OHLC');
-var getCoinGeckoCoinList = coingecko.createPublicFunction('/coins/list', 'Request for CoinGecko Coins List');
 var getTrendingCoinList = coingecko.createPublicFunction('/search/trending', 'Request for CoinGecko Trending Coins List');
 var getStatusUpdates = coingecko.createPublicFunction('/status_updates', 'Request for CoinGecko Status Updates');
-// (async function () {
-// 	//let coinGeckoOHLC = await getCoinGeckoOHLC({'{id}': 'bitcoin', searchParams: { vs_currency: 'eur', days: '1'}, headers: {accept: 'application/json'}}, {});
-// 	//l.i(""+coinGeckoOHLC.body);
-// 	let cgCoinListResponse = await getCoinGeckoCoinList({}, {searchParams: {}, headers: {accept: 'application/json'}});
-// 	let cgCoins = JSON.parse(cgCoinListResponse.body);
-// 	if (!isEmpty(cgCoins)) {
-// 		for (let i=0; i<cgCoins.length; i++) {
-// 			let coinId = cgCoins[i].id;
-// 			let coinSymbol = cgCoins[i].symbol;
-// 			let coinName = cgCoins[i].name;
-// 			let cgOHLCResponse = await getCoinGeckoOHLC({'{id}': coinId, searchParams: { vs_currency: 'eur', days: '1'}, headers: {accept: 'application/json'}}, {});
-// 			let cgOHLC = JSON.parse(cgOHLCResponse.body);
-// 			l.i(JSON.stringify(cgOHLC));
-// 			await sleep(1000);
-// 		}
-// 	}
-// })();
 
 // dalgon instance
 var dalgon = new Dalgon(APIKEY, PRIVATEAPIKEY, l, SIMULATION);
@@ -80,34 +52,19 @@ var getAssetInfo = dalgon.createPublicFunction('/0/public/Assets', 'Request for 
 var getTradeableAssetPairs = dalgon.createPublicFunction('/0/public/AssetPairs', 'Request for Get Tradeable Asset Pairs');
 var getTicker = dalgon.createPublicFunction('/0/public/Ticker', 'Request for Get Ticker');
 var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHLC Data');
+
 var privateHeaderObj = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'};
 var getLedgerInfo     = dalgon.createPrivateFunction('/0/private/Ledgers',        privateHeaderObj, 'Request for Get Ledger Info');
 var getBalance        = dalgon.createPrivateFunction('/0/private/Balance',        privateHeaderObj, 'Request for Get Balance');
-var getTradeBalance   = dalgon.createPrivateFunction('/0/private/TradeBalance',   privateHeaderObj, 'Request for Trade Balance');
 var getOpenOrders     = dalgon.createPrivateFunction('/0/private/OpenOrders',     privateHeaderObj, 'Request for Open Orders');
-var getDepositMethods = dalgon.createPrivateFunction('/0/private/DepositMethods', privateHeaderObj, 'Request for Deposit Methods');
+var queryOrders       = dalgon.createPrivateFunction('/0/private/QueryOrders',    privateHeaderObj, 'Request for Query Orders');
 var addOrder          = dalgon.createPrivateFunction('/0/private/AddOrder',       privateHeaderObj, 'Request for Adding an Order');
-var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',      privateHeaderObj, 'Request for Cancel All Orders');
+var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',    privateHeaderObj, 'Request for Cancel Order');
 
 (async function () {
 
-	// let quarter = new Date();
-	// quarter.setHours(quarter.getHours() - 24*30*3);
-	// let assetPair = "QTUMEUR";
-	// let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), 720, l, SIMULATION));
-	// let changeQuarter = ohlcQuarter.getChange();
-
-	// let ohlcQuarterHalf = new OHLC(assetPair, l, {});
-	// ohlcQuarterHalf.setTicks(ohlcQuarter.ticks.slice(0, Math.ceil(ohlcQuarter.getTicks().length/2)));
-	// let changeQuarterHalf = ohlcQuarterHalf.getChange();
-	// l.i(`${ohlcQuarter.getTicks().length} ${changeQuarter} ${ohlcQuarterHalf.getTicks().length} ${changeQuarterHalf}`);
-	// l.i(`${ohlcQuarter.getTicks()[0].open} ${ohlcQuarter.getTicks()[539].open}`);
-	// l.i(`${ohlcQuarter.getTicks()[0].open} ${ohlcQuarter.getTicks()[269].open}`);
-	// l.i(`${JSON.stringify(ohlcQuarterHalf.getTicks()[0])} ${JSON.stringify(ohlcQuarterHalf.getTicks()[269])}`);
-	// return;
-
 	// clean asset report file
-	let reportFilePath = properties.get('main.ASSETREPORTFILE');
+	let reportFilePath = properties.get('main.ASSET_EVAL_REPORT_FILE');
 	fs.writeFile(reportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
 
 	let autoTradeCurrencies = JSON.parse(properties.get("main.AUTOTRADE_CURRENCIES"));
@@ -149,6 +106,16 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 			else viberBot.sendTextMessage("Failed to get balance.");
 		});
 
+		// Purchases
+		viberBot.getBot().onTextMessage(/^(my )?(purchases)$/i, async (message, response) => {
+			let timeTolerance = properties.get("ledger.TIME_TOLERANCE");
+			let ledger = await (Ledger.request(getLedgerInfo, {ofs: 0}, timeTolerance, BASE_CURRENCY, l, SIMULATION));
+			ledger.groupLedgerEntries();
+			ledger.getAssetPurchaseInfo();
+			if (ledger) viberBot.sendTextMessage(ledger.reportPurchaseInfo());
+			else viberBot.sendTextMessage("Failed to get purchase history.");
+		});
+
 		// Portfolio value
 		viberBot.getBot().onTextMessage(/^(my )?(kraken )?portfolio value$/i, async (message, response) => {
 			viberBot.sendTextMessage('Please wait.');
@@ -159,15 +126,18 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 					assets.push(asset);
 				}
 				let assetInfoResponseBody;
-				await getAssetInfo({searchParams: { asset: assets.join(',') } }).then(s => assetInfoResponseBody = JSON.parse(s.body));
-				if (!isEmpty(assetInfoResponseBody) && assetInfoResponseBody.result && Object.keys(assetInfoResponseBody.result).length > 0) {
+				let assetInfos = await AssetInfo.request(getAssetInfo, {searchParams: { asset: assets.join(',') }}, l, SIMULATION);
+				//await getAssetInfo({searchParams: { asset: assets.join(',') } }).then(s => assetInfoResponseBody = JSON.parse(s.body));
+				if (!isEmpty(assetInfos)) {
+				//if (!isEmpty(assetInfoResponseBody) && assetInfoResponseBody.result && Object.keys(assetInfoResponseBody.result).length > 0) {
 					let holdings = {};
 					let total = 0;
-					for (let assetInfo in assetInfoResponseBody.result) {
-						let assetAltName = assetInfoResponseBody.result[assetInfo].altname || assetInfo;
+					for (let i=0; i < assetInfos.length; i++) {
+						let assetInfo = assetInfos[i];
+						let assetAltName = assetInfo.altName || assetInfo.assetName;
 						let ticker = await (Ticker.request(getTicker, { searchParams: { pair: assetAltName+BASE_CURRENCY } }, l, SIMULATION));
 						if (ticker) {
-							holdings[assetAltName] = (ticker.askPrice * parseFloat(balance.balanceJsonResponse[assetInfo])).toFixed(2);
+							holdings[assetAltName] = (ticker.askPrice * parseFloat(balance.balanceJsonResponse[assetInfo.assetName])).toFixed(2);
 							total += parseFloat(holdings[assetAltName]);
 							if (holdings[assetAltName] == '0.00') delete holdings[assetAltName];
 							else holdings[assetAltName] += BASE_CURRENCY;
@@ -177,29 +147,112 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 					Object.keys(holdings).reduce( (prev, curr, i) => { let elem = i==1 ? prev : curr; report += `${elem}: ${holdings[elem]}\n`; });
 					report += `Total: ${total}${BASE_CURRENCY}`;
 					viberBot.sendTextMessage(report);
-				}
-			}
-			else viberBot.sendTextMessage("Failed to get portfolio value.");
+				}else viberBot.sendTextMessage(`Failed to get portfolio value: could not get asset info.`);
+			}else viberBot.sendTextMessage("Failed to get portfolio value: could not get balance.");
 		});
 
 		// Open Orders
 		viberBot.getBot().onTextMessage(/^(my )?(open orders)$/i, async (message, response) => {
 			let openOrdersResponseBody = await (Order.request(getOpenOrders, {}));
 			if (openOrdersResponseBody && openOrdersResponseBody.result) {
-				viberBot.sendTextMessage(Order.reportOpenOrders(openOrdersResponseBody));
-			}else if (openOrdersResponseBody && openOrdersResponseBody.error) {
+				viberBot.sendTextMessage(Order.reportOpenOrders(openOrdersResponseBody, TIMEZONE));
+			}else if (openOrdersResponseBody && !isEmpty(openOrdersResponseBody.error)) {
 				viberBot.sendTextMessage(`${openOrdersResponseBody.error}`);
 			}else viberBot.sendTextMessage("Failed to get open orders.");
 		});
 
-		// Purchases
-		viberBot.getBot().onTextMessage(/^(my )?(purchases)$/i, async (message, response) => {
-			let timeTolerance = properties.get("ledger.TIMETOLERANCE");
-			let ledger = await (Ledger.request(getLedgerInfo, {ofs: 0}, timeTolerance, BASE_CURRENCY, l, SIMULATION));
-			ledger.groupLedgerEntries();
-			ledger.getAssetPurchaseInfo();
-			if (ledger) viberBot.sendTextMessage(ledger.reportPurchaseInfo());
-			else viberBot.sendTextMessage("Failed to get purchase history.");
+		// Cancel Order txid
+		viberBot.getBot().onTextMessage(/^cancel order (\S+)$/i, async (message, response) => {
+			let matches = message.text.match(/^cancel order (\S+)$/i);
+			let txid = matches[1];
+			let report = '';
+			let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid});
+			if (cancelOrderResponseBody && !isEmpty(cancelOrderResponseBody.error)) {
+				report = l.err(`Failed to cancel Order ${txid} with error: ${cancelOrderResponseBody.error.toString()}`, 0, true);
+			}else if (cancelOrderResponseBody && cancelOrderResponseBody.result.count) {
+				report = l.suc(`Order ${txid} canceled.`, 0, true);
+			}else {
+				report = l.err(`Failed to cancel Order ${txid}.`, 0, true);
+			}
+			viberBot.sendTextMessage(`${report}`);
+		});
+
+		// Change unit price of Order txid: get Order info, cancel it, create a new Order with changed unit price and submit it
+		viberBot.getBot().onTextMessage(/^change order (\S+) unit price (\S+)$/i, async (message, response) => {
+			let matches = message.text.match(/^change order (\S+) unit price (\S+)$/i);
+			let txid = matches[1];
+			let unitPrice = parseFloat(matches[2]);
+
+			viberBot.sendTextMessage(`Please wait.`);
+			let report = l.i(`CANCEL ORDER & ADD NEW WITH CHANGED UNIT PRICE - START`) + '\n';
+			let reportEnd = `CANCEL ORDER & ADD NEW WITH CHANGED UNIT PRICE - END`;
+
+			// Get Order information
+			let queryOrderResponseBody = await Order.request(queryOrders, {txid: txid});
+			await sleep(1000);
+			if (queryOrderResponseBody && !isEmpty(queryOrderResponseBody.error)) {
+				report += l.err(`Failed to query Order with error: ${queryOrderResponseBody.error.toString()}`, 1, true) + '\n';
+				report += l.i(`${reportEnd}`);
+				viberBot.sendTextMessage(`${report}`);
+				return;
+			}else if (queryOrderResponseBody && queryOrderResponseBody.result) {
+
+				// Create a new Order
+				txid = Object.keys(queryOrderResponseBody.result)[0];
+				let userref = queryOrderResponseBody.result[txid].userref;
+				let pair = queryOrderResponseBody.result[txid].descr.pair;
+				let type = queryOrderResponseBody.result[txid].descr.type;
+				let ordertype = queryOrderResponseBody.result[txid].descr.ordertype;
+				let price = unitPrice;
+				let price2 = queryOrderResponseBody.result[txid].descr.price;
+				let leverage = queryOrderResponseBody.result[txid].descr.leverage;
+				let volume = queryOrderResponseBody.result[txid].vol;
+				let oflags = queryOrderResponseBody.result[txid].oflags;
+
+				// Cancel old Order
+				let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid});
+				await sleep(1000);
+				if (cancelOrderResponseBody && !isEmpty(cancelOrderResponseBody.error)) {
+					report += l.err(`Failed to cancel old Order with error: ${cancelOrderResponseBody.error.toString()}`, 1, true) + '\n';
+					report += l.i(`${reportEnd}`);
+					viberBot.sendTextMessage(`${report}`);
+					return;
+				}else if (cancelOrderResponseBody && cancelOrderResponseBody.result.count) {
+					report += l.i(`Old Order canceled.`, 1) + '\n';
+				}else {
+					report += l.err(`Failed to cancel old Order.`, 1, true) + '\n';
+					report += l.i(`${reportEnd}`);
+					viberBot.sendTextMessage(`${report}`);
+					return;
+				}
+
+				await sleep(1000);
+
+				// Submit new Order
+				let newOrder = new Order(userref, ordertype, type, viberBot, l, SIMULATION);
+				let newOrderResponseBody = await Order.request(addOrder, newOrder.prepareOrderParamsObj(pair, { price: price, price2: price2, volume: volume, leverage: leverage, oflags: oflags, }));
+				await sleep(1000);
+				if (newOrderResponseBody && !isEmpty(newOrderResponseBody.error)) {
+					report += l.err(`Failed to submit new Order with error: ${newOrderResponseBody.error.toString()}`, 1, true) + '\n';
+					report += l.i(`${reportEnd}`);
+					viberBot.sendTextMessage(`${report}`);
+					return;
+				}else if (newOrderResponseBody && newOrderResponseBody.result.descr.order) {
+					report += l.suc(`Submitted new Order: ${newOrderResponseBody.result.descr.order}`, 1, true) + '\n';
+					report += l.i(`${reportEnd}`);
+					viberBot.sendTextMessage(`${report}`);
+				}else {
+					report += l.err(`Failed to submit new Order.`, 1, true) + '\n';
+					report += l.i(`${reportEnd}`);
+					viberBot.sendTextMessage(`${report}`);
+					return;
+				}
+
+			}else {
+				report += l.err(`Failed to query Order.`, 1, true) + '\n';
+				report += l.i(`${reportEnd}`);
+				viberBot.sendTextMessage(`${report}`);
+			}
 		});
 
 		// Trade ASSET_SYMBOL BUY_TOTAL
@@ -274,7 +327,7 @@ var cancelAllOrders   = dalgon.createPrivateFunction('/0/private/CancelAll',    
 	}
 
 	let timestampSecondsI=0, timestampSecondsF;
-	let maxNumOHLCResults = properties.get("ohlc.MAXNUMRESULTS");
+	let maxNumOHLCResults = properties.get("ohlc.MAX_NUM_RESULTS");
 	let assets = properties.get("ohlc.ASSETS").split(' ');
 
 	while(true) {

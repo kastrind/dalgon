@@ -37,11 +37,13 @@ class DalgonViberBot {
 		this.bot.onTextMessage(/^help/i, async (message, response) => {
 			response.send(new TextMessage(`"recommend assets": return potential profitable assets\n
 			"start|stop trading": permission to purchase potential profitable assets\n
-			"ticker ASSET_SYMBOL": return ticker info on given asset symbol, e.g. BTC\n
+			"ticker ASSET_SYMBOL [base ASSET_SYMBOL]": return ticker info on given asset symbol, e.g. BTC. Optionally set different base currency, e.g. XBT for Bitcoin\n
 			"balance": current balance in Kraken exchange\n
-			"portfolio value": view current value for each asset balance, in base currency \n
-			"open orders": view current open orders\n
 			"purchases": view purchased asset amounts and costs\n
+			"portfolio value": view current value for each asset balance, in base currency\n
+			"open orders": view current open orders\n
+			"change order TXID unit price PRICE": cancel and submit new order with changed unit price\n
+			"cancel order TXID": cancel order\n
 			"trade ASSET_SYMBOL": buy ASSET_SYMBOL with the existing auto-trading configuration\n
 			"set budget ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL budget to the given amount\n
 			"[get] [auto-]trading config[uration]": get auto trading configuration\n

@@ -29,7 +29,7 @@ var dalgon = new Dalgon(APIKEY, PRIVATEAPIKEY, l, SIMULATION);
 var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHLC Data');
 
 (async function () {
-	let maxNumResults = properties.get("ohlc.MAXNUMRESULTS");
+	let maxNumResults = properties.get("ohlc.MAX_NUM_RESULTS");
 	let ohlc;
 	let d = new Date();
 	d.setHours(d.getHours() - 24);
@@ -55,7 +55,7 @@ var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHL
 			let getOHLCSim = dalgonSim.createPublicFunction('/0/public/OHLC', 'Request for Get OHLC Data');
 			let ohlcSim = await (OHLC.request(getOHLCSim, "MANAEUR", d.toISOString(), maxNumResults, l, simulation, { body: JSON.stringify(ohlcSimResponseJson) } ));
 			//console.log(ohlcSim);
-			assert.equal(ohlcSim.getChange(), -0.06129);
+			assert.equal(ohlcSim.getChange(), -0.06129232999078365);
 			assert.equal(ohlcSim.getHighest().high, 3.87468);
 			assert.equal(ohlcSim.getHighestClose().close, 3.8619);
 			assert.equal(ohlcSim.getLowest().low, 3.41753);

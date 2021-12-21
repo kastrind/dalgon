@@ -25,6 +25,8 @@ class TradeableAssetPair {
 		this.marginCall = response.margin_call;
 		this.marginStop = response.margin_stop;
 		this.orderMin = response.ordermin;
+
+		this.response = response;
 	}
 
 	static async request(tradeableAssetPairRequest, requestParamsObj, loggerObj, simulationMode=false, simObj={}) {

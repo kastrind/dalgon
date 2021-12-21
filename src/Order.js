@@ -1,7 +1,7 @@
 import Ticker from './Ticker.js';
 import Balance from './Balance.js';
 import TradeableAssetPair from './TradeableAssetPair.js';
-import { isEmpty } from './utils.js';
+import { isEmpty, sleep } from './utils.js';
 
 class Order {
 
@@ -97,6 +97,7 @@ class Order {
 				return true;
 			}else {
 				this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: unsupported pair ${assetPairQuery}.`, 1, true) + '\n';
+				await sleep(1000);
 				continue;
 			}
 		}
@@ -118,6 +119,7 @@ class Order {
 
 		// Determine amount to buy
 		let ticker = await (Ticker.request(getTicker, { searchParams: { pair: this.tradeAbleAssetPairId } }, l, this.simulationMode, this.tickerSimObj));
+		await sleep(1000);
 		if (isEmpty(ticker)) {
 			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: failed to get Ticker.`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
@@ -153,6 +155,7 @@ class Order {
 		this.autoTradeReport += l.i(`Conditional close to take ${profitPercent}% profit: ${profitPrice} ${buyWith} price per unit.`, 1) + '\n';
 
 		let orderResponse = await addOrder(this.prepareOrderParamsObj(this.tradeAbleAssetPairId, { price: buyPriceUnit, volume: buyVolume, 'close[ordertype]': 'take-profit', 'close[price]': profitPrice } ), this.orderSimObj);
+		await sleep(1000);
 		let orderResponseBody = JSON.parse(orderResponse.body);
 
 		// Order failed
@@ -196,16 +199,19 @@ class Order {
 	static async request(orderRequest, orderParamsObj, simObj={}) {
 		let responseBody = {};
 		await orderRequest(orderParamsObj, simObj).then(s => responseBody = JSON.parse(s.body));
-		if (!isEmpty(responseBody) && (responseBody.result && Object.keys(responseBody.result).length > 0 || responseBody.error)) {
+		if (!isEmpty(responseBody) && ((responseBody.result && Object.keys(responseBody.result).length > 0) || responseBody.error)) {
 			return responseBody;
 		}
 		return null;
 	}
 
-	static reportOpenOrders(openOrdersResponseBody) {
+	static reportOpenOrders(openOrdersResponseBody, timeZone) {
 		let report = "";
-		for(let key in openOrdersResponseBody.result.open) {
-			report += (new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[key].opentm)*1000))).toISOString()) +': '+ openOrdersResponseBody.result.open[key].descr.order + '\n';
+		var options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+		for(let txid in openOrdersResponseBody.result.open) {
+			let date = new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[txid].opentm)*1000))).toLocaleString("en-US", options);
+			let description = openOrdersResponseBody.result.open[txid].descr.order;
+			report += `${date}\ntxid: ${txid}\n${description} \n\n`;
 		}
 		return report;
 	}
