@@ -145,7 +145,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					}
 					let report = '';
 					Object.keys(holdings).reduce( (prev, curr, i) => { let elem = i==1 ? prev : curr; report += `${elem}: ${holdings[elem]}\n`; });
-					report += `Total: ${total}${BASE_CURRENCY}`;
+					report += `Total: ${total.toFixed(2)}${BASE_CURRENCY}`;
 					viberBot.sendTextMessage(report);
 				}else viberBot.sendTextMessage(`Failed to get portfolio value: could not get asset info.`);
 			}else viberBot.sendTextMessage("Failed to get portfolio value: could not get balance.");
