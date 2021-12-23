@@ -208,10 +208,14 @@ class Order {
 	static reportOpenOrders(openOrdersResponseBody, timeZone) {
 		let report = "";
 		var options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-		for(let txid in openOrdersResponseBody.result.open) {
-			let date = new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[txid].opentm)*1000))).toLocaleString("en-US", options);
-			let description = openOrdersResponseBody.result.open[txid].descr.order;
-			report += `${date}\ntxid: ${txid}\n${description} \n\n`;
+		if (isEmpty(openOrdersResponseBody.result.open)) {
+			report = "There are no open orders.\n"; }
+		else {
+			for(let txid in openOrdersResponseBody.result.open) {
+				let date = new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[txid].opentm)*1000))).toLocaleString("en-US", options);
+				let description = openOrdersResponseBody.result.open[txid].descr.order;
+				report += `${date}\ntxid: ${txid}\n${description} \n\n`;
+			}
 		}
 		return report;
 	}
