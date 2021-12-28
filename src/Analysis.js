@@ -83,6 +83,7 @@ class Analysis {
 
 			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
 			let changeMonth = ohlcMonth.getChange();
+			let candleStickScore = ohlcMonth.getCandleStickScore();
 
 			let ohlcMonthHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcMonthHalf.setTicks(ohlcMonth.ticks.slice(0, Math.ceil(ohlcMonth.getTicks().length/2)));
@@ -124,34 +125,45 @@ class Analysis {
 			let currAssetReport = "";
 			let currAssetResult = {};
 			if (
-				(
+					(
+						(change3h <= -0.1 || change6h <= -0.1 || change12h <= -0.1 || changeDay24h <= -0.1 || changeWeekHalf <= -0.1 || changeWeek <= -0.1)
+						&& candleStickScore >= 0.005
+						&& changeQuarter > 0
+					) ||
+					(
+						(
+						(changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0)
+						||
 
-				(changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0)
-				||
+						(change3h < 0.02 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek > 0)
+						||
 
-				(change3h < 0.02 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek > 0)
-				||
+						(change6h < 0.02 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf > 0)
+						||
 
-				(change6h < 0.02 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf > 0)
-				||
+						(change12h < 0.02 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth > 0)
+						||
 
-				(change12h < 0.02 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth > 0)
-				||
+						(changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf > 0)
+						||
 
-				(changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf > 0)
-				||
-
-				(changeWeekHalf < 0.05 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf < 0 && changeQuarter > 0)
-
+						(changeWeekHalf < 0.05 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf < 0 && changeQuarter > 0)
+						)
+						&&
+						(priceOverHighestWeek > 0.2 || priceOverHighestMonth > 0.3)
+					)
 				)
-				&&
-				(priceOverHighestWeek > 0.2 || priceOverHighestMonth > 0.3)
-				)
-				{
+			{
 				isCandidate = true;
-				currAssetResult = {name: asset, score: 0, report: "", changePastHour: changePastHour, changeDay24h: changeDay24h, changeWeek: changeWeek, changeMonth: changeMonth, changeQuarter: changeQuarter, priceOverHighestWeek: priceOverHighestWeek, priceOverHighestMonth: priceOverHighestMonth};
+				currAssetResult = {name: asset, score: 0, candleStickScore: candleStickScore, report: "", changePastHour: changePastHour, changeDay24h: changeDay24h, changeWeek: changeWeek, changeMonth: changeMonth, changeQuarter: changeQuarter, priceOverHighestWeek: priceOverHighestWeek, priceOverHighestMonth: priceOverHighestMonth};
 
-				if (changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0) {
+				if ((change3h <= -0.1 || change6h <= -0.1 || change12h <= -0.1 || changeDay24h <= -0.1 || changeWeekHalf <= -0.1 || changeWeek <= -0.1)
+					&& candleStickScore >= 0
+					&& changeQuarter > 0) {
+					currAssetReport = this.l.i(`${asset}: ${prcnt(changeDay24h)}%24h with candlestick score ${candleStickScore}`, 1) + '\n';
+					currAssetResult.score = 0.5 * Math.abs(Math.min(change3h, change6h, change12h, changeDay24h, changeWeekHalf, changeWeek)) + 0.5 * candleStickScore * 100;
+
+				}else if (changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0) {
 					currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh`, 1) + '\n';
 					currAssetResult.score = 0.30 * Math.abs(changePastHour) + 0.25 * Math.abs(change3h) + 0.20 * Math.abs(change6h) + 0.15 * Math.abs(change12h) + 0.05 * Math.abs(changeDay24h) + 0.05 * Math.abs(changeWeekHalf);
 
@@ -175,7 +187,8 @@ class Analysis {
 					currAssetReport = this.l.i(`${asset}: ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 1) + '\n';
 					currAssetResult.score = 0.30 * Math.abs(changeWeekHalf) + 0.25 * Math.abs(changeWeek) + 0.20 * Math.abs(changeMonthHalf) + 0.15 * Math.abs(changeMonth) + 0.05 * Math.abs(changeQuarterHalf) + 0.05 * Math.abs(changeQuarter);
 				}
-				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 1) + '\n\n';
+				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 1) + '\n';
+				currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 1) + '\n';
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = "";

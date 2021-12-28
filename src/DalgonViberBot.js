@@ -107,6 +107,26 @@ class DalgonViberBot {
 		}
 	}
 
+	async sendBigTextMessage(message) {
+		let chunkSize=1000;
+		let i = 0;
+		for (i=0; i < message.length; i+=chunkSize) {
+			this.sendTextMessage(`${message.slice(i, i+chunkSize)}`);
+			await sleep(2000);
+		}
+	}
+
+	sendRecommendedAssets(reportFilePath) {
+		let that = this;
+		fs.readFile(reportFilePath, async function(err, data) {
+			if (!data.length) {
+				that.sendTextMessage(`No results yet.`);
+			}else {
+				that.sendBigTextMessage(data);
+			}
+		});
+	}
+
 }
 
 export default DalgonViberBot;

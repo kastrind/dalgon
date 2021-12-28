@@ -14,6 +14,9 @@ import Order from './Order.js';
 
 import { isEmpty, sleep } from './utils.js';
 
+import OHLC from './OHLC.js';
+import OHLCRange from './OHLCRange.js';
+
 // command line params
 var cmdOpts = options;
 
@@ -62,6 +65,22 @@ var addOrder          = dalgon.createPrivateFunction('/0/private/AddOrder',     
 var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',    privateHeaderObj, 'Request for Cancel Order');
 
 (async function () {
+
+	// let day24h = new Date("2021-12-10T14:00:00.000Z");
+	// day24h.setHours(day24h.getHours() - 24);
+	// l.i(day24h.toLocaleString());
+	// let ohlcDay24h = await (OHLC.request(getOHLC, "SANDEUR", day24h.toISOString(), 720, l, SIMULATION));
+	// ohlcDay24h.ticks.slice(0, 5).forEach(elem => {
+	// 	l.i(JSON.stringify(elem, null, 2));
+	// 	l.w(`time is ${new Date(elem.time*1000).toISOString()}`, 1, true);
+	// 	l.w(`is Green: ${elem.isGreen()}`, 1, true);
+	// 	l.w(`is Red: ${elem.isRed()}`, 1, true);
+	// 	l.w(`is Candle: ${elem.isCandle()}`, 1, true);
+	// 	l.w(`is Hammer: ${elem.isHammer()}`, 1, true);
+	// 	l.w(`is InvHam: ${elem.isInvertedHammer()}`, 1, true);
+	// });
+	// l.w(`score: ${ohlcDay24h.getCandleStickScore().toFixed(3)}`, 0, true);
+	// return;
 
 	// clean asset report file
 	let reportFilePath = properties.get('main.ASSET_EVAL_REPORT_FILE');
@@ -329,6 +348,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let timestampSecondsI=0, timestampSecondsF;
 	let maxNumOHLCResults = properties.get("ohlc.MAX_NUM_RESULTS");
 	let assets = properties.get("ohlc.ASSETS").split(' ');
+	let prevRecommendedAssets;
 
 	while(true) {
 
@@ -345,15 +365,26 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let analysis = new Analysis(assets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION);
 			let recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
+			// If first time sending recommended assets, or assets different than previous
+			// and more than 3 and candlestick score more than 0.01
+			// send recommended assets
+			if ((isEmpty(prevRecommendedAssets) || (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(','))) &&
+				!isEmpty(recommendedAssets.filter(asset => asset.candleStickScore > 0))) {
+				await viberBot.sendRecommendedAssets(reportFilePath);
+				prevRecommendedAssets = recommendedAssets.map(asset => asset);
+			}
+
 			// If allowed to auto-trade
 			if (viberBot && viberBot.canStartTrading) {
-				//let assetResultsReversed = [{name: "ANT"}, {name: "MATIC"}];
 				let assetResultsReversed = recommendedAssets.reverse();
 				let assetToInvestIn;
 				// Attempt to auto-trade each recommended asset, starting from the best recommendation
 				for (let i=0; i<assetResultsReversed.length; i++) {
 
 					assetToInvestIn = assetResultsReversed[i].name;
+
+					// Asset should hit bottom and about to trend upwards
+					if (assetResultsReversed.candleStickScore < 0) continue;
 
 					// Create a new Order
 					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);

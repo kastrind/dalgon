@@ -28,31 +28,35 @@ class OHLC {
 	}
 
 	getHighest() {
-		return this.ticks.reduce((prev, curr) => { if ( curr.high > prev.high ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.high > prev.high ) return curr; else return prev; });
 	}
 
 	getHighestClose() {
-		return this.ticks.reduce((prev, curr) => { if ( curr.close > prev.close ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.close > prev.close ) return curr; else return prev; });
 	}
 
 	getLowest() {
-		return this.ticks.reduce((prev, curr) => { if ( curr.low < prev.low ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.low < prev.low ) return curr; else return prev; });
 	}
 
 	getLowestClose() {
-		return this.ticks.reduce((prev, curr) => { if ( curr.close < prev.close ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.close < prev.close ) return curr; else return prev; });
 	}
 
 	getMinVol() {
-		return this.ticks.reduce((prev, curr) => { if ( curr.vol < prev.vol ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.vol < prev.vol ) return curr; else return prev; });
 	}
 
 	getMaxVol() {
-		return this.ticks.reduce((prev, curr) => { if ( curr.vol > prev.vol ) return curr; else return prev;});
+		return this.ticks.reduce((prev, curr) => { if ( curr.vol > prev.vol ) return curr; else return prev; });
 	}
 
 	getChange() {
 		return ( ( this.ticks[this.ticks.length - 1].open - this.ticks[0].open ) / this.ticks[0].open );
+	}
+
+	getAverage() {
+		return this.ticks.reduce((prev, curr) => { return prev + curr; }) / this.ticks.length;
 	}
 
 	static async request(OHLCRequest, paramAsset, paramSince, maxNumResults, loggerObj, simulationMode=false, simObj={}) {
@@ -66,6 +70,48 @@ class OHLC {
 			return new OHLC(OHLCRequestParamsObj.searchParams.pair, loggerObj, simulationMode, responseBody.result);
 		}
 		return null;
+	}
+
+	getCandleStickScore() {
+		let scores = [0.1, 0.1, 0.15, 0.25, 0.4];
+		let score = 0;
+		let last5Ticks = this.ticks.slice(-5);
+		this.l.d(`Last 5 ticks:\n${JSON.stringify(last5Ticks, null, 2)}`, 1);
+		let sumVol = 0;
+		last5Ticks.forEach(tick => sumVol+=tick.vol);
+		for (let i=0; i<last5Ticks.length; i++) {
+			let tick = last5Ticks[i];
+			let candleBody = Math.abs(tick.close - tick.open);
+			if (tick.isGreen() && tick.isCandle()) {
+				score += scores[i] * (candleBody / tick.close) * tick.vol / sumVol;
+				this.l.d(`Tick ${i} is a green candle with candleBody ${candleBody}.`, 2);
+
+			}else if (tick.isRed() && tick.isCandle()) {
+				score -= scores[i] * (candleBody / tick.close) * tick.vol / sumVol;
+				this.l.d(`Tick ${i} is a red candle with candleBody ${candleBody}.`, 2);
+
+			}else if (tick.isGreen() && tick.isHammer()) {
+				let handleBody = tick.open - tick.low;
+				score += scores[i] * (handleBody / tick.close) * tick.vol / sumVol;
+				this.l.d(`Tick ${i} is a green hammer with handleBody ${handleBody}.`, 2);
+
+			}else if (tick.isRed() && tick.isHammer()) {
+				let handleBody = tick.close - tick.low;
+				score -= scores[i] * (handleBody / tick.close) * tick.vol / sumVol;
+				this.l.d(`Tick ${i} is a red hammer with handleBody ${handleBody}.`, 2);
+			}else if (tick.isInvertedHammer()) {
+				let handleBody = 0;
+				if (tick.isRed()) {
+					handleBody = tick.high - tick.open;
+				}else {
+					handleBody = tick.high - tick.close;
+				}
+				score += (scores[i] * (handleBody / tick.close) * tick.vol / sumVol) / 2;
+				this.l.d(`Tick ${i} is an inverted hammer with handleBody ${handleBody}.`, 2);
+			}
+			this.l.d(`Score is ${score}.`, 2);
+		}
+		return score;
 	}
 
 }
