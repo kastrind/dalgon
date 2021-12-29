@@ -96,7 +96,7 @@ class Order {
 				this.autoTradeCurrency = autoTradeCurrency;
 				return true;
 			}else {
-				this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: unsupported pair ${assetPairQuery}.`, 1, true) + '\n';
+				this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: unsupported pair ${assetToInvestIn}${autoTradeCurrency.name}.`, 1, true) + '\n';
 				await sleep(1000);
 				continue;
 			}
