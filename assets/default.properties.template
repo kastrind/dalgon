@@ -3,7 +3,7 @@ APIKEY=
 BASE_CURRENCY=EUR
 TIMEZONE=Europe/Athens
 ASSET_EVAL_REPORT_FILE=assets/asset_report.txt
-AUTOTRADE_CURRENCIES={"XETH": {"name": "XETH", "queryAssetName": "ETH", "minBuyAmount": 0, "buyPercent": 0, "budget": 0, "profitPercent": 1}, "XXBT": {"name": "XXBT", "queryAssetName": "BTC", "minBuyAmount": 0, "buyPercent": 0, "budget": 0, "profitPercent": 1}}
+AUTOTRADE_CURRENCIES={"XETH": {"name": "XETH", "queryAssetName": "ETH", "minBuyAmount": 0.01, "buyPercent": 20, "budget": 0, "profitPercent": 1}, "XXBT": {"name": "XXBT", "queryAssetName": "BTC", "minBuyAmount": 0.001, "buyPercent": 20, "budget": 0, "profitPercent": 1}}
 BUY_EXCEPTIONS=USDT USDC TBTC WBTC PAXG
 BUY_WHITELIST=
 

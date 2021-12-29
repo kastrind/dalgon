@@ -162,7 +162,7 @@ class Analysis {
 					&& changeQuarter > 0) {
 						let changes = {'3h': change3h, '6h': change6h, '12h': change12h, '24h': changeDay24h, 'Wh': changeWeekHalf, 'W': changeWeek};
 						let sortedChangesKeys = Object.keys(changes).sort( (a, b) => changes[a] - changes[b]);
-					currAssetReport = this.l.i(`${asset}: ${prcnt( changes[sortedChangesKeys[0]] )}%${sortedChangesKeys[0]} with candlestick score ${candleStickScore}`, 1) + '\n';
+					currAssetReport = this.l.i(`${asset}: ${prcnt( changes[sortedChangesKeys[0]] )}%${sortedChangesKeys[0]} with candlestick score ${candleStickScore.toFixed(3)}`, 1) + '\n';
 					currAssetResult.score = 0.5 * Math.abs(changes[sortedChangesKeys[0]]) + 0.5 * candleStickScore * 100;
 
 				}else if (changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0) {
