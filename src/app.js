@@ -276,6 +276,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 		// Trade ASSET_SYMBOL BUY_TOTAL
 		viberBot.getBot().onTextMessage(/^trade ([A-Z]+)$/i, async (message, response) => {
+			viberBot.sendTextMessage(`Please wait.`);
 			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1].toUpperCase();
 			if (assetToInvestIn) {
 				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
@@ -288,7 +289,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		});
 
 		// Set Budget ASSET_SYMBOL AMOUNT
-		viberBot.getBot().onTextMessage(/^(set )?budget (\S)+( |=)(\S)+$/i, async (message, response) => {
+		viberBot.getBot().onTextMessage(/^(set )?budget (\S+)( |=)(\S+)$/i, async (message, response) => {
 			let matches = message.text.match(/^(set )?budget (\S+)( |=)(\S+)$/i);
 			let assetName = matches[2].toUpperCase();
 			let budget = parseFloat(matches[4]);
@@ -297,6 +298,45 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			}else {
 				autoTradeCurrencies[assetName].budget = budget;
 				viberBot.sendTextMessage(`${assetName} budget set to ${budget}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
+			}
+		});
+
+		// Set Minimum Trading Amount ASSET_SYMBOL AMOUNT
+		viberBot.getBot().onTextMessage(/^(set )?trading min (\S+)( |=)(\S+)$/i, async (message, response) => {
+			let matches = message.text.match(/^(set )?trading min (\S+)( |=)(\S+)$/i);
+			let assetName = matches[2].toUpperCase();
+			let minBuyAmount = parseFloat(matches[4]);
+			if (!autoTradeCurrencies[assetName]) {
+				viberBot.sendTextMessage(`Failed to set minimum trading amount: auto-trading currency ${assetName} not found.`);
+			}else {
+				autoTradeCurrencies[assetName].minBuyAmount = minBuyAmount;
+				viberBot.sendTextMessage(`${assetName} minimum buying amount set to ${minBuyAmount}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
+			}
+		});
+
+		// Set Trading Percentage ASSET_SYMBOL AMOUNT
+		viberBot.getBot().onTextMessage(/^(set )?trading percent (\S+)( |=)(\S+)$/i, async (message, response) => {
+			let matches = message.text.match(/^(set )?trading percent (\S+)( |=)(\S+)$/i);
+			let assetName = matches[2].toUpperCase();
+			let buyPercent = parseFloat(matches[4]);
+			if (!autoTradeCurrencies[assetName]) {
+				viberBot.sendTextMessage(`Failed to set trading percent: auto-trading currency ${assetName} not found.`);
+			}else {
+				autoTradeCurrencies[assetName].buyPercent = buyPercent;
+				viberBot.sendTextMessage(`${assetName} trading percent set to ${buyPercent}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
+			}
+		});
+
+		// Set Profit Percentage ASSET_SYMBOL AMOUNT
+		viberBot.getBot().onTextMessage(/^(set )?profit percent (\S+)( |=)(\S+)$/i, async (message, response) => {
+			let matches = message.text.match(/^(set )?profit percent (\S+)( |=)(\S+)$/i);
+			let assetName = matches[2].toUpperCase();
+			let profitPercent = parseFloat(matches[4]);
+			if (!autoTradeCurrencies[assetName]) {
+				viberBot.sendTextMessage(`Failed to set profit percent: auto-trading currency ${assetName} not found.`);
+			}else {
+				autoTradeCurrencies[assetName].profitPercent = profitPercent;
+				viberBot.sendTextMessage(`${assetName} profit percent set to ${profitPercent}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
 			}
 		});
 
