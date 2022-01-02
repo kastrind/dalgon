@@ -58,7 +58,7 @@ class Analysis {
 			let change6h = ohlc6h.getChange();
 
 			let ohlc3h = new OHLC(assetPair, this.l, this.simulationMode, null);
-			ohlc3h.setTicks(ohlc6h.ticks.slice(0, Math.ceil(ohlc6h.getTicks().length/2)));
+			ohlc3h.setTicks(ohlc6h.getTicks().slice(Math.ceil(ohlc6h.getTicks().length/2), ohlc6h.getTicks().length));
 			let change3h = ohlc3h.getChange();
 
 			await sleep(1000);
@@ -67,7 +67,7 @@ class Analysis {
 			let changeDay24h = ohlcDay24h.getChange();
 
 			let ohlc12h = new OHLC(assetPair, this.l, this.simulationMode);
-			ohlc12h.setTicks(ohlcDay24h.ticks.slice(0, Math.ceil(ohlcDay24h.getTicks().length/2)));
+			ohlc12h.setTicks(ohlcDay24h.getTicks().slice(Math.ceil(ohlcDay24h.getTicks().length/2), ohlcDay24h.getTicks().length));
 			let change12h = ohlc12h.getChange();
 
 			await sleep(1000);
@@ -76,7 +76,7 @@ class Analysis {
 			let changeWeek = ohlcWeek.getChange();
 
 			let ohlcWeekHalf = new OHLC(assetPair, this.l, this.simulationMode);
-			ohlcWeekHalf.setTicks(ohlcWeek.ticks.slice(0, Math.ceil(ohlcWeek.getTicks().length/2)));
+			ohlcWeekHalf.setTicks(ohlcWeek.getTicks().slice(Math.ceil(ohlcWeek.getTicks().length/2), ohlcWeek.getTicks().length));
 			let changeWeekHalf = ohlcWeekHalf.getChange();
 
 			await sleep(1000);
@@ -86,7 +86,7 @@ class Analysis {
 			let candleStickScore = ohlcMonth.getCandleStickScore();
 
 			let ohlcMonthHalf = new OHLC(assetPair, this.l, this.simulationMode);
-			ohlcMonthHalf.setTicks(ohlcMonth.ticks.slice(0, Math.ceil(ohlcMonth.getTicks().length/2)));
+			ohlcMonthHalf.setTicks(ohlcMonth.getTicks().slice(Math.ceil(ohlcMonth.getTicks().length/2), ohlcMonth.getTicks().length));
 			let changeMonthHalf = ohlcMonthHalf.getChange();
 
 			await sleep(1000);
@@ -95,7 +95,7 @@ class Analysis {
 			let changeQuarter = ohlcQuarter.getChange();
 
 			let ohlcQuarterHalf = new OHLC(assetPair, this.l, this.simulationMode);
-			ohlcQuarterHalf.setTicks(ohlcQuarter.ticks.slice(0, Math.ceil(ohlcQuarter.getTicks().length/2)));
+			ohlcQuarterHalf.setTicks(ohlcQuarter.getTicks().slice(Math.ceil(ohlcQuarter.getTicks().length/2), ohlcQuarter.getTicks().length));
 			let changeQuarterHalf = ohlcQuarterHalf.getChange();
 
 			await sleep(1000);

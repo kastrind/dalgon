@@ -66,22 +66,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 (async function () {
 
-	// let day24h = new Date("2021-12-10T14:00:00.000Z");
-	// day24h.setHours(day24h.getHours() - 24);
-	// l.i(day24h.toLocaleString());
-	// let ohlcDay24h = await (OHLC.request(getOHLC, "SANDEUR", day24h.toISOString(), 720, l, SIMULATION));
-	// ohlcDay24h.ticks.slice(0, 5).forEach(elem => {
-	// 	l.i(JSON.stringify(elem, null, 2));
-	// 	l.w(`time is ${new Date(elem.time*1000).toISOString()}`, 1, true);
-	// 	l.w(`is Green: ${elem.isGreen()}`, 1, true);
-	// 	l.w(`is Red: ${elem.isRed()}`, 1, true);
-	// 	l.w(`is Candle: ${elem.isCandle()}`, 1, true);
-	// 	l.w(`is Hammer: ${elem.isHammer()}`, 1, true);
-	// 	l.w(`is InvHam: ${elem.isInvertedHammer()}`, 1, true);
-	// });
-	// l.w(`score: ${ohlcDay24h.getCandleStickScore().toFixed(3)}`, 0, true);
-	// return;
-
 	// clean asset report file
 	let reportFilePath = properties.get('main.ASSET_EVAL_REPORT_FILE');
 	fs.writeFile(reportFilePath, '', function (err) { if (err) l.err(err, 0, true); });

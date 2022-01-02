@@ -52,7 +52,7 @@ class OHLC {
 	}
 
 	getChange() {
-		return ( ( this.ticks[this.ticks.length - 1].open - this.ticks[0].open ) / this.ticks[0].open );
+		return ( ( this.ticks[this.ticks.length - 1].close - this.ticks[0].close ) / this.ticks[0].close );
 	}
 
 	getAverage() {
