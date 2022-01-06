@@ -13,6 +13,8 @@ class DalgonViberBot {
 	constructor(loggerObj, reportFilePath, exposeUrl, port, botName, avatarUrl, authToken, recipientProfiles) {
 		this.l = loggerObj;
 		this.app = express();
+		this.history = [];
+		this.historyIndex = 0;
 
 		this.bot = new ViberBot({
 			authToken: authToken,
@@ -30,8 +32,9 @@ class DalgonViberBot {
 			});
 		}
 
-		this.bot.onTextMessage(/^hi|hello/i, async (message, response) => {
+		this.bot.onTextMessage(/^(hi|hello)(\s|$)/i, async (message, response) => {
 			response.send(new TextMessage(`Greetings, ${response.userProfile.name}. I am ${this.bot.name}, an autonomous cryptocurrency trading agent. Type help to learn more.`));
+			this.recordHistory(message);
 		});
 
 		this.bot.onTextMessage(/^help/i, async (message, response) => {
@@ -50,10 +53,12 @@ class DalgonViberBot {
 			"set trading percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL trading percent to the given percent\n
 			"set profit percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL profit to the given percent\n
 			"[get] [auto-]trading config[uration]": get auto trading configuration\n
+			"history": get recent messages history\n
 			"portfolio|holdings": holdings on CoinGecko\n
 			"trending": return trending coins from CoinGecko\n
 			"updates|status updates|news": return news from CoinGecko\n`
 			));
+			this.recordHistory(message);
 		});
 
 		this.bot.on(BotEvents.SUBSCRIBED, response => {
@@ -74,16 +79,19 @@ class DalgonViberBot {
 					}
 				}
 			});
+			this.recordHistory(message);
 		});
 
 		this.bot.onTextMessage(/^start trading$/i, async (message, response) => {
 			response.send(new TextMessage(`I will start trading.`));
 			this.canStartTrading = true;
+			this.recordHistory(message);
 		});
 
 		this.bot.onTextMessage(/^stop trading$/i, async (message, response) => {
 			response.send(new TextMessage(`I will stop trading.`));
 			this.canStartTrading = false;
+			this.recordHistory(message);
 		});
 
 		this.app.use("/viber/webhook", this.bot.middleware());
@@ -116,6 +124,24 @@ class DalgonViberBot {
 		for (i=0; i < message.length; i+=chunkSize) {
 			this.sendTextMessage(`${message.slice(i, i+chunkSize)}`);
 			await sleep(2000);
+		}
+	}
+
+	recordHistory(message) {
+		if (!isEmpty(this.history) && this.history.length >= 20) {
+			this.historyIndex = 0;
+		}
+		if (!this.history.includes(message.text)) this.history[this.historyIndex++] = message.text;
+	}
+
+	async sendHistory() {
+		if (isEmpty(this.history)) {
+			this.sendTextMessage(`No history.`);
+		}else {
+			for (let i=0; i < this.history.length; i++) {
+				this.sendTextMessage(`${this.history[i]}`);
+				await sleep(1000);
+			}
 		}
 	}
 

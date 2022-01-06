@@ -100,6 +100,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let ticker = await (Ticker.request(getTicker, { searchParams: { pair: asset + baseCurrency } }, l, SIMULATION));
 			if (ticker) viberBot.sendTextMessage(ticker.toString());
 			else viberBot.sendTextMessage("Failed to get ticker information.");
+			viberBot.recordHistory(message);
 		});
 
 		// Balance
@@ -107,6 +108,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let balance = await (Balance.request(getBalance, {}, l, SIMULATION));
 			if (balance) viberBot.sendTextMessage(balance.toString());
 			else viberBot.sendTextMessage("Failed to get balance.");
+			viberBot.recordHistory(message);
 		});
 
 		// Purchases
@@ -117,6 +119,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			ledger.getAssetPurchaseInfo();
 			if (ledger) viberBot.sendTextMessage(ledger.reportPurchaseInfo());
 			else viberBot.sendTextMessage("Failed to get purchase history.");
+			viberBot.recordHistory(message);
 		});
 
 		// Portfolio value
@@ -128,11 +131,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				for (let asset in balance.balanceJsonResponse) {
 					assets.push(asset);
 				}
-				let assetInfoResponseBody;
 				let assetInfos = await AssetInfo.request(getAssetInfo, {searchParams: { asset: assets.join(',') }}, l, SIMULATION);
-				//await getAssetInfo({searchParams: { asset: assets.join(',') } }).then(s => assetInfoResponseBody = JSON.parse(s.body));
 				if (!isEmpty(assetInfos)) {
-				//if (!isEmpty(assetInfoResponseBody) && assetInfoResponseBody.result && Object.keys(assetInfoResponseBody.result).length > 0) {
 					let holdings = {};
 					let total = 0;
 					for (let i=0; i < assetInfos.length; i++) {
@@ -152,6 +152,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					viberBot.sendTextMessage(report);
 				}else viberBot.sendTextMessage(`Failed to get portfolio value: could not get asset info.`);
 			}else viberBot.sendTextMessage("Failed to get portfolio value: could not get balance.");
+			viberBot.recordHistory(message);
 		});
 
 		// Open Orders
@@ -162,6 +163,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			}else if (openOrdersResponseBody && !isEmpty(openOrdersResponseBody.error)) {
 				viberBot.sendTextMessage(`${openOrdersResponseBody.error}`);
 			}else viberBot.sendTextMessage("Failed to get open orders.");
+			viberBot.recordHistory(message);
 		});
 
 		// Cancel Order txid
@@ -178,6 +180,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				report = l.err(`Failed to cancel Order ${txid}.`, 0, true);
 			}
 			viberBot.sendTextMessage(`${report}`);
+			viberBot.recordHistory(message);
 		});
 
 		// Change unit price of Order txid: get Order info, cancel it, create a new Order with changed unit price and submit it
@@ -256,6 +259,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				report += l.i(`${reportEnd}`);
 				viberBot.sendTextMessage(`${report}`);
 			}
+			viberBot.recordHistory(message);
 		});
 
 		// Trade ASSET_SYMBOL BUY_TOTAL
@@ -270,6 +274,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					totalBought = order.getAutoTradeTotalBought();
 				}
 			}
+			viberBot.recordHistory(message);
 		});
 
 		// Set Budget ASSET_SYMBOL AMOUNT
@@ -283,6 +288,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				autoTradeCurrencies[assetName].budget = budget;
 				viberBot.sendTextMessage(`${assetName} budget set to ${budget}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
 			}
+			viberBot.recordHistory(message);
 		});
 
 		// Set Minimum Trading Amount ASSET_SYMBOL AMOUNT
@@ -296,6 +302,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				autoTradeCurrencies[assetName].minBuyAmount = minBuyAmount;
 				viberBot.sendTextMessage(`${assetName} minimum buying amount set to ${minBuyAmount}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
 			}
+			viberBot.recordHistory(message);
 		});
 
 		// Set Trading Percentage ASSET_SYMBOL AMOUNT
@@ -309,6 +316,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				autoTradeCurrencies[assetName].buyPercent = buyPercent;
 				viberBot.sendTextMessage(`${assetName} trading percent set to ${buyPercent}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
 			}
+			viberBot.recordHistory(message);
 		});
 
 		// Set Profit Percentage ASSET_SYMBOL AMOUNT
@@ -322,11 +330,18 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				autoTradeCurrencies[assetName].profitPercent = profitPercent;
 				viberBot.sendTextMessage(`${assetName} profit percent set to ${profitPercent}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
 			}
+			viberBot.recordHistory(message);
 		});
 
 		// Get Auto-Trading Configuration
 		viberBot.getBot().onTextMessage(/^(get )?(auto)?( |-)?trading config(uration)?$/i, async (message, response) => {
 			viberBot.sendTextMessage(`${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
+			viberBot.recordHistory(message);
+		});
+
+		// Get History
+		viberBot.getBot().onTextMessage(/^history$/i, async (message, response) => {
+			viberBot.sendHistory();
 		});
 
 		// Coingecko Features:
@@ -344,6 +359,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				let suggestTokenExpired = cgportfolioResponse.statusCode==200 ? ' Perhaps user token cookie expired?' : '';
 				viberBot.sendTextMessage(`Request failed with status ${cgportfolioResponse.statusCode} and body\n${cgportfolioResponse.body}.${suggestTokenExpired}`);
 			});
+			viberBot.recordHistory(message);
 		});
 
 		// Trending
@@ -353,6 +369,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					viberBot.sendTextMessage(coingecko.reportTrendingCoins(cgResponse));
 				}else { viberBot.sendTextMessage(`Request failed.`); }
 			});
+			viberBot.recordHistory(message);
 		});
 
 		// Status updates
@@ -366,6 +383,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					}
 				}else { viberBot.sendTextMessage(`Request failed.`); }
 			});
+			viberBot.recordHistory(message);
 		});
 	}
 
@@ -382,7 +400,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			timestampSecondsF = Math.floor(Date.now() / 1000);
 			if (viberBot && timestampSecondsF - timestampSecondsI >= 3 * 60 * 60) {
 				let canStartTradingMsg = viberBot.canStartTrading ? " I am permitted to auto-trade." : " I am not permitted to auto-trade.";
-				await viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
+				viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
 			// Analyse assets to recommend for trading
@@ -390,12 +408,12 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
 			// If first time sending recommended assets, or assets different than previous
-			// and more than 3 and candlestick score more than 0.01
-			// send recommended assets
+			// and candlestick score > 0, then send recommended assets
 			if ((isEmpty(prevRecommendedAssets) || (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(','))) &&
 				!isEmpty(recommendedAssets.filter(asset => asset.candleStickScore > 0))) {
-				await viberBot.sendRecommendedAssets(reportFilePath);
+				viberBot.sendRecommendedAssets(reportFilePath);
 				prevRecommendedAssets = recommendedAssets.map(asset => asset);
+				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
 
 			// If allowed to auto-trade
@@ -420,7 +438,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 							totalBought = order.getAutoTradeTotalBought();
 						}else {
 							viberBot.canStartTrading = false;
-							await viberBot.sendTextMessage(`I stopped auto-trading. Awaiting instructions.`);
+							viberBot.sendTextMessage(`I stopped auto-trading. Awaiting instructions.`);
 							break;
 						}
 					}
@@ -432,7 +450,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 		}catch(e) {
 			let exceptionMsg = l.err(`Exception caught: ${e}`, 0, true);
-			if (viberBot) await viberBot.sendTextMessage(`${exceptionMsg}`);
+			if (viberBot) viberBot.sendTextMessage(`${exceptionMsg}`);
 			await sleep(3000);
 		}
 
