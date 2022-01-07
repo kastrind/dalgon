@@ -137,7 +137,7 @@ class DalgonViberBot {
 		if (isEmpty(this.history)) {
 			this.sendTextMessage(`No history.`);
 		}else {
-			for (let i = this.history.length - 1; i <= 0; i--) {
+			for (let i = this.history.length - 1; i >= 0; i--) {
 				this.sendTextMessage(`${this.history[i]}`);
 				await sleep(1000);
 			}
