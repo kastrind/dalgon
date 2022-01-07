@@ -71,7 +71,7 @@ class DalgonViberBot {
 				if (!data.length) {
 					response.send(new TextMessage(`No results yet.`)).catch(err => { that.l.err(JSON.stringify(err, null, 2)); });
 				}else {
-					let chunkSize=1000;
+					let chunkSize=768;
 					let i = 0;
 					for (i=0; i < data.length; i+=chunkSize) {
 						await response.send(new TextMessage(`${data.slice(i, i+chunkSize)}`)).catch(err => { that.l.err(JSON.stringify(err, null, 2)); });
@@ -119,11 +119,10 @@ class DalgonViberBot {
 	}
 
 	async sendBigTextMessage(message) {
-		let chunkSize=1000;
-		let i = 0;
-		for (i=0; i < message.length; i+=chunkSize) {
+		let chunkSize = 768;
+		for (let i = 0; i < message.length; i += chunkSize) {
 			this.sendTextMessage(`${message.slice(i, i+chunkSize)}`);
-			await sleep(2000);
+			await sleep(3000);
 		}
 	}
 
@@ -138,7 +137,7 @@ class DalgonViberBot {
 		if (isEmpty(this.history)) {
 			this.sendTextMessage(`No history.`);
 		}else {
-			for (let i=0; i < this.history.length; i++) {
+			for (let i = this.history.length - 1; i <= 0; i--) {
 				this.sendTextMessage(`${this.history[i]}`);
 				await sleep(1000);
 			}
