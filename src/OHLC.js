@@ -61,28 +61,18 @@ class OHLC {
 
 	getEMA(numPeriods, smoothing, offset=0, property='close') {
 		return this.ticks.getEMA(numPeriods, smoothing, offset, property);
-		// if (isEmpty(smoothing)) smoothing = 2 / (numPeriods + 1);
-		// if (isEmpty(input)) input = this.ticks;
-		// return this.ticks.slice(this.ticks.length - numPeriods - offset, this.ticks.length - offset).reduce((prev, curr, i) => {
-		// 	wSum += Math.pow(1 - smoothing, i);
-		// 	if (i===1) prev = prev.close;
-		// 	return parseFloat(prev) + Math.pow(1 - smoothing, i)*curr.close; }) / wSum;
 	}
 
 	getMACD(a, b, c, smoothing, offset=0, property='close') {
+		this.l.d(`Computing MACD(${a}, ${b}, ${c}) until present period with offset ${offset} and smoothing ${smoothing} on property ${property}:`, 1);
 		let macdSeries = [];
 		for (let i=0; i<c; i++) {
 			macdSeries.push(this.getEMA(a, smoothing, i + offset, property) - this.getEMA(b, smoothing, i + offset, property));
 		}
-		this.l.i(`macdSeries: ${macdSeries}`);
+		this.l.d(`MACD series: ${macdSeries}`, 2);
 		let signal = macdSeries.getEMA(c, smoothing, 0, null);
-		this.l.i(`signal: ${signal}`);
-		return macdSeries[0] - signal;
-	}
-
-	getMACDSignal() {
-		let signal = macdSeries.getEMA(c, smoothing, 0, null);
-		
+		this.l.d(`MACD signal: ${signal}`, 2);
+		this.l.d(`MACD result: ${macdSeries[0] - signal}`, 2);
 		return macdSeries[0] - signal;
 	}
 

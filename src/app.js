@@ -65,34 +65,13 @@ var addOrder          = dalgon.createPrivateFunction('/0/private/AddOrder',     
 var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',    privateHeaderObj, 'Request for Cancel Order');
 
 (async function () {
-	var tempTicks = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-	l.i(tempTicks.getEMA(16, null, 0, null));
-	let month = new Date();
-	month.setHours(month.getHours() - 24*30);
-	let ohlcMonth = await (OHLC.request(getOHLC, "BTCEUR", month.toISOString(), 720, l, SIMULATION));
-	let changeMonth = ohlcMonth.getChange();
-	let candleStickScore = ohlcMonth.getCandleStickScore();
-	//l.i(`${changeMonth} ${candleStickScore}`);
-	l.i(`minVol: ${ohlcMonth.getMinVol()}`);
-	l.i(`maxVol: ${ohlcMonth.getMaxVol()}`);
-	l.i(`avg: ${ohlcMonth.getAverage()}`);
-	
-	// ohlcMonth.setTicks([{'close': 1},{'close': 2}, {'close': 3}, {'close': 2}, {'close': 4}]);
-	// l.i(`ema2: ${ohlcMonth.getEMA(2, null, 0, 'close')}`);
-	// l.i(`ema3: ${ohlcMonth.getEMA(3, null, 0, 'close')}`);
-	// l.i(`macd-signal: ${ohlcMonth.getMACD(2, 3, 2, null, 0, 'close')}`);
-	// l.i(`macd-signal-1: ${ohlcMonth.getMACD(2, 3, 2, null, 1, 'close')}`);
+	// let month = new Date();
+	// month.setHours(month.getHours() - 24*30);
+	// let ohlcMonth = await (OHLC.request(getOHLC, "BTCEUR", month.toISOString(), 720, l, SIMULATION));
+	// ohlcMonth.setTicks([{'close': 100},{'close': 99},{'close': 95},{'close': 90},{'close': 80},{'close': 65},{'close': 50},{'close':49}, {'close': 48}, {'close': 47}, {'close': 48}]);
+	// l.i(`macd-signal: ${ohlcMonth.getMACD(5, 8, 3, null, 0, 'close')}`);
+	// l.i(`macd-signal-1: ${ohlcMonth.getMACD(5, 8, 3, null, 1, 'close')}`);
 	// return;
-
-	// l.i(`ema12: ${ohlcMonth.getEMA(12, null, 0, 'close')}`);
-	// l.i(`ema26: ${ohlcMonth.getEMA(26, null, 0, 'close')}`);
-	// let macd = ohlcMonth.getEMA(12, null, 0, 'close') - ohlcMonth.getEMA(26, null, 0, 'close');
-	// l.i(`macd: ${macd}`);
-	l.i(`macd-signal: ${ohlcMonth.getMACD(12, 26, 9, null, 0, 'close')}`);
-	l.i(`macd-signal-1: ${ohlcMonth.getMACD(12, 26, 9, null, 1, 'close')}`);
-	l.i(`macd-signal-2: ${ohlcMonth.getMACD(12, 26, 9, null, 2, 'close')}`);
-	return;
-
 
 	// clean asset report file
 	let reportFilePath = properties.get('main.ASSET_EVAL_REPORT_FILE');

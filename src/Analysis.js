@@ -84,6 +84,8 @@ class Analysis {
 			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
 			let changeMonth = ohlcMonth.getChange();
 			let candleStickScore = ohlcMonth.getCandleStickScore();
+			let macdCurrent = ohlcMonth.getMACD(12, 26, 9, null, 0, 'close');
+			let macdPrevious = ohlcMonth.getMACD(12, 26, 9, null, 1, 'close');
 
 			let ohlcMonthHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcMonthHalf.setTicks(ohlcMonth.getTicks().slice(Math.ceil(ohlcMonth.getTicks().length/2), ohlcMonth.getTicks().length));
@@ -163,7 +165,7 @@ class Analysis {
 						let changes = {'3h': change3h, '6h': change6h, '12h': change12h, '24h': changeDay24h, 'Wh': changeWeekHalf, 'W': changeWeek};
 						let sortedChangesKeys = Object.keys(changes).sort( (a, b) => changes[a] - changes[b]);
 					currAssetReport = this.l.i(`${asset}: ${prcnt( changes[sortedChangesKeys[0]] )}%${sortedChangesKeys[0]} ${prcnt(changeQuarter)}%Q with candlestick score ${candleStickScore.toFixed(3)}`, 1) + '\n';
-					currAssetResult.score = 0.3 * Math.abs(changes[sortedChangesKeys[0]]) + candleStickScore;
+					currAssetResult.score = 0.5 * Math.abs(changes[sortedChangesKeys[0]]) + candleStickScore;
 
 				}else if (changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeQuarter > 0) {
 					currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeQuarter)}%Q`, 1) + '\n';
@@ -191,6 +193,7 @@ class Analysis {
 				}
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 1) + '\n';
+				currAssetReport += this.l.i(`${asset} MACD-now: ${macdCurrent.toFixed(3)}, MACD-prev: ${macdPrevious.toFixed(3)}`, 1) + '\n\n';
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = "";
