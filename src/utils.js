@@ -23,4 +23,24 @@ function getDateTime() {
 	return `${('0'+date.getDate()).slice(-2)}/${('0'+(date.getMonth()+1)).slice(-2)}/${date.getFullYear()} ${('0'+date.getHours()).slice(-2)}:${('0'+date.getMinutes()).slice(-2)}:${('0'+date.getSeconds()).slice(-2)}`;
 }
 
+Array.prototype.getEMA = function(numPeriods, smoothing, offset=0, property='close') {
+	var tempTicks = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+	var that = this;
+	let wSum = 1;
+	// return tempTicks.slice(-numPeriods).reduce((prev, curr, i) => {
+	// 	that.l.i("index: "+i + " curr: "+ curr);
+	// 	wSum += Math.pow(1 - smoothing, i);
+	// 	return prev + Math.pow(1 - smoothing, i)*curr; }) / wSum;
+	//this.l.i(`!!!!${tempTicks.slice(tempTicks.length - numPeriods - offset, tempTicks.length - offset)}`);
+	if (isEmpty(smoothing)) smoothing = 2 / (numPeriods + 1);
+	return this.slice(this.length - numPeriods - offset, this.length - offset).reduce((prev, curr, i) => {
+		wSum += Math.pow(1 - smoothing, i);
+		if (!isEmpty(property)) {
+			if (i===1) prev = prev[property];
+			curr = curr[property];
+		} 
+		return prev + Math.pow(1 - smoothing, i)*curr; }) / wSum;
+		//return prev + curr});
+};
+
 export { isEmpty, isOK, sleep, prcnt, getDateTime };

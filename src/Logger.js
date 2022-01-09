@@ -38,7 +38,7 @@ class Logger {
 	}
 
 	getLogMsg(msg, indentation=0, colorResume="") {
-		msg = ""+msg.replace(/(\n)/g, "$1"+'  '.repeat(indentation)).replace(new RegExp('(\\n)(\\s{'+(indentation*2)+'})', 'g'), "$1"+this.reset+"$2"+colorResume);
+		msg = (""+msg).replace(/(\n)/g, "$1"+'  '.repeat(indentation)).replace(new RegExp('(\\n)(\\s{'+(indentation*2)+'})', 'g'), "$1"+this.reset+"$2"+colorResume);
 		return msg;
 	}
 	

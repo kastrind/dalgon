@@ -44,11 +44,11 @@ class OHLC {
 	}
 
 	getMinVol() {
-		return this.ticks.reduce((prev, curr) => { if ( curr.vol < prev.vol ) return curr; else return prev; });
+		return (this.ticks.reduce((prev, curr) => { if ( curr.vol < prev.vol ) return curr; else return prev; })).vol;
 	}
 
 	getMaxVol() {
-		return this.ticks.reduce((prev, curr) => { if ( curr.vol > prev.vol ) return curr; else return prev; });
+		return (this.ticks.reduce((prev, curr) => { if ( curr.vol > prev.vol ) return curr; else return prev; })).vol;
 	}
 
 	getChange() {
@@ -56,7 +56,34 @@ class OHLC {
 	}
 
 	getAverage() {
-		return this.ticks.reduce((prev, curr) => { return prev + curr; }) / this.ticks.length;
+		return this.ticks.reduce((prev, curr, i) => { if(i===1) prev=prev.close; return prev + curr.close; }) / this.ticks.length;
+	}
+
+	getEMA(numPeriods, smoothing, offset=0, property='close') {
+		return this.ticks.getEMA(numPeriods, smoothing, offset, property);
+		// if (isEmpty(smoothing)) smoothing = 2 / (numPeriods + 1);
+		// if (isEmpty(input)) input = this.ticks;
+		// return this.ticks.slice(this.ticks.length - numPeriods - offset, this.ticks.length - offset).reduce((prev, curr, i) => {
+		// 	wSum += Math.pow(1 - smoothing, i);
+		// 	if (i===1) prev = prev.close;
+		// 	return parseFloat(prev) + Math.pow(1 - smoothing, i)*curr.close; }) / wSum;
+	}
+
+	getMACD(a, b, c, smoothing, offset=0, property='close') {
+		let macdSeries = [];
+		for (let i=0; i<c; i++) {
+			macdSeries.push(this.getEMA(a, smoothing, i + offset, property) - this.getEMA(b, smoothing, i + offset, property));
+		}
+		this.l.i(`macdSeries: ${macdSeries}`);
+		let signal = macdSeries.getEMA(c, smoothing, 0, null);
+		this.l.i(`signal: ${signal}`);
+		return macdSeries[0] - signal;
+	}
+
+	getMACDSignal() {
+		let signal = macdSeries.getEMA(c, smoothing, 0, null);
+		
+		return macdSeries[0] - signal;
 	}
 
 	static async request(OHLCRequest, paramAsset, paramSince, maxNumResults, loggerObj, simulationMode=false, simObj={}) {
