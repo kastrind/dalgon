@@ -84,8 +84,19 @@ class Analysis {
 			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
 			let changeMonth = ohlcMonth.getChange();
 			let candleStickScore = ohlcMonth.getCandleStickScore();
-			let macdCurrent = ohlcMonth.getMACD(12, 26, 9, null, 0, 'close');
-			let macdPrevious = ohlcMonth.getMACD(12, 26, 9, null, 1, 'close');
+			let macd_a = 12;
+			let macd_b = 26;
+			let macd_c = 9;
+			let macdCurrent;
+			let macdPrevious;
+			// if there is enough ohlc data to calculate MACD
+			if (Math.max(macd_a, macd_b) + macd_c + 1 <= ohlcMonth.getTicks().length) {
+				macdCurrent = ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close').toFixed(3);
+				macdPrevious = ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close').toFixed(3);
+			}else {
+				macdCurrent = 'N/A';
+				macdPrevious = 'N/A';
+			}
 
 			let ohlcMonthHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcMonthHalf.setTicks(ohlcMonth.getTicks().slice(Math.ceil(ohlcMonth.getTicks().length/2), ohlcMonth.getTicks().length));
@@ -193,7 +204,7 @@ class Analysis {
 				}
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 1) + '\n';
-				currAssetReport += this.l.i(`${asset} MACD-now: ${macdCurrent.toFixed(3)}, MACD-prev: ${macdPrevious.toFixed(3)}`, 1) + '\n\n';
+				currAssetReport += this.l.i(`${asset} MACD-now:  ${macdCurrent},\nMACD-prev: ${macdPrevious}`, 1) + '\n\n';
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = "";
