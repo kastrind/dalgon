@@ -415,9 +415,9 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
 			// If first time sending recommended assets, or assets different than previous
-			// and candlestick score > 0, then send recommended assets
+			// and macd previous < 0 and macd current > 0, then send recommended assets
 			if ((isEmpty(prevRecommendedAssets) || (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(','))) &&
-				!isEmpty(recommendedAssets.filter(asset => asset.candleStickScore > 0))) {
+				!isEmpty(recommendedAssets.filter(asset => asset.macdPrevious < 0 && asset.macdCurrent > 0))) {
 				viberBot.sendRecommendedAssets(reportFilePath);
 				prevRecommendedAssets = recommendedAssets.map(asset => asset);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
@@ -433,7 +433,9 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					assetToInvestIn = assetResultsReversed[i].name;
 
 					// Asset should hit bottom and about to trend upwards
-					if (assetResultsReversed.candleStickScore < 0) continue;
+					// if (assetResultsReversed[i].candleStickScore < 0) continue;
+					// Asset should have its MACD above 0 and previously below 0
+					if (! (assetResultsReversed[i].macdPrevious < 0 && assetResultsReversed[i].macdCurrent > 0)) continue;
 
 					// Create a new Order
 					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);

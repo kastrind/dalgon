@@ -139,12 +139,10 @@ class Analysis {
 			let currAssetResult = {};
 			if (
 					(
-						(change3h <= -0.1 || change6h <= -0.1 || change12h <= -0.1 || changeDay24h <= -0.1 || changeWeekHalf <= -0.1 || changeWeek <= -0.1)
-						&& candleStickScore >= 0.005
-						&& changeQuarter > 0
-					) ||
-					(
-						(
+						((change3h <= -0.1 || change6h <= -0.1 || change12h <= -0.1 || changeDay24h <= -0.1 || changeWeekHalf <= -0.1 || changeWeek <= -0.1)
+						&& changeQuarter > 0)
+						||
+
 						(changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeQuarter > 0)
 						||
 
@@ -161,22 +159,25 @@ class Analysis {
 						||
 
 						(changeWeekHalf < 0.05 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf < 0 && changeQuarter > 0)
-						)
-						&&
-						(priceOverHighestWeek > 0.2 || priceOverHighestMonth > 0.3)
 					)
+					&&
+					(priceOverHighestWeek > 0.2 || priceOverHighestMonth > 0.3)
+					&&
+					(macdCurrent > 0 && macdPrevious < 0)
 				)
 			{
 				isCandidate = true;
-				currAssetResult = {name: asset, score: 0, candleStickScore: candleStickScore, report: "", changePastHour: changePastHour, changeDay24h: changeDay24h, changeWeek: changeWeek, changeMonth: changeMonth, changeQuarter: changeQuarter, priceOverHighestWeek: priceOverHighestWeek, priceOverHighestMonth: priceOverHighestMonth};
+				currAssetResult = {name: asset, score: 0, candleStickScore: candleStickScore, macdCurrent: macdCurrent, macdPrevious: macdPrevious, report: "", changePastHour: changePastHour, changeDay24h: changeDay24h, changeWeek: changeWeek, changeMonth: changeMonth, changeQuarter: changeQuarter, priceOverHighestWeek: priceOverHighestWeek, priceOverHighestMonth: priceOverHighestMonth};
 
 				if ((change3h <= -0.1 || change6h <= -0.1 || change12h <= -0.1 || changeDay24h <= -0.1 || changeWeekHalf <= -0.1 || changeWeek <= -0.1)
-					&& candleStickScore >= 0
 					&& changeQuarter > 0) {
 						let changes = {'3h': change3h, '6h': change6h, '12h': change12h, '24h': changeDay24h, 'Wh': changeWeekHalf, 'W': changeWeek};
 						let sortedChangesKeys = Object.keys(changes).sort( (a, b) => changes[a] - changes[b]);
-					currAssetReport = this.l.i(`${asset}: ${prcnt( changes[sortedChangesKeys[0]] )}%${sortedChangesKeys[0]} ${prcnt(changeQuarter)}%Q with candlestick score ${candleStickScore.toFixed(3)}`, 1) + '\n';
-					currAssetResult.score = 0.5 * Math.abs(changes[sortedChangesKeys[0]]) + candleStickScore;
+					currAssetReport = this.l.i(`${asset}: ${prcnt( changes[sortedChangesKeys[0]] )}%${sortedChangesKeys[0]} ${prcnt(changeQuarter)}%Q`, 1) + '\n';
+					sortedChangesKeys.forEach( (key, i) => {
+						currAssetResult.score += (0.5 / (i+1)) * Math.abs(changes[key]);
+					});
+					currAssetResult.score += 0.1 * Math.abs(changeQuarter);
 
 				}else if (changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeQuarter > 0) {
 					currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeQuarter)}%Q`, 1) + '\n';
