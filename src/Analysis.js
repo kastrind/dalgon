@@ -160,10 +160,10 @@ class Analysis {
 
 						(changeWeekHalf < 0.05 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf < 0 && changeQuarter > 0)
 					)
-					&&
-					(priceOverHighestWeek > 0.2 || priceOverHighestMonth > 0.3)
-					&&
-					(macdCurrent > 0 && macdPrevious < 0)
+					// &&
+					// (priceOverHighestWeek > 0.2 || priceOverHighestMonth > 0.3)
+					// &&
+					// (macdCurrent > 0 && macdPrevious < 0)
 				)
 			{
 				isCandidate = true;
