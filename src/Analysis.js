@@ -162,8 +162,8 @@ class Analysis {
 					)
 					// &&
 					// (priceOverHighestWeek > 0.2 || priceOverHighestMonth > 0.3)
-					// &&
-					// (macdCurrent > 0 && macdPrevious < 0)
+					&&
+					(macdCurrent > 0 && macdPrevious < 0)
 				)
 			{
 				isCandidate = true;

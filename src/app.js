@@ -425,17 +425,46 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			// If allowed to auto-trade
 			if (viberBot && viberBot.canStartTrading) {
+
+				// Get the Open Orders
+				let openOrderAssetPairs = [];
+				let openOrdersResponseBody = await Order.request(getOpenOrders, {});
+				await sleep(1000);
+				if (openOrdersResponseBody && openOrdersResponseBody.result) {
+					if (!isEmpty(openOrdersResponseBody.result.open)) {
+						for(let txid in openOrdersResponseBody.result.open) {
+							let openOrderAssetPair = openOrdersResponseBody.result.open[txid].descr.pair;
+							openOrderAssetPairs.push(openOrderAssetPair);
+						}
+					}
+				}
+
 				let assetResultsReversed = recommendedAssets.reverse();
 				let assetToInvestIn;
 				// Attempt to auto-trade each recommended asset, starting from the best recommendation
 				for (let i=0; i<assetResultsReversed.length; i++) {
 
 					assetToInvestIn = assetResultsReversed[i].name;
+					l.i(`Initiating auto trading for asset ${assetToInvestIn}`, 0, true);
 
 					// Asset should hit bottom and about to trend upwards
 					// if (assetResultsReversed[i].candleStickScore < 0) continue;
 					// Asset should have its MACD above 0 and previously below 0
 					if (! (assetResultsReversed[i].macdPrevious < 0 && assetResultsReversed[i].macdCurrent > 0)) continue;
+
+					// If there is an open order for the asset to invest in, do not trade
+					let assetInfos = await AssetInfo.request(getAssetInfo, {searchParams: { asset: assetToInvestIn }}, l, SIMULATION);
+					await sleep(1000);
+					if (!isEmpty(assetInfos)) {
+						for (let i=0; i < assetInfos.length; i++) { // there should be only one
+							let assetInfo = assetInfos[i];
+							if (openOrderAssetPairs.filter( (pair) => pair.startsWith(assetInfo.assetName) || pair.startsWith(assetInfo.altName) ).length > 0) {
+								l.w(`Will not proceed to order ${assetToInvestIn}: there is an open order for this asset. `, 0, true);
+								continue;
+							}
+			
+						}
+					}
 
 					// Create a new Order
 					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);
