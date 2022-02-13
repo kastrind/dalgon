@@ -414,6 +414,12 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let analysis = new Analysis(assets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION);
 			let recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
+			if (isEmpty(recommendedAssets)) {
+				l.i("Sleeping...");
+				await sleep(5 * 60000);
+				continue;
+			}
+
 			// If first time sending recommended assets, or assets different than previous
 			// and macd previous < 0 and macd current > 0, then send recommended assets
 			if ((isEmpty(prevRecommendedAssets) || (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(','))) &&
