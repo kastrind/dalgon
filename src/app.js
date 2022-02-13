@@ -415,7 +415,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
 			if (isEmpty(recommendedAssets)) {
-				l.i("Sleeping...");
+				l.i("No recommended assets. Sleeping...");
 				await sleep(5 * 60000);
 				continue;
 			}
