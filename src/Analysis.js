@@ -1,6 +1,6 @@
 import fs from 'fs';
 import OHLC from './OHLC.js';
-import { sleep, prcnt } from './utils.js';
+import { sleep, prcnt, isEmpty } from './utils.js';
 
 class Analysis {
 
@@ -228,6 +228,11 @@ class Analysis {
 			}
 			report += this.l.i(`EVALUATING ASSET: ${asset} - END`);
 		}
+
+		if (isEmpty(assetResults)) {
+			fs.writeFile(reportFilePath, '', function(err) { if (err) this.l.err(err, 0, true); } );
+		}
+
 		return assetResults;
 	}
 
