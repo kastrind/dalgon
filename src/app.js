@@ -340,6 +340,23 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.recordHistory(message);
 		});
 
+		// Reset budget for the given asset, i.e. set the total amount bought to zero
+		viberBot.getBot().onTextMessage(/^re(set|new) budget (\S+)$/i, async (message, response) => {
+			let matches = message.text.match(/^re(set|new) budget (\S+)$/i);
+			let assetName = matches[1].toUpperCase();
+			totalBought[assetName] = 0;
+			viberBot.sendTextMessage(`Total amount bought with ${assetName} is now reset back to 0.`);
+			viberBot.recordHistory(message);
+		});
+
+		// Get the total amount bought with the given asset
+		viberBot.getBot().onTextMessage(/^get budget (\S+)$/i, async (message, response) => {
+			let matches = message.text.match(/^get budget (\S+)$/i);
+			let assetName = matches[1].toUpperCase();
+			viberBot.sendTextMessage(`Total amount bought with ${assetName} is ${totalBought[assetName]}.`);
+			viberBot.recordHistory(message);
+		});
+
 		// Get Auto-Trading Configuration
 		viberBot.getBot().onTextMessage(/^(get )?(auto)?( |-)?trading config(uration)?$/i, async (message, response) => {
 			viberBot.sendTextMessage(`${JSON.stringify(autoTradeCurrencies, null, 2)}.`);

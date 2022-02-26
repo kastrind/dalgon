@@ -53,6 +53,8 @@ class DalgonViberBot {
 			"set trading percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL trading percent to the given percent\n
 			"set profit percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL profit to the given percent\n
 			"[get] [auto-]trading config[uration]": get auto trading configuration\n
+			"reset|renew budget ASSET_SYMBOL": Set total amount bought with ASSET_SYMBOL back to 0\n
+			"get budget ASSET_SYMBOL": Get total amount bought with ASSET_SYMBOL\n
 			"history": get recent messages history\n
 			"portfolio|holdings": holdings on CoinGecko\n
 			"trending": return trending coins from CoinGecko\n
