@@ -343,7 +343,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		// Reset budget for the given asset, i.e. set the total amount bought to zero
 		viberBot.getBot().onTextMessage(/^re(set|new) budget (\S+)$/i, async (message, response) => {
 			let matches = message.text.match(/^re(set|new) budget (\S+)$/i);
-			let assetName = matches[1].toUpperCase();
+			let assetName = matches[2].toUpperCase();
 			totalBought[assetName] = 0;
 			viberBot.sendTextMessage(`Total amount bought with ${assetName} is now reset back to 0.`);
 			viberBot.recordHistory(message);
@@ -353,7 +353,11 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		viberBot.getBot().onTextMessage(/^get budget (\S+)$/i, async (message, response) => {
 			let matches = message.text.match(/^get budget (\S+)$/i);
 			let assetName = matches[1].toUpperCase();
-			viberBot.sendTextMessage(`Total amount bought with ${assetName} is ${totalBought[assetName]}.`);
+			if (isEmpty(totalBought[assetName])) {
+				viberBot.sendTextMessage(`No amount bought with ${assetName} yet.`);
+			}else {
+				viberBot.sendTextMessage(`Total amount bought with ${assetName} is ${totalBought[assetName]}.`);
+			}
 			viberBot.recordHistory(message);
 		});
 
