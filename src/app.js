@@ -14,8 +14,8 @@ import Order from './Order.js';
 
 import { isEmpty, sleep } from './utils.js';
 
-import OHLC from './OHLC.js';
-import OHLCRange from './OHLCRange.js';
+// import OHLC from './OHLC.js';
+// import OHLCRange from './OHLCRange.js';
 
 // command line params
 var cmdOpts = options;
@@ -423,6 +423,12 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	while(true) {
 
 		try {
+
+			if (viberBot && viberBot.pauseAnalysis) {
+				l.i("Analysis paused...");
+				await sleep(5 * 60000);
+				continue;
+			}
 			
 			// Send message to the subscribers every 3 hours that the script is running
 			timestampSecondsF = Math.floor(Date.now() / 1000);

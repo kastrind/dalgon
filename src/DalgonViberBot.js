@@ -22,6 +22,7 @@ class DalgonViberBot {
 			avatar: avatarUrl // It is recommended to be 720x720, and no more than 100kb.
 		});
 
+		this.pauseAnalysis = false;
 		this.canStartTrading = false;
 
 		this.userProfiles = recipientProfiles;
@@ -39,6 +40,7 @@ class DalgonViberBot {
 
 		this.bot.onTextMessage(/^help/i, async (message, response) => {
 			response.send(new TextMessage(`"recommend assets": return potential profitable assets\n
+			"pause|resume analysis": pause or resume analysis on potential profitable assets to recommend\n
 			"start|stop trading": permission to purchase potential profitable assets\n
 			"ticker ASSET_SYMBOL [base ASSET_SYMBOL]": return ticker info on given asset symbol, e.g. BTC. Optionally set different base currency, e.g. XBT for Bitcoin\n
 			"balance": current balance in Kraken exchange\n
@@ -81,6 +83,18 @@ class DalgonViberBot {
 					}
 				}
 			});
+			this.recordHistory(message);
+		});
+
+		this.bot.onTextMessage(/^(resume|start) analysis$/i, async (message, response) => {
+			response.send(new TextMessage(`I will resume analysis.`));
+			this.pauseAnalysis = false;
+			this.recordHistory(message);
+		});
+
+		this.bot.onTextMessage(/^(pause|stop) analysis$/i, async (message, response) => {
+			response.send(new TextMessage(`I will pause analysis.`));
+			this.pauseAnalysis = true;
 			this.recordHistory(message);
 		});
 
