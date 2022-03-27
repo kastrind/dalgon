@@ -194,7 +194,7 @@ class Analysis {
 					priceOverHighestWeek: priceOverHighestWeek,
 					priceOverHighestMonth: priceOverHighestMonth
 				};
-				currAssetResult.score = currAssetResult.macdCurrent + Math.abs(currAssetResult.macdPrevious);
+				currAssetResult.score = parseFloat(currAssetResult.macdCurrent) + Math.abs(parseFloat(currAssetResult.macdPrevious));
 
 				// if ((change3h <= -0.1 || change6h <= -0.1 || change12h <= -0.1 || changeDay24h <= -0.1 || changeWeekHalf <= -0.1 || changeWeek <= -0.1)
 				// 	&& changeQuarter > 0) {
