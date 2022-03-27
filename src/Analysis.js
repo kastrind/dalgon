@@ -194,6 +194,7 @@ class Analysis {
 					priceOverHighestWeek: priceOverHighestWeek,
 					priceOverHighestMonth: priceOverHighestMonth
 				};
+				currAssetResult.score = currAssetResult.macdCurrent + Math.abs(currAssetResult.macdPrevious);
 
 				// if ((change3h <= -0.1 || change6h <= -0.1 || change12h <= -0.1 || changeDay24h <= -0.1 || changeWeekHalf <= -0.1 || changeWeek <= -0.1)
 				// 	&& changeQuarter > 0) {
@@ -232,8 +233,9 @@ class Analysis {
 				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 1) + '\n';
+				currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now:  ${macdCurrent},\nMACD-prev: ${macdPrevious}`, 1) + '\n\n';
-				currAssetResult.score = currAssetResult.macdCurrent + Math.abs(currAssetResult.macdPrevious);
+				
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = "";
