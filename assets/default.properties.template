@@ -19,7 +19,7 @@ EXPOSE_URL=
 PORT=
 BOT_NAME=
 AVATAR_URL=
-RECIPIENT_PROFILES=[{"id": "tfmtP4ifKQrS4j3hOD9Zvw==", "name": "Dimitris Kastrinakis", "avatar": null, "country":"GR", "language": "en-US", "apiVersion": 10}]
+RECIPIENT_PROFILES=[{"id": "", "name": "", "avatar": null, "country":"", "language": "", "apiVersion": 10}]
 
 [coingecko]
 REMEMBER_USER_TOKEN=
