@@ -86,6 +86,12 @@ class Order {
 				continue;
 			}
 
+			// Keep minimum balance
+			if (this.balance - minBuyAmount <= autoTradeCurrency.minBalance) {
+				this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: reached minimum balance.`, 1, true) + '\n';
+				continue;
+			}
+
 			// Find the asset pair id and decimals
 			let assetPairQuery = assetToInvestIn + queryAssetName;
 			let tradeableAssetPairs = await TradeableAssetPair.request(getTradeableAssetPairs, { searchParams: { pair: assetPairQuery } }, l, this.simulationMode, this.tradeableAssetPairSimObj);
@@ -139,6 +145,15 @@ class Order {
 		if (this.autoTradeTotalBought[buyWith] + buyPriceTotal > budget) {
 			buyPriceTotal = budget - this.autoTradeTotalBought[buyWith];
 			this.autoTradeReport += l.w(`Reducing amount to buy to ${buyPriceTotal} ${buyWith} to prevent overspending the budget.`, 1, true) + '\n';
+		}
+
+		// Keep minimum balance
+		if (this.balance - buyPriceTotal <= this.autoTradeCurrency.minBalance) {
+			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: reached minimum balance.`, 1, true) + '\n';
+			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
+			await this.viberBot.sendTextMessage(`I failed to buy ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
+			this.autoTradeCurrency = undefined;
+			return false;
 		}
 
 		// Determine price per unit and volume to buy from total buying price
