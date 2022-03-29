@@ -29,8 +29,8 @@ Array.prototype.getEMA = function(numPeriods, smoothing, offset=0, property='clo
 	return this.slice(this.length - numPeriods - offset, this.length - offset).reduce((prev, curr, i) => {
 		wSum += Math.pow(1 - smoothing, i);
 		if (!isEmpty(property)) {
-			if (i===1) prev = prev[property];
-			curr = curr[property];
+			if (i===1) prev = parseFloat(prev[property]);
+			curr = parseFloat(curr[property]);
 		} 
 		return prev + Math.pow(1 - smoothing, i)*curr; }) / wSum;
 		//return prev + curr});

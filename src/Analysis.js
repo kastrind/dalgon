@@ -96,8 +96,8 @@ class Analysis {
 			let macdPrevious;
 			// if there is enough ohlc data to calculate MACD
 			if (Math.max(macd_a, macd_b) + macd_c + 1 <= ohlcMonth.getTicks().length) {
-				macdCurrent = ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close').toFixed(3);
-				macdPrevious = ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close').toFixed(3);
+				macdCurrent = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
+				macdPrevious = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
 			}else {
 				macdCurrent = 'N/A';
 				macdPrevious = 'N/A';
@@ -144,41 +144,16 @@ class Analysis {
 			let currAssetReport = "";
 			let currAssetResult = {};
 			if (
-					// (
-					// 	((change3h <= -0.1 || change6h <= -0.1 || change12h <= -0.1 || changeDay24h <= -0.1 || changeWeekHalf <= -0.1 || changeWeek <= -0.1)
-					// 	&& changeQuarter > 0)
-					// 	||
-
-					// 	(changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeQuarter > 0)
-					// 	||
-
-					// 	(change3h < 0.02 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek > 0)
-					// 	||
-
-					// 	(change6h < 0.02 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf > 0)
-					// 	||
-
-					// 	(change12h < 0.02 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth > 0)
-					// 	||
-
-					// 	(changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf > 0)
-					// 	||
-
-					// 	(changeWeekHalf < 0.05 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf < 0 && changeQuarter > 0)
-					// )
-					// &&
-					// (priceOverHighestWeek > 0.2 || priceOverHighestMonth > 0.3)
-					// &&
-					(macdCurrent > 0 && macdPrevious < 0)
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 				)
 			{
 				isCandidate = true;
 				currAssetResult = {
 					name: asset,
-					score: 0,
+					score: ((macdCurrent + Math.abs(macdPrevious)) / ohlcPastHour.getAverage()).toFixed(3),
 					candleStickScore: candleStickScore,
-					macdCurrent: macdCurrent,
-					macdPrevious: macdPrevious,
+					macdCurrent: macdCurrent.toFixed(3),
+					macdPrevious: macdPrevious.toFixed(3),
 					report: "",
 					changePastHour: changePastHour,
 					change3h: change3h,
@@ -194,48 +169,12 @@ class Analysis {
 					priceOverHighestWeek: priceOverHighestWeek,
 					priceOverHighestMonth: priceOverHighestMonth
 				};
-				currAssetResult.score = (parseFloat(currAssetResult.macdCurrent) + Math.abs(parseFloat(currAssetResult.macdPrevious)) / ohlcPastHour.getAverage()).toFixed(3);
 
-				// if ((change3h <= -0.1 || change6h <= -0.1 || change12h <= -0.1 || changeDay24h <= -0.1 || changeWeekHalf <= -0.1 || changeWeek <= -0.1)
-				// 	&& changeQuarter > 0) {
-				// 		let changes = {'3h': change3h, '6h': change6h, '12h': change12h, '24h': changeDay24h, 'Wh': changeWeekHalf, 'W': changeWeek};
-				// 		let sortedChangesKeys = Object.keys(changes).sort( (a, b) => changes[a] - changes[b]);
-				// 	currAssetReport = this.l.i(`${asset}: ${prcnt( changes[sortedChangesKeys[0]] )}%${sortedChangesKeys[0]} ${prcnt(changeQuarter)}%Q`, 1) + '\n';
-				// 	sortedChangesKeys.forEach( (key, i) => {
-				// 		currAssetResult.score += (0.5 / (i+1)) * Math.abs(changes[key]);
-				// 	});
-				// 	currAssetResult.score += 0.1 * Math.abs(changeQuarter);
-
-				// }else if (changePastHour <= 0.02 && change3h < 0 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeQuarter > 0) {
-				// 	currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeQuarter)}%Q`, 1) + '\n';
-				// 	currAssetResult.score = 0.30 * Math.abs(changePastHour) + 0.25 * Math.abs(change3h) + 0.20 * Math.abs(change6h) + 0.15 * Math.abs(change12h) + 0.05 * Math.abs(changeDay24h) + 0.05 * Math.abs(changeWeekHalf);
-
-				// }else if (change3h < 0.02 && change6h < 0 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek > 0) {
-				// 	currAssetReport = this.l.i(`${asset}: ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W`, 1) + '\n';
-				// 	currAssetResult.score = 0.30 * Math.abs(change3h) + 0.25 * Math.abs(change6h) + 0.20 * Math.abs(change12h) + 0.15 * Math.abs(changeDay24h) + 0.05 * Math.abs(changeWeekHalf) + 0.05 * Math.abs(changeWeek);
-
-				// }else if (change6h < 0.02 && change12h < 0 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf > 0) {
-				// 	currAssetReport = this.l.i(`${asset}: ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh`, 1) + '\n';
-				// 	currAssetResult.score = 0.30 * Math.abs(change6h) + 0.25 * Math.abs(change12h) + 0.20 * Math.abs(changeDay24h) + 0.15 * Math.abs(changeWeekHalf) + 0.05 * Math.abs(changeWeek) + 0.05 * Math.abs(changeMonthHalf);
-
-				// }else if (change12h < 0.02 && changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth > 0) {
-				// 	currAssetReport = this.l.i(`${asset}: ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M`, 1) + '\n';
-				// 	currAssetResult.score = 0.30 * Math.abs(change12h) + 0.25 * Math.abs(changeDay24h) + 0.20 * Math.abs(changeWeekHalf) + 0.15 * Math.abs(changeWeek) + 0.05 * Math.abs(changeMonthHalf) + 0.05 * Math.abs(changeMonth);
-
-				// }else if (changeDay24h < -0.05 && changeWeekHalf < 0 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf > 0) {
-				// 	currAssetReport = this.l.i(`${asset}: ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh`, 1) + '\n';
-				// 	currAssetResult.score = 0.30 * Math.abs(changeDay24h) + 0.25 * Math.abs(changeWeekHalf) + 0.20 * Math.abs(changeWeek) + 0.15 * Math.abs(changeMonthHalf) + 0.05 * Math.abs(changeMonth) + 0.05 * Math.abs(changeQuarterHalf);
-
-				// }else if (changeWeekHalf < 0.05 && changeWeek < 0 && changeMonthHalf < 0 && changeMonth < 0 && changeQuarterHalf < 0 && changeQuarter > 0) {
-				// 	currAssetReport = this.l.i(`${asset}: ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 1) + '\n';
-				// 	currAssetResult.score = 0.30 * Math.abs(changeWeekHalf) + 0.25 * Math.abs(changeWeek) + 0.20 * Math.abs(changeMonthHalf) + 0.15 * Math.abs(changeMonth) + 0.05 * Math.abs(changeQuarterHalf) + 0.05 * Math.abs(changeQuarter);
-				// }
 				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 1) + '\n';
-				currAssetReport += this.l.i(`${asset} MACD-now:  ${macdCurrent},\nMACD-prev: ${macdPrevious}`, 1) + '\n\n';
-				
+				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 1) + '\n\n';
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = "";
