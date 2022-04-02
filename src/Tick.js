@@ -3,13 +3,13 @@ class Tick {
 	constructor(time, open, high, low, close, volWAvgPrice, vol, count) {
 		this.time = time;
 		this.date = new Date(this.time * 1000);
-		this.open = open;
-		this.high = high;
-		this.low = low;
-		this.close = close;
-		this.volWavgPrice = volWAvgPrice;
-		this.vol = vol;
-		this.count = count;
+		this.open = parseFloat(open);
+		this.high = parseFloat(high);
+		this.low = parseFloat(low);
+		this.close = parseFloat(close);
+		this.volWavgPrice = parseFloat(volWAvgPrice);
+		this.vol = parseFloat(vol);
+		this.count = parseInt(count);
 	}
 
 	isRed() {

@@ -50,13 +50,11 @@ class DalgonViberBot {
 			"change order TXID unit price PRICE": cancel and submit new order with changed unit price\n
 			"cancel order TXID": cancel order\n
 			"trade ASSET_SYMBOL": buy ASSET_SYMBOL with the existing auto-trading configuration\n
-			"set budget ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL budget to the given amount\n
+			"set min balance ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL the amount/percentage of the remaining balance not to be used for trading\n
 			"set trading min ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL minimum trading amount to the given amount\n
 			"set trading percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL trading percent to the given percent\n
 			"set profit percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL profit to the given percent\n
 			"[get] [auto-]trading config[uration]": get auto trading configuration\n
-			"reset|renew budget ASSET_SYMBOL": Set total amount bought with ASSET_SYMBOL back to 0\n
-			"get budget ASSET_SYMBOL": Get total amount bought with ASSET_SYMBOL\n
 			"history": get recent messages history\n
 			"portfolio|holdings": holdings on CoinGecko\n
 			"trending": return trending coins from CoinGecko\n

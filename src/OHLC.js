@@ -14,7 +14,7 @@ class OHLC {
 		var that = this;
 		if (!isEmpty(this.OHLCJsonResponse)) {
 			this.OHLCJsonResponse[this.assetPairResponse].forEach( (el, i, arr)  => that.ticks.push(new Tick(
-				el[0], parseFloat(el[1]), parseFloat(el[2]), parseFloat(el[3]), parseFloat(el[4]), parseFloat(el[5]), parseFloat(el[6]), parseInt(el[7])
+				el[0], el[1], el[2], el[3], el[4], el[5], el[6], el[7]
 			)));
 		}
 	}

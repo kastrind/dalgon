@@ -80,7 +80,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let autoTradeCurrencies = JSON.parse(properties.get("main.AUTOTRADE_CURRENCIES"));
 	let buyExceptions = properties.get("main.BUY_EXCEPTIONS").split(' ');
 	let buyWhiteList = properties.get("main.BUY_WHITELIST");
-	let totalBought = {};
 
 	let viberBot;
 	// prepare viber bot
@@ -275,25 +274,23 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1].toUpperCase();
 			if (assetToInvestIn) {
 				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
-				order.setAutoTradeTotalBought(totalBought);
 				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
 					await order.autoTrade(assetToInvestIn, getTicker, addOrder);
-					totalBought = order.getAutoTradeTotalBought();
 				}
 			}
 			viberBot.recordHistory(message);
 		});
 
-		// Set Budget ASSET_SYMBOL AMOUNT
-		viberBot.getBot().onTextMessage(/^(set )?budget (\S+)( |=)(\S+)$/i, async (message, response) => {
-			let matches = message.text.match(/^(set )?budget (\S+)( |=)(\S+)$/i);
+		// Set Minimum Balance Amount/Percent ASSET_SYMBOL AMOUNT
+		viberBot.getBot().onTextMessage(/^(set )?min balance (\S+)( |=)(\S+)$/i, async (message, response) => {
+			let matches = message.text.match(/^(set )?min balance (\S+)( |=)(\S+)$/i);
 			let assetName = matches[2].toUpperCase();
-			let budget = parseFloat(matches[4]);
+			let minBalance = parseFloat(matches[4]);
 			if (!autoTradeCurrencies[assetName]) {
-				viberBot.sendTextMessage(`Failed to set budget: auto-trading currency ${assetName} not found.`);
+				viberBot.sendTextMessage(`Failed to set minimum balance: auto-trading currency ${assetName} not found.`);
 			}else {
-				autoTradeCurrencies[assetName].budget = budget;
-				viberBot.sendTextMessage(`${assetName} budget set to ${budget}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
+				autoTradeCurrencies[assetName].minBalance = minBalance;
+				viberBot.sendTextMessage(`${assetName} minimum balance set to ${minBalance}.`);
 			}
 			viberBot.recordHistory(message);
 		});
@@ -307,7 +304,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				viberBot.sendTextMessage(`Failed to set minimum trading amount: auto-trading currency ${assetName} not found.`);
 			}else {
 				autoTradeCurrencies[assetName].minBuyAmount = minBuyAmount;
-				viberBot.sendTextMessage(`${assetName} minimum buying amount set to ${minBuyAmount}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
+				viberBot.sendTextMessage(`${assetName} minimum buying amount set to ${minBuyAmount}.`);
 			}
 			viberBot.recordHistory(message);
 		});
@@ -321,7 +318,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				viberBot.sendTextMessage(`Failed to set trading percent: auto-trading currency ${assetName} not found.`);
 			}else {
 				autoTradeCurrencies[assetName].buyPercent = buyPercent;
-				viberBot.sendTextMessage(`${assetName} trading percent set to ${buyPercent}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
+				viberBot.sendTextMessage(`${assetName} trading percent set to ${buyPercent}.`);
 			}
 			viberBot.recordHistory(message);
 		});
@@ -335,35 +332,17 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				viberBot.sendTextMessage(`Failed to set profit percent: auto-trading currency ${assetName} not found.`);
 			}else {
 				autoTradeCurrencies[assetName].profitPercent = profitPercent;
-				viberBot.sendTextMessage(`${assetName} profit percent set to ${profitPercent}\n${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
-			}
-			viberBot.recordHistory(message);
-		});
-
-		// Reset budget for the given asset, i.e. set the total amount bought to zero
-		viberBot.getBot().onTextMessage(/^re(set|new) budget (\S+)$/i, async (message, response) => {
-			let matches = message.text.match(/^re(set|new) budget (\S+)$/i);
-			let assetName = matches[2].toUpperCase();
-			totalBought[assetName] = 0;
-			viberBot.sendTextMessage(`Total amount bought with ${assetName} is now reset back to 0.`);
-			viberBot.recordHistory(message);
-		});
-
-		// Get the total amount bought with the given asset
-		viberBot.getBot().onTextMessage(/^get budget (\S+)$/i, async (message, response) => {
-			let matches = message.text.match(/^get budget (\S+)$/i);
-			let assetName = matches[1].toUpperCase();
-			if (isEmpty(totalBought[assetName])) {
-				viberBot.sendTextMessage(`No amount bought with ${assetName} yet.`);
-			}else {
-				viberBot.sendTextMessage(`Total amount bought with ${assetName} is ${totalBought[assetName]}.`);
+				viberBot.sendTextMessage(`${assetName} profit percent set to ${profitPercent}.`);
 			}
 			viberBot.recordHistory(message);
 		});
 
 		// Get Auto-Trading Configuration
 		viberBot.getBot().onTextMessage(/^(get )?(auto)?( |-)?trading config(uration)?$/i, async (message, response) => {
-			viberBot.sendTextMessage(`${JSON.stringify(autoTradeCurrencies, null, 2)}.`);
+			for (let assetName in autoTradeCurrencies) {
+				viberBot.sendTextMessage(`${JSON.stringify(autoTradeCurrencies[assetName], null, 2)}.`);
+				await sleep(1000);
+			}
 			viberBot.recordHistory(message);
 		});
 
@@ -501,13 +480,10 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 					// Create a new Order
 					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);
-					order.setAutoTradeTotalBought(totalBought);
 					// If prerequisites to auto-trade are met, submit the limit Order with conditional take-profit
 					if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
 						let autoTradeResult = await order.autoTrade(assetToInvestIn, getTicker, addOrder);
-						if (autoTradeResult) {
-							totalBought = order.getAutoTradeTotalBought();
-						}else {
+						if (!autoTradeResult) {
 							viberBot.canStartTrading = false;
 							viberBot.sendTextMessage(`I stopped auto-trading. Awaiting instructions.`);
 							break;
