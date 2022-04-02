@@ -285,7 +285,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		viberBot.getBot().onTextMessage(/^(set )?min balance (\S+)( |=)(\S+)$/i, async (message, response) => {
 			let matches = message.text.match(/^(set )?min balance (\S+)( |=)(\S+)$/i);
 			let assetName = matches[2].toUpperCase();
-			let minBalance = parseFloat(matches[4]);
+			let minBalance = matches[4].slice(-1) === '%' ? parseFloat(matches[4].slice(0, -1)) + '%' : parseFloat(matches[4]);
 			if (!autoTradeCurrencies[assetName]) {
 				viberBot.sendTextMessage(`Failed to set minimum balance: auto-trading currency ${assetName} not found.`);
 			}else {
