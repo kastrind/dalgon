@@ -55,13 +55,13 @@ var getOHLC = dalgon.createPublicFunction('/0/public/OHLC', 'Request for Get OHL
 			let getOHLCSim = dalgonSim.createPublicFunction('/0/public/OHLC', 'Request for Get OHLC Data');
 			let ohlcSim = await (OHLC.request(getOHLCSim, "MANAEUR", d.toISOString(), maxNumResults, l, simulation, { body: JSON.stringify(ohlcSimResponseJson) } ));
 			//console.log(ohlcSim);
-			assert.equal(ohlcSim.getChange(), -0.06129232999078365);
+			assert.equal(ohlcSim.getChange(), -0.06092566826494408);
 			assert.equal(ohlcSim.getHighest().high, 3.87468);
 			assert.equal(ohlcSim.getHighestClose().close, 3.8619);
 			assert.equal(ohlcSim.getLowest().low, 3.41753);
 			assert.equal(ohlcSim.getLowestClose().close, 3.42484);
-			assert.equal(ohlcSim.getMinVol().vol, 0);
-			assert.equal(ohlcSim.getMaxVol().vol, 87344.26547723);
+			assert.equal(ohlcSim.getMinVol(), 0);
+			assert.equal(ohlcSim.getMaxVol(), 87344.26547723);
 		});
 
 	});
