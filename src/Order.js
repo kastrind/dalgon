@@ -70,7 +70,7 @@ class Order {
 			let minBuyAmount = autoTradeCurrency.minBuyAmount;
 			let minBalance = autoTradeCurrency.minBalance;
 			// if min balance is percentage, calculate the amount
-			this.minBalance = minBalance.slice(-1) === '%' ? parseFloat(minBalance.slice(0,-1)) * this.balance / 100 : minBalance;
+			this.minBalance = minBalance.toString().slice(-1) === '%' ? parseFloat(minBalance.slice(0,-1)) * this.balance / 100 : parseFloat(minBalance);
 
 			this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]) || 0;
 			this.autoTradeReport += l.i(`Attempt to order with ${buyWith}. Current ${buyWith} balance is ${this.balance}.`, 1) + '\n';
