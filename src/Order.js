@@ -67,10 +67,9 @@ class Order {
 		for(let buyWith in autoTradeCurrencies) {
 			let autoTradeCurrency = autoTradeCurrencies[buyWith];
 			let queryAssetName = autoTradeCurrency.queryAssetName;
-			let minBuyAmount = autoTradeCurrency.minBuyAmount;
-			let minBalance = autoTradeCurrency.minBalance;
-			// if min balance is percentage, calculate the amount
-			this.minBalance = minBalance.toString().slice(-1) === '%' ? parseFloat(minBalance.slice(0,-1)) * this.balance / 100 : parseFloat(minBalance);
+			let minBuyAmount = parseFloat(autoTradeCurrency.minBuyAmount);
+			let minBalance = parseFloat(autoTradeCurrency.minBalance);
+			this.minBalance = minBalance;
 
 			this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]) || 0;
 			this.autoTradeReport += l.i(`Attempt to order with ${buyWith}. Current ${buyWith} balance is ${this.balance}.`, 1) + '\n';
@@ -130,8 +129,8 @@ class Order {
 		}
 
 		let buyWith = this.autoTradeCurrency.name;
-		let minBuyAmount = this.autoTradeCurrency.minBuyAmount;
-		let buyBalancePercent = this.autoTradeCurrency.buyPercent;
+		let minBuyAmount = parseFloat(this.autoTradeCurrency.minBuyAmount);
+		let buyBalancePercent = parseFloat(this.autoTradeCurrency.buyPercent);
 
 		let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
 

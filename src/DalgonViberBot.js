@@ -50,7 +50,7 @@ class DalgonViberBot {
 			"change order TXID unit price PRICE": cancel and submit new order with changed unit price\n
 			"cancel order TXID": cancel order\n
 			"trade ASSET_SYMBOL": buy ASSET_SYMBOL with the existing auto-trading configuration\n
-			"set min balance ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL the amount/percentage of the remaining balance not to be used for trading\n
+			"set min balance ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL the desired amount of the remaining balance not to be used for trading\n
 			"set trading min ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL minimum trading amount to the given amount\n
 			"set trading percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL trading percent to the given percent\n
 			"set profit percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL profit to the given percent\n
