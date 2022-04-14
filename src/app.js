@@ -468,13 +468,16 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					let assetInfos = await AssetInfo.request(getAssetInfo, {searchParams: { asset: assetToInvestIn }}, l, SIMULATION);
 					await sleep(1000);
 					if (!isEmpty(assetInfos)) {
+						let assetHasOpenOrder = false;
 						for (let i=0; i < assetInfos.length; i++) { // there should be only one
 							let assetInfo = assetInfos[i];
 							if (openOrderAssetPairs.filter( (pair) => pair.startsWith(assetInfo.assetName) || pair.startsWith(assetInfo.altName) ).length > 0) {
 								l.w(`Will not proceed to order ${assetToInvestIn}: there is an open order for this asset. `, 0, true);
-								continue;
+								assetHasOpenOrder = true;
 							}
-			
+						}
+						if (assetHasOpenOrder) {
+							continue;
 						}
 					}
 
