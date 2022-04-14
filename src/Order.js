@@ -67,21 +67,26 @@ class Order {
 		for(let buyWith in autoTradeCurrencies) {
 			let autoTradeCurrency = autoTradeCurrencies[buyWith];
 			let queryAssetName = autoTradeCurrency.queryAssetName;
+
 			let minBuyAmount = parseFloat(autoTradeCurrency.minBuyAmount);
+			let buyBalancePercent = parseFloat(autoTradeCurrency.buyPercent);
+
 			let minBalance = parseFloat(autoTradeCurrency.minBalance);
 			this.minBalance = minBalance;
-
 			this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]) || 0;
-			this.autoTradeReport += l.i(`Attempt to order with ${buyWith}. Current ${buyWith} balance is ${this.balance}.`, 1) + '\n';
+
+			let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
+
+			this.autoTradeReport += l.i(`Attempt to order with ${buyPriceTotal.toFixed(3)}${buyWith}. Current balance is ${this.balance.toFixed(3)}${buyWith}.`, 1) + '\n';
 
 			// Must have enough balance
-			if (this.balance < minBuyAmount) {
-				this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: not enough balance.`, 1, true) + '\n';
+			if (this.balance < buyPriceTotal) {
+				this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: not enough balance of ${this.balance.toFixed(3)}${buyWith}.`, 1, true) + '\n';
 				continue;
 			}
 
 			// Keep minimum balance
-			if (this.balance - minBuyAmount < this.minBalance) {
+			if (this.balance - buyPriceTotal < this.minBalance) {
 				this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: reached minimum balance.`, 1, true) + '\n';
 				continue;
 			}
@@ -134,17 +139,11 @@ class Order {
 
 		let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
 
-		// Maintain minimum balance
-		if ( this.balance - buyPriceTotal < this.minBalance ) {
-			buyPriceTotal = this.balance - this.minBalance;
-			this.autoTradeReport += l.w(`Reducing amount to buy to ${buyPriceTotal} ${buyWith} to maintain minimum balance.`, 1, true) + '\n';
-		}
-
 		// Determine price per unit and volume to buy from total buying price
 		let buyPriceUnit = parseFloat(ticker.askPrice);
 		let buyVolume = buyPriceTotal / buyPriceUnit;
-		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
-		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
+		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal.toFixed(3)} ${buyWith}`, 1) + '\n';
+		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit.toFixed(3)} ${buyWith} price per unit, times ${buyVolume.toFixed(3)} volume.`, 1) + '\n';
 
 		let profitPercent = this.autoTradeCurrency.profitPercent;
 
