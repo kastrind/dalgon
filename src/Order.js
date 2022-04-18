@@ -77,11 +77,11 @@ class Order {
 
 			let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
 
-			this.autoTradeReport += l.i(`Attempt to order with ${buyPriceTotal.toFixed(3)}${buyWith}. Current balance is ${this.balance.toFixed(3)}${buyWith}.`, 1) + '\n';
+			this.autoTradeReport += l.i(`Attempt to order with ${buyPriceTotal}${buyWith}. Current balance is ${this.balance}${buyWith}.`, 1) + '\n';
 
 			// Must have enough balance
 			if (this.balance < buyPriceTotal) {
-				this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: not enough balance of ${this.balance.toFixed(3)}${buyWith}.`, 1, true) + '\n';
+				this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: not enough balance of ${this.balance}${buyWith}.`, 1, true) + '\n';
 				continue;
 			}
 
@@ -142,8 +142,8 @@ class Order {
 		// Determine price per unit and volume to buy from total buying price
 		let buyPriceUnit = parseFloat(ticker.askPrice);
 		let buyVolume = buyPriceTotal / buyPriceUnit;
-		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal.toFixed(3)} ${buyWith}`, 1) + '\n';
-		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit.toFixed(3)} ${buyWith} price per unit, times ${buyVolume.toFixed(3)} volume.`, 1) + '\n';
+		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
+		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
 
 		let profitPercent = this.autoTradeCurrency.profitPercent;
 
