@@ -53,42 +53,42 @@ class Analysis {
 			if (!ohlcPastHour) return [];
 			let changePastHour = ohlcPastHour.getChange();
 
-			await sleep(3000);
+			await sleep(2000);
 
 			let ohlc6h = await (OHLC.request(getOHLC, assetPair, past6h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
-			if (!ohlc6h) { await sleep(3000); continue; }
+			if (!ohlc6h) { await sleep(2000); continue; }
 			let change6h = ohlc6h.getChange();
 
 			let ohlc3h = new OHLC(assetPair, this.l, this.simulationMode, null);
 			ohlc3h.setTicks(ohlc6h.getTicks().slice(Math.ceil(ohlc6h.getTicks().length/2), ohlc6h.getTicks().length));
 			let change3h = ohlc3h.getChange();
 
-			await sleep(3000);
+			await sleep(2000);
 
 			let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
-			if (!ohlcDay24h) { await sleep(3000); continue; }
+			if (!ohlcDay24h) { await sleep(2000); continue; }
 			let changeDay24h = ohlcDay24h.getChange();
 
 			let ohlc12h = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlc12h.setTicks(ohlcDay24h.getTicks().slice(Math.ceil(ohlcDay24h.getTicks().length/2), ohlcDay24h.getTicks().length));
 			let change12h = ohlc12h.getChange();
 
-			await sleep(3000);
+			await sleep(2000);
 
 			let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
-			if (!ohlcWeek) { await sleep(3000); continue; }
+			if (!ohlcWeek) { await sleep(2000); continue; }
 			let changeWeek = ohlcWeek.getChange();
+			let candleStickScore = ohlcWeek.getCandleStickScore();
 
 			let ohlcWeekHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcWeekHalf.setTicks(ohlcWeek.getTicks().slice(Math.ceil(ohlcWeek.getTicks().length/2), ohlcWeek.getTicks().length));
 			let changeWeekHalf = ohlcWeekHalf.getChange();
 
-			await sleep(3000);
+			await sleep(2000);
 
 			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
-			if (!ohlcMonth) { await sleep(3000); continue; }
+			if (!ohlcMonth) { await sleep(2000); continue; }
 			let changeMonth = ohlcMonth.getChange();
-			let candleStickScore = ohlcMonth.getCandleStickScore();
 			let macd_a = 12;
 			let macd_b = 26;
 			let macd_c = 9;
@@ -107,7 +107,7 @@ class Analysis {
 			ohlcMonthHalf.setTicks(ohlcMonth.getTicks().slice(Math.ceil(ohlcMonth.getTicks().length/2), ohlcMonth.getTicks().length));
 			let changeMonthHalf = ohlcMonthHalf.getChange();
 
-			await sleep(3000);
+			await sleep(2000);
 
 			let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
 			if (!ohlcQuarter) { await sleep(3000); continue; }
@@ -117,7 +117,7 @@ class Analysis {
 			ohlcQuarterHalf.setTicks(ohlcQuarter.getTicks().slice(Math.ceil(ohlcQuarter.getTicks().length/2), ohlcQuarter.getTicks().length));
 			let changeQuarterHalf = ohlcQuarterHalf.getChange();
 
-			await sleep(3000);
+			await sleep(2000);
 
 			let lowestCloseWeek = ohlcWeek.getLowestClose().close;
 			let priceOverLowestWeek = 0;
@@ -150,7 +150,7 @@ class Analysis {
 				isCandidate = true;
 				currAssetResult = {
 					name: asset,
-					score: ((macdCurrent + Math.abs(macdPrevious)) / ohlcPastHour.getAverage()).toFixed(3),
+					score: (((macdCurrent + Math.abs(macdPrevious)) / ohlcPastHour.getAverage()) - candleStickScore).toFixed(3),
 					candleStickScore: candleStickScore,
 					macdCurrent: macdCurrent.toFixed(3),
 					macdPrevious: macdPrevious.toFixed(3),
