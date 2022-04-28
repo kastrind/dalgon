@@ -10,12 +10,10 @@ import Balance from './Balance.js';
 import AssetInfo from './AssetInfo.js';
 import DalgonViberBot from './DalgonViberBot.js';
 import Analysis from './Analysis.js';
+import TradeableAssetPair from './TradeableAssetPair.js';
 import Order from './Order.js';
 
 import { isEmpty, sleep } from './utils.js';
-
-// import OHLC from './OHLC.js';
-// import OHLCRange from './OHLCRange.js';
 
 // command line params
 var cmdOpts = options;
@@ -65,13 +63,6 @@ var addOrder          = dalgon.createPrivateFunction('/0/private/AddOrder',     
 var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',    privateHeaderObj, 'Request for Cancel Order');
 
 (async function () {
-	// let month = new Date();
-	// month.setHours(month.getHours() - 24*30);
-	// let ohlcMonth = await (OHLC.request(getOHLC, "BTCEUR", month.toISOString(), 720, l, SIMULATION));
-	// ohlcMonth.setTicks([{'close': 100},{'close': 99},{'close': 95},{'close': 90},{'close': 80},{'close': 65},{'close': 50},{'close':49}, {'close': 48}, {'close': 47}, {'close': 48}]);
-	// l.i(`macd-signal: ${ohlcMonth.getMACD(5, 8, 3, null, 0, 'close')}`);
-	// l.i(`macd-signal-1: ${ohlcMonth.getMACD(5, 8, 3, null, 1, 'close')}`);
-	// return;
 
 	// clean asset report file
 	let reportFilePath = properties.get('main.ASSET_EVAL_REPORT_FILE');
@@ -397,6 +388,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let timestampSecondsI=0, timestampSecondsF;
 	let maxNumOHLCResults = properties.get("ohlc.MAX_NUM_RESULTS");
 	let assets = properties.get("ohlc.ASSETS").split(' ');
+	let tradeableAssets = await TradeableAssetPair.findTradeableAssets(assets, getTradeableAssetPairs, autoTradeCurrencies, l, SIMULATION);
 	let prevRecommendedAssets;
 
 	while(true) {
@@ -417,7 +409,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
 			// Analyse assets to recommend for trading
-			let analysis = new Analysis(assets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION);
+			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION);
 			let recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
 			if (isEmpty(recommendedAssets)) {

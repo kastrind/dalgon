@@ -42,6 +42,22 @@ class TradeableAssetPair {
 		return [];
 	}
 
+	static async findTradeableAssets(assetsToAnalyse, getTradeableAssetPairs, autoTradeCurrencies, loggerObj, simulationMode=false, simObj={}) {
+		let tradeableAssetPairs = await TradeableAssetPair.request(getTradeableAssetPairs, { searchParams: { } }, loggerObj, simulationMode, simObj);
+		let tradeableAssetPairsStr = tradeableAssetPairs.reduce( (prev, curr, i) => {if (i===0) return curr.assetPair + ' '; else return prev + curr.assetPair + ' ';}, '');
+		let autoTradeCurrencyNames = Object.keys(autoTradeCurrencies);
+		let tradeableAssetsToAnalyse = [];
+		assetsToAnalyse.forEach(asset => {
+			let positions = [];
+			autoTradeCurrencyNames.forEach(atcn => {
+				let pos = tradeableAssetPairsStr.search(new RegExp(asset+'.?'+atcn.slice(-3)));
+				positions.push(pos);
+			});
+			if (Math.min(...positions) > -1) tradeableAssetsToAnalyse.push(asset);
+		});
+		return tradeableAssetsToAnalyse;
+	}
+
 }
 
 export default TradeableAssetPair;
