@@ -27,6 +27,7 @@ var SIMULATION = cmdOpts.simulation || false;
 
 // logger
 var l = new Logger(VERBOSE, DEBUG);
+l.i(`Dalgon starting. Validating CLI input parameters and configuration...`);
 
 // validate command line params
 if (!cmdOpts.privAPIKey) { l.err('Private API Key is mandatory.', 0, true); process.exit(-1); }
@@ -40,7 +41,11 @@ var properties = new PropertiesReader(`env/${ENV}.properties`);
 // load config properties
 var APIKEY = properties.get("main.APIKEY");
 var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
+l.i(`Base currency: ${BASE_CURRENCY}`);
 var TIMEZONE = properties.get("main.TIMEZONE");
+l.i(`Timezone: ${TIMEZONE}`);
+
+l.i(`Declaring Kraken and CoinGecko API functions...`);
 
 // coingecko instance
 var coingecko = new CoinGecko(l, SIMULATION);
@@ -64,6 +69,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 (async function () {
 
+	l.suc(`Dalgon started. Initiating analysis and auto-trading cycle...`, 0, true);
+
 	// clean asset report file
 	let reportFilePath = properties.get('main.ASSET_EVAL_REPORT_FILE');
 	fs.writeFile(reportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
@@ -71,6 +78,10 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let autoTradeCurrencies = JSON.parse(properties.get("main.AUTOTRADE_CURRENCIES"));
 	let buyExceptions = properties.get("main.BUY_EXCEPTIONS").split(' ');
 	let buyWhiteList = properties.get("main.BUY_WHITELIST");
+
+	l.i(`Auto-trade currencies: ${JSON.stringify(autoTradeCurrencies, null, 2)}`);
+	l.i(`Auto-trade exceptions: ${buyExceptions}`);
+	l.i(`Auto-trade whitelist: ${buyWhiteList}`);
 
 	let viberBot;
 	// prepare viber bot
@@ -86,6 +97,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		}
 
 		viberBot = await new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
+
+		l.i(`Dalgon Viber bot initiated.`);
 
 		// Kraken features:
 
@@ -388,10 +401,16 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let timestampSecondsI=0, timestampSecondsF;
 	let maxNumOHLCResults = properties.get("ohlc.MAX_NUM_RESULTS");
 	let assets = properties.get("ohlc.ASSETS").split(' ');
+	l.i(`Assets: ${assets}`);
+	l.i(`#Assets: ${assets.length}`);
 	let tradeableAssets = await TradeableAssetPair.findTradeableAssets(assets, getTradeableAssetPairs, autoTradeCurrencies, l, SIMULATION);
+	l.i(`Auto-tradeable assets: ${tradeableAssets}`);
+	l.i(`#Auto-tradeable assets: ${tradeableAssets.length}`);
 	let prevRecommendedAssets;
 
 	while(true) {
+
+		l.i(`Entered Dalgon main loop.`);
 
 		try {
 
