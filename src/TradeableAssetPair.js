@@ -53,7 +53,7 @@ class TradeableAssetPair {
 				let pos = tradeableAssetPairsStr.search(new RegExp(asset+'.?'+atcn.slice(-3)));
 				positions.push(pos);
 			});
-			if (Math.min(...positions) > -1) tradeableAssetsToAnalyse.push(asset);
+			if (Math.max(...positions) > -1) tradeableAssetsToAnalyse.push(asset);
 		});
 		return tradeableAssetsToAnalyse;
 	}

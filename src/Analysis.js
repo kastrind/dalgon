@@ -144,7 +144,7 @@ class Analysis {
 			let currAssetReport = "";
 			let currAssetResult = {};
 			if (
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.005)
 				)
 			{
 				isCandidate = true;
