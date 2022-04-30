@@ -167,9 +167,10 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 		// Open Orders
 		viberBot.getBot().onTextMessage(/^(my )?(open orders)$/i, async (message, response) => {
+			viberBot.sendTextMessage('Please wait.');
 			let openOrdersResponseBody = await Order.request(getOpenOrders, {});
 			if (openOrdersResponseBody && openOrdersResponseBody.result) {
-				viberBot.sendTextMessage(Order.reportOpenOrders(openOrdersResponseBody, TIMEZONE));
+				viberBot.sendTextMessage(await Order.reportOpenOrders(openOrdersResponseBody, TIMEZONE, getTicker));
 			}else if (openOrdersResponseBody && !isEmpty(openOrdersResponseBody.error)) {
 				viberBot.sendTextMessage(`${openOrdersResponseBody.error}`);
 			}else viberBot.sendTextMessage("Failed to get open orders.");

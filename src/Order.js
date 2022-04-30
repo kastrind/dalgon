@@ -194,7 +194,7 @@ class Order {
 		return null;
 	}
 
-	static reportOpenOrders(openOrdersResponseBody, timeZone) {
+	static async reportOpenOrders(openOrdersResponseBody, timeZone, getTicker=null) {
 		let report = "";
 		var options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
 		if (isEmpty(openOrdersResponseBody.result.open)) {
@@ -203,7 +203,21 @@ class Order {
 			for(let txid in openOrdersResponseBody.result.open) {
 				let date = new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[txid].opentm)*1000))).toLocaleString("en-US", options);
 				let description = openOrdersResponseBody.result.open[txid].descr.order;
-				report += `${date}\ntxid: ${txid}\n${description} \n\n`;
+
+				let askPriceReportPart = "";
+				if (getTicker) {
+					let pair = openOrdersResponseBody.result.open[txid].descr.pair;
+					let price = parseFloat(openOrdersResponseBody.result.open[txid].descr.price);
+					let ticker = await (Ticker.request(getTicker, { searchParams: { pair: pair } }));
+					await sleep(1000);
+					if (ticker) {
+						let askPrice = ticker.lastTradeClosedPrice;
+						let differencePercent = ((price - askPrice)*100/askPrice).toFixed(2);
+						askPriceReportPart = `\nask price: ${askPrice} (${differencePercent}%)`;
+					}
+				}
+
+				report += `${date}\ntxid: ${txid}\n${description}${askPriceReportPart}\n\n`;
 			}
 		}
 		return report;
