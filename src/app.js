@@ -419,6 +419,11 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 		try {
 
+			if (viberBot) {
+				// Cancel and sell any take-profit orders that went stale
+				viberBot.sendBigTextMessage(await Order.sellStaleProfitOrders(STALE_ORDER_DAYS, STALE_ORDER_PRICE_DIFFERENCE_PERCENT, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l));
+			}
+
 			if (viberBot && viberBot.pauseAnalysis) {
 				l.i("Analysis paused...");
 				await sleep(5 * 60000);
@@ -450,9 +455,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				prevRecommendedAssets = recommendedAssets.map(asset => asset);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
-
-			// Cancel and sell any take-profit orders that went stale
-			viberBot.sendBigTextMessage(await Order.sellStaleProfitOrders(STALE_ORDER_DAYS, STALE_ORDER_PRICE_DIFFERENCE_PERCENT, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l));
 
 			// If allowed to auto-trade
 			if (viberBot && viberBot.canStartTrading) {
