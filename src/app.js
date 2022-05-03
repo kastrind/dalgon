@@ -421,7 +421,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			if (viberBot) {
 				// Cancel and sell any take-profit orders that went stale
-				viberBot.sendBigTextMessage(await Order.sellStaleProfitOrders(STALE_ORDER_DAYS, STALE_ORDER_PRICE_DIFFERENCE_PERCENT, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l));
+				let staleResult = await Order.sellStaleProfitOrders(STALE_ORDER_DAYS, STALE_ORDER_PRICE_DIFFERENCE_PERCENT, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l)
+				if (staleResult.result) viberBot.sendBigTextMessage(staleResult.report);
 			}
 
 			if (viberBot && viberBot.pauseAnalysis) {

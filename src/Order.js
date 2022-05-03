@@ -224,6 +224,7 @@ class Order {
 	}
 
 	static async sellStaleProfitOrders(staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, timeZone, getTicker, cancelOrder, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, simAddOrderObj={}) {
+		let result = false;
 		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
 		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
 		
@@ -255,6 +256,7 @@ class Order {
 					}
 					// if order eligible for cancellation
 					if (daysDiff >= staleOrderDays || differencePercent > staleOrderPriceDifferencePercent) {
+						result = true;
 						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
 						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
 						await sleep(1000);
@@ -290,7 +292,7 @@ class Order {
 			}
 		}
 		report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
-		return report;
+		return {result: result, report: report};
 	}
 
 }
