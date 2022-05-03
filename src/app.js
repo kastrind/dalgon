@@ -44,9 +44,9 @@ var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
 l.i(`Base currency: ${BASE_CURRENCY}`);
 var TIMEZONE = properties.get("main.TIMEZONE");
 l.i(`Timezone: ${TIMEZONE}`);
-var STALE_ORDER_DAYS = properties.get("main.STALE_ORDER_DAYS");
+var STALE_ORDER_DAYS = parseInt(properties.get("main.STALE_ORDER_DAYS"));
 l.i(`Days until a sell take-profit order goes stale: ${STALE_ORDER_DAYS}`);
-var STALE_ORDER_PRICE_DIFFERENCE_PERCENT = properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT");
+var STALE_ORDER_PRICE_DIFFERENCE_PERCENT = parseFloat(properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT"));
 l.i(`Price difference percent for a sell take-profit order to go stale: ${STALE_ORDER_PRICE_DIFFERENCE_PERCENT}`);
 
 l.i(`Declaring Kraken and CoinGecko API functions...`);
@@ -452,7 +452,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			}
 
 			// Cancel and sell any take-profit orders that went stale
-			viberBot.sendBigTextMessage(await Order.sellStaleProfitOrders(getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l));
+			viberBot.sendBigTextMessage(await Order.sellStaleProfitOrders(STALE_ORDER_DAYS, STALE_ORDER_PRICE_DIFFERENCE_PERCENT, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l));
 
 			// If allowed to auto-trade
 			if (viberBot && viberBot.canStartTrading) {
