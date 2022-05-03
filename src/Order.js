@@ -196,7 +196,7 @@ class Order {
 
 	static async reportOpenOrders(openOrdersResponseBody, timeZone, getTicker=null) {
 		let report = "";
-		var options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
 		if (isEmpty(openOrdersResponseBody.result.open)) {
 			report = "There are no open orders.\n"; }
 		else {
@@ -204,22 +204,92 @@ class Order {
 				let date = new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[txid].opentm)*1000))).toLocaleString("en-US", options);
 				let description = openOrdersResponseBody.result.open[txid].descr.order;
 
-				let askPriceReportPart = "";
+				let currPriceReportPart = "";
 				if (getTicker) {
 					let pair = openOrdersResponseBody.result.open[txid].descr.pair;
 					let price = parseFloat(openOrdersResponseBody.result.open[txid].descr.price);
-					let ticker = await (Ticker.request(getTicker, { searchParams: { pair: pair } }));
+					let ticker = await Ticker.request(getTicker, { searchParams: { pair: pair } });
 					await sleep(1000);
 					if (ticker) {
-						let askPrice = ticker.lastTradeClosedPrice;
-						let differencePercent = ((price - askPrice)*100/askPrice).toFixed(2);
-						askPriceReportPart = `\nask price: ${askPrice} (${differencePercent}%)`;
+						let currPrice = parseFloat(ticker.lastTradeClosedPrice);
+						let differencePercent = ((price - currPrice)*100/currPrice).toFixed(2);
+						currPriceReportPart = `\ncurr price: ${currPrice} (${differencePercent}%)`;
 					}
 				}
 
-				report += `${date}\ntxid: ${txid}\n${description}${askPriceReportPart}\n\n`;
+				report += `${date}\ntxid: ${txid}\n${description}${currPriceReportPart}\n\n`;
 			}
 		}
+		return report;
+	}
+
+	static async sellStaleProfitOrders(getOpenOrders, timeZone, getTicker, cancelOrder, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, simAddOrderObj={}) {
+		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
+		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+		
+		let openOrdersResponseBody = await Order.request(getOpenOrders, {}, simOpenOrdersObj);
+
+		if (!isEmpty(openOrdersResponseBody.result.open)) {
+			let dateNow = new Date().getTime();
+			for(let txid in openOrdersResponseBody.result.open) {
+				let currOpenOrder = openOrdersResponseBody.result.open[txid];
+				let type = currOpenOrder.descr.type;
+				let orderType = currOpenOrder.descr.ordertype;
+				let description = currOpenOrder.descr.order;
+				if (type == 'sell' && orderType == 'take-profit') {
+					let dateFull = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).toLocaleString("en-US", options);
+					let date = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).getTime();
+					let daysDiff = Math.round((dateNow - date)/(1000*60*60*24));
+					report += l.i(`Order ${txid}: ${description}`) + '\n';
+					report += l.i(`Took place on ${dateFull}. ${daysDiff} days ago.`, 2) + '\n';
+
+					let pair = currOpenOrder.descr.pair;
+					let ticker = await Ticker.request(getTicker, { searchParams: { pair: pair } });
+					let differencePercent = 0;
+					await sleep(1000);
+					if (ticker) {
+						let price = parseFloat(currOpenOrder.descr.price);
+						let currPrice = parseFloat(ticker.lastTradeClosedPrice);
+						let differencePercent = ((price - currPrice)*100/currPrice).toFixed(2);
+						report += l.i(`Curr price is ${currPrice}, price difference is ${differencePercent}%.`, 2) + '\n';
+					}
+					// if order eligible for cancellation
+					if (daysDiff >= 0 || differencePercent > 5) {
+						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
+						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
+						await sleep(1000);
+						// Cancel order succeeded
+						if (cancelOrderResponseBody && !cancelOrderResponseBody.result.pending) {
+							report += l.suc(`Order ${txid} cancelled.`, 2, true) + '\n';
+							report += l.i(`Placing market order...`, 2) + '\n';
+							let vol = currOpenOrder.vol;
+							let order = new Order(1, 'market', 'sell', null, null, simAddOrderObj==true, false);
+							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, { volume: vol } ), simAddOrderObj);
+							await sleep(1000);
+							let orderResponseBody = JSON.parse(orderResponse.body);
+							// Market order failed
+							if (!isEmpty(orderResponseBody.error)) {
+								report += l.err(`Market order failed with error: ${orderResponseBody.error}`, 2, true) + '\n';
+								report += l.err(`Proceed manually.`, 2, true) + '\n';
+							}
+							// Market order succeeded
+							else {
+								report += l.suc(`Market order placed.`, 2, true) + '\n'; 
+								report += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 2, true) + '\n'; 
+							}
+						// Cancel order failed
+						}else {
+							report += l.err(`Order was not cancelled.`, 2, true) + '\n';
+							if (cancelOrderResponseBody) {
+								report += l.err(`Response: ${JSON.stringify(cancelOrderResponseBody, null, 2)}`, 2, true) + '\n';
+							}
+							report += l.err(`Proceed manually.`, 2, true) + '\n';
+						}
+					}
+				}
+			}
+		}
+		report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
 		return report;
 	}
 
