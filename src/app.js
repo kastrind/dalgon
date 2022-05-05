@@ -479,12 +479,18 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				for (let i=0; i<assetResultsReversed.length; i++) {
 
 					assetToInvestIn = assetResultsReversed[i].name;
-					l.i(`Initiating auto trading for asset ${assetToInvestIn}`, 0, true);
+					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
 
 					// Asset should hit bottom and about to trend upwards
-					if (assetResultsReversed[i].candleStickScore > -0.001) continue;
+					if (assetResultsReversed[i].candleStickScore > -0.001) {
+						l.w(`Will not proceed to order ${assetToInvestIn}: candlestick score is > -0.001.`, 1, true);
+						continue;
+					}
 					// Asset should have its MACD above 0 and previously below 0
-					if (! (assetResultsReversed[i].macdPrevious < 0 && assetResultsReversed[i].macdCurrent > 0)) continue;
+					if (! (assetResultsReversed[i].macdPrevious < 0 && assetResultsReversed[i].macdCurrent > 0)) {
+						l.w(`Will not proceed to order ${assetToInvestIn}: MACD did not transition from negative to positive.`, 1, true);
+						continue;
+					}
 
 					// If there is an open order for the asset to invest in, do not trade
 					let assetInfos = await AssetInfo.request(getAssetInfo, {searchParams: { asset: assetToInvestIn }}, l, SIMULATION);
@@ -494,7 +500,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 						for (let i=0; i < assetInfos.length; i++) { // there should be only one
 							let assetInfo = assetInfos[i];
 							if (openOrderAssetPairs.filter( (pair) => pair.startsWith(assetInfo.assetName) || pair.startsWith(assetInfo.altName) ).length > 0) {
-								l.w(`Will not proceed to order ${assetToInvestIn}: there is an open order for this asset. `, 0, true);
+								l.w(`Will not proceed to order ${assetToInvestIn}: there is an open order for this asset.`, 1, true);
 								assetHasOpenOrder = true;
 							}
 						}
@@ -515,6 +521,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 						}
 					}
 					await sleep(1000);
+					l.i(`Completed auto-trading for asset ${assetToInvestIn}`, 0, true);
 				}
 			}
 			l.i("Sleeping...");
