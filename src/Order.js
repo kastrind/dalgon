@@ -226,6 +226,8 @@ class Order {
 	static async sellStaleProfitOrders(staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, timeZone, getTicker, cancelOrder, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, simAddOrderObj={}) {
 		let result = false;
 		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
+		report += l.i(`Stale orders are >= ${staleOrderDays} days old.`) + '\n';
+		report += l.i(`Stale orders are > ${staleOrderPriceDifferencePercent}% to market price.`) + '\n';
 		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
 		
 		let openOrdersResponseBody = await Order.request(getOpenOrders, {}, simOpenOrdersObj);
@@ -242,7 +244,7 @@ class Order {
 					let date = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).getTime();
 					let daysDiff = Math.round((dateNow - date)/(1000*60*60*24));
 					report += l.i(`Order ${txid}: ${description}`) + '\n';
-					report += l.i(`Took place on ${dateFull}. ${daysDiff} days ago.`, 2) + '\n';
+					report += l.i(`Took place on ${dateFull}, ${daysDiff} days ago.`, 2) + '\n';
 
 					let pair = currOpenOrder.descr.pair;
 					let ticker = await Ticker.request(getTicker, { searchParams: { pair: pair } });
@@ -251,11 +253,13 @@ class Order {
 					if (ticker) {
 						let price = parseFloat(currOpenOrder.descr.price);
 						let currPrice = parseFloat(ticker.lastTradeClosedPrice);
-						let differencePercent = ((price - currPrice)*100/currPrice).toFixed(2);
-						report += l.i(`Curr price is ${currPrice}, price difference is ${differencePercent}%.`, 2) + '\n';
+						differencePercent = (price - currPrice)*100/currPrice;
+						report += l.i(`Curr price is ${currPrice}, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 					}
 					// if order eligible for cancellation
 					if (daysDiff >= staleOrderDays || differencePercent > staleOrderPriceDifferencePercent) {
+						if (daysDiff >= staleOrderDays) report += l.i(`Order is stale: ${daysDiff} days old >= ${staleOrderDays} days.`, 2) + '\n';
+						if (differencePercent > staleOrderPriceDifferencePercent) report += l.i(`Order is stale: ${differencePercent}% > ${staleOrderPriceDifferencePercent}% to market price.`, 2) + '\n';
 						result = true;
 						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
 						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
