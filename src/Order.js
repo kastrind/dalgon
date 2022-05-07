@@ -226,8 +226,8 @@ class Order {
 	static async sellStaleProfitOrders(staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, timeZone, getTicker, cancelOrder, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, simAddOrderObj={}) {
 		let result = false;
 		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
-		report += l.i(`Stale orders are >= ${staleOrderDays} days old.`) + '\n';
-		report += l.i(`Stale orders are > ${staleOrderPriceDifferencePercent}% to market price.`) + '\n';
+		report += l.i(`Orders considered stale are >= ${staleOrderDays} days old.`) + '\n';
+		report += l.i(`Orders considered stale are > ${staleOrderPriceDifferencePercent}% to market price.`) + '\n';
 		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
 		
 		let openOrdersResponseBody = await Order.request(getOpenOrders, {}, simOpenOrdersObj);
@@ -259,7 +259,7 @@ class Order {
 					// if order eligible for cancellation
 					if (daysDiff >= staleOrderDays || differencePercent > staleOrderPriceDifferencePercent) {
 						if (daysDiff >= staleOrderDays) report += l.i(`Order is stale: ${daysDiff} days old >= ${staleOrderDays} days.`, 2) + '\n';
-						if (differencePercent > staleOrderPriceDifferencePercent) report += l.i(`Order is stale: ${differencePercent}% > ${staleOrderPriceDifferencePercent}% to market price.`, 2) + '\n';
+						if (differencePercent > staleOrderPriceDifferencePercent) report += l.i(`Order is stale: ${differencePercent.toFixed(2)}% > ${staleOrderPriceDifferencePercent}% to market price.`, 2) + '\n';
 						result = true;
 						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
 						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
