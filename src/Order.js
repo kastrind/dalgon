@@ -244,7 +244,7 @@ class Order {
 					let date = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).getTime();
 					let daysDiff = (dateNow - date)/(1000*60*60*24);
 					report += l.i(`Order ${txid}: ${description}`) + '\n';
-					report += l.i(`Took place on ${dateFull}, ${daysDiff} days ago.`, 2) + '\n';
+					report += l.i(`Took place on ${dateFull}, ${daysDiff.toFixed(2)} days ago.`, 2) + '\n';
 
 					let pair = currOpenOrder.descr.pair;
 					let ticker = await Ticker.request(getTicker, { searchParams: { pair: pair } });
