@@ -261,9 +261,8 @@ class Order {
 					// order is profitabe but did not reach desired market price in time
 					if ((daysDiff >= staleOrderDays || differencePercent > staleOrderPriceDifferencePercent) ||
 						(daysDiff >= staleOrderDays/3 && differencePercent > 0 && differencePercent <= 1)) {
-						if (daysDiff >= staleOrderDays) report += l.i(`Order is stale: ${daysDiff} days old >= ${staleOrderDays} days.`, 2) + '\n';
-						if (differencePercent > staleOrderPriceDifferencePercent) report += l.i(`Order is stale: ${differencePercent.toFixed(2)}% > ${staleOrderPriceDifferencePercent}% to market price.`, 2) + '\n';
 						result = true;
+						report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
 						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
 						await sleep(1000);
