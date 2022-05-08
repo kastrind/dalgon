@@ -44,7 +44,7 @@ var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
 l.i(`Base currency: ${BASE_CURRENCY}`);
 var TIMEZONE = properties.get("main.TIMEZONE");
 l.i(`Timezone: ${TIMEZONE}`);
-var STALE_ORDER_DAYS = parseInt(properties.get("main.STALE_ORDER_DAYS"));
+var STALE_ORDER_DAYS = parseFloat(properties.get("main.STALE_ORDER_DAYS"));
 l.i(`Days until a sell take-profit order goes stale: ${STALE_ORDER_DAYS}`);
 var STALE_ORDER_PRICE_DIFFERENCE_PERCENT = parseFloat(properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT"));
 l.i(`Price difference percent for a sell take-profit order to go stale: ${STALE_ORDER_PRICE_DIFFERENCE_PERCENT}`);

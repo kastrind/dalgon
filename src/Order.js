@@ -140,7 +140,7 @@ class Order {
 		let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
 
 		// Determine price per unit and volume to buy from total buying price
-		let buyPriceUnit = parseFloat(ticker.askPrice);
+		let buyPriceUnit = parseFloat(ticker.lastTradeClosedPrice);
 		let buyVolume = buyPriceTotal / buyPriceUnit;
 		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
 		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
@@ -242,7 +242,7 @@ class Order {
 				if (type == 'sell' && orderType == 'take-profit') {
 					let dateFull = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).toLocaleString("en-US", options);
 					let date = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).getTime();
-					let daysDiff = Math.round((dateNow - date)/(1000*60*60*24));
+					let daysDiff = (dateNow - date)/(1000*60*60*24);
 					report += l.i(`Order ${txid}: ${description}`) + '\n';
 					report += l.i(`Took place on ${dateFull}, ${daysDiff} days ago.`, 2) + '\n';
 
@@ -256,8 +256,11 @@ class Order {
 						differencePercent = (price - currPrice)*100/currPrice;
 						report += l.i(`Curr price is ${currPrice}, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 					}
-					// if order eligible for cancellation
-					if (daysDiff >= staleOrderDays || differencePercent > staleOrderPriceDifferencePercent) {
+					// if order eligible for cancellation, that is:
+					// if order too old, or desired market price diverged too much, or 
+					// order is profitabe but did not reach desired market price in time
+					if ((daysDiff >= staleOrderDays || differencePercent > staleOrderPriceDifferencePercent) ||
+						(daysDiff >= staleOrderDays/3 && differencePercent > 0 && differencePercent <= 1)) {
 						if (daysDiff >= staleOrderDays) report += l.i(`Order is stale: ${daysDiff} days old >= ${staleOrderDays} days.`, 2) + '\n';
 						if (differencePercent > staleOrderPriceDifferencePercent) report += l.i(`Order is stale: ${differencePercent.toFixed(2)}% > ${staleOrderPriceDifferencePercent}% to market price.`, 2) + '\n';
 						result = true;
