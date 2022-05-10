@@ -482,8 +482,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
 
 					// Asset should hit bottom and about to trend upwards
-					if (assetResultsReversed[i].candleStickScore >= 0.001) {
-						l.w(`Will not proceed to order ${assetToInvestIn}: candlestick score >= 0.001.`, 1, true);
+					if (assetResultsReversed[i].candleStickScore < 0.001) {
+						l.w(`Will not proceed to order ${assetToInvestIn}: candlestick score < 0.001.`, 1, true);
 						continue;
 					}
 					// Asset should have its MACD above 0 and previously below 0
