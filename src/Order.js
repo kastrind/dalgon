@@ -257,9 +257,9 @@ class Order {
 						report += l.i(`Curr price is ${currPrice}, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 					}
 					// if order eligible for cancellation, that is:
-					// if order too old, or desired market price diverged too much, or 
+					// if order too old and desired market price diverged too much, or 
 					// order is profitabe but did not reach desired market price in time
-					if ((daysDiff >= staleOrderDays || differencePercent > staleOrderPriceDifferencePercent) ||
+					if ((daysDiff >= staleOrderDays && differencePercent > staleOrderPriceDifferencePercent) ||
 						(daysDiff >= staleOrderDays/3 && differencePercent > 0 && differencePercent <= 1)) {
 						result = true;
 						report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';

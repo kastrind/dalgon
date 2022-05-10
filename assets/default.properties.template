@@ -6,8 +6,8 @@ ASSET_EVAL_REPORT_FILE=assets/asset_report.txt
 AUTOTRADE_CURRENCIES={"XETH": {"name": "XETH", "queryAssetName": "ETH", "minBuyAmount": 0.01, "buyPercent": 0, "profitPercent": 2, "minBalance": 0}, "XXBT": {"name": "XXBT", "queryAssetName": "BTC", "minBuyAmount": 0.0006, "buyPercent": 25, "profitPercent": 2, "minBalance": 0.001}}
 BUY_EXCEPTIONS=BTC ETH USDT USDC TBTC WBTC PAXG SBR DAI UST REPV2 ETH2 SUSHI
 BUY_WHITELIST=
-STALE_ORDER_DAYS=2
-STALE_ORDER_PRICE_DIFFERENCE_PERCENT=5
+STALE_ORDER_DAYS=5
+STALE_ORDER_PRICE_DIFFERENCE_PERCENT=10
 
 [ledger]
 TIME_TOLERANCE=10
