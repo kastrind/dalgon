@@ -1,3 +1,4 @@
+import fs from 'fs';
 import Ticker from './Ticker.js';
 import Balance from './Balance.js';
 import TradeableAssetPair from './TradeableAssetPair.js';
@@ -112,7 +113,7 @@ class Order {
 		return false;
 	}
 
-	async autoTrade(assetToInvestIn, getTicker, addOrder) {
+	async autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder) {
 		let l = this.l;
 		let autoTradeReportEnd = `BUY ${assetToInvestIn} ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - END`;
 
@@ -144,8 +145,6 @@ class Order {
 		let buyVolume = buyPriceTotal / buyPriceUnit;
 		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
 		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
-
-		let profitPercent = this.autoTradeCurrency.profitPercent;
 
 		// Set the desired selling price for profit
 		let profitPrice = buyPriceUnit + profitPercent * buyPriceUnit / 100;
@@ -223,9 +222,10 @@ class Order {
 		return report;
 	}
 
-	static async sellStaleProfitOrders(staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, timeZone, getTicker, cancelOrder, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, simAddOrderObj={}) {
+	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, timeZone, getTicker, cancelOrder, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, simAddOrderObj={}) {
 		let result = false;
 		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
+		report += l.i(`Desired profit percentage: ${profitPercent}%.`) + '\n';
 		report += l.i(`Orders considered stale are >= ${staleOrderDays} days old.`) + '\n';
 		report += l.i(`Orders considered stale are > ${staleOrderPriceDifferencePercent}% to market price.`) + '\n';
 		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
@@ -235,6 +235,12 @@ class Order {
 		if (!isEmpty(openOrdersResponseBody.result.open)) {
 			let dateNow = new Date().getTime();
 			for(let txid in openOrdersResponseBody.result.open) {
+
+				if (staleOrderExceptions.includes(txid)) {
+					report += l.i(`Skipping order ${txid} because it is excepted.`, 2) + '\n';
+					continue;
+				}
+
 				let currOpenOrder = openOrdersResponseBody.result.open[txid];
 				let type = currOpenOrder.descr.type;
 				let orderType = currOpenOrder.descr.ordertype;
@@ -249,21 +255,49 @@ class Order {
 					let pair = currOpenOrder.descr.pair;
 					let ticker = await Ticker.request(getTicker, { searchParams: { pair: pair } });
 					let differencePercent = 0;
-					await sleep(1000);
+					let currPrice;
+					let canSellForProfit = false;
+					await sleep(100);
 					if (ticker) {
 						let price = parseFloat(currOpenOrder.descr.price);
-						let currPrice = parseFloat(ticker.lastTradeClosedPrice);
+						currPrice = parseFloat(ticker.lastTradeClosedPrice);
 						differencePercent = (price - currPrice)*100/currPrice;
 						report += l.i(`Curr price is ${currPrice}, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
+
+						// if selling is profitable
+						if (differencePercent <= profitPercent -1) {
+							if (!isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length>=2) {
+								let lastTwo = priceToMarketSeries[txid].slice(-2);
+								// if current price to market > last one, and
+								// last price to market > the second-to-last, time to sell
+								// if (differencePercent > lastTwo[1] && lastTwo[1] > lastTwo[0] &&
+								// 	lastTwo[1] < profitPercent && lastTwo[0] < profitPercent) {
+
+								// if current price to market > last one
+								if (differencePercent >= lastTwo[1] && lastTwo[1] < profitPercent) {
+									canSellForProfit = true;
+								}//else keep waiting, in attempt to maximize profit
+							}
+						}
 					}
+
+					if (!Object.keys(priceToMarketSeries).includes(txid)) priceToMarketSeries[txid] = [differencePercent];
+					else priceToMarketSeries[txid].push(differencePercent);
+					if (priceToMarketSeries[txid].length>2) priceToMarketSeries[txid].shift();
+
 					// if order eligible for cancellation, that is:
 					// if order too old and desired market price diverged too much, or 
-					// order is profitabe but did not reach desired market price in time
+					// order is profitabe enough
 					if ((daysDiff >= staleOrderDays && differencePercent > staleOrderPriceDifferencePercent) ||
-						(daysDiff >= staleOrderDays/3 && differencePercent > 0 && differencePercent <= 1)) {
+						canSellForProfit) {
 						result = true;
-						report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
+						if (!canSellForProfit) {
+							report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
+						}else {
+							report += l.i(`Can sell for profit: ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
+						}
 						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
+						/*
 						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
 						await sleep(1000);
 						// Cancel order succeeded
@@ -283,7 +317,10 @@ class Order {
 							// Market order succeeded
 							else {
 								report += l.suc(`Market order placed.`, 2, true) + '\n'; 
-								report += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 2, true) + '\n'; 
+								report += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 2, true) + '\n';
+								if (canSellForProfit) {
+									delete priceToMarketSeries[txid];
+								}
 							}
 						// Cancel order failed
 						}else {
@@ -292,13 +329,27 @@ class Order {
 								report += l.err(`Response: ${JSON.stringify(cancelOrderResponseBody, null, 2)}`, 2, true) + '\n';
 							}
 							report += l.err(`Proceed manually.`, 2, true) + '\n';
-						}
+						}*/
 					}
 				}
 			}
 		}
 		report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
-		return {result: result, report: report};
+		return {result: result, report: report, priceToMarketSeries: priceToMarketSeries};
+	}
+
+	static readPriceToMarketSeries(priceToMarketSeriesFilePath, logger) {
+		let priceToMarketSeries = {};
+		try {
+			priceToMarketSeries = JSON.parse(fs.readFileSync(priceToMarketSeriesFilePath, {encoding:'utf8', flag:'r'}));
+		}catch(error) {
+			logger.err(error, 0, true);
+		}
+		return priceToMarketSeries;
+	}
+
+	static writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, logger) {
+		fs.writeFileSync(priceToMarketSeriesFilePath, JSON.stringify(priceToMarketSeries, null, 2), function(err) { if (err) logger.err(err, 0, true); } );
 	}
 
 }

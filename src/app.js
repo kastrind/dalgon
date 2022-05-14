@@ -15,6 +15,9 @@ import Order from './Order.js';
 
 import { isEmpty, sleep } from './utils.js';
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 // command line params
 var cmdOpts = options;
 
@@ -44,10 +47,12 @@ var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
 l.i(`Base currency: ${BASE_CURRENCY}`);
 var TIMEZONE = properties.get("main.TIMEZONE");
 l.i(`Timezone: ${TIMEZONE}`);
-var STALE_ORDER_DAYS = parseFloat(properties.get("main.STALE_ORDER_DAYS"));
-l.i(`Days until a sell take-profit order goes stale: ${STALE_ORDER_DAYS}`);
-var STALE_ORDER_PRICE_DIFFERENCE_PERCENT = parseFloat(properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT"));
-l.i(`Price difference percent for a sell take-profit order to go stale: ${STALE_ORDER_PRICE_DIFFERENCE_PERCENT}`);
+var profitPercent = parseFloat(properties.get("main.PROFIT_PERCENT"));
+l.i(`Desired profit percentage: ${profitPercent}`);
+var staleOrderDays = parseFloat(properties.get("main.STALE_ORDER_DAYS"));
+l.i(`Days until a sell take-profit order goes stale: ${staleOrderDays}`);
+var staleOrderPriceDifferencePercent = parseFloat(properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT"));
+l.i(`Price difference percent for a sell take-profit order to go stale: ${staleOrderPriceDifferencePercent}`);
 
 l.i(`Declaring Kraken and CoinGecko API functions...`);
 
@@ -72,6 +77,32 @@ var addOrder          = dalgon.createPrivateFunction('/0/private/AddOrder',     
 var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',    privateHeaderObj, 'Request for Cancel Order');
 
 (async function () {
+	let priceToMarketSeriesFilePath = properties.get('main.PRICE_TO_MARKET_SERIES_FILE');
+	let priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFilePath, l);
+	let staleOrderExceptions = properties.get('main.STALE_ORDER_EXCEPTIONS').split(' ');
+
+	/*
+	const simOpenOrdersObj = require('../assets/open.Orders.sim.response.json');
+	var dalgon2 = new Dalgon(APIKEY, PRIVATEAPIKEY, l, false);
+	var getTicker2 = dalgon2.createPublicFunction('/0/public/Ticker', 'Request for Get Ticker2');
+	let priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFilePath, l);
+	l.i(JSON.stringify(priceToMarketSeries, null, 2));
+	let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker2, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+	//l.i(JSON.stringify(staleResult, null, 2));
+	priceToMarketSeries = staleResult.priceToMarketSeries;
+	Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
+
+	staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker2, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+	//l.i(JSON.stringify(staleResult, null, 2));
+	priceToMarketSeries = staleResult.priceToMarketSeries;
+	Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
+
+	staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker2, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+	//l.i(JSON.stringify(staleResult, null, 2));
+	priceToMarketSeries = staleResult.priceToMarketSeries;
+	Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
+	return;
+	*/
 
 	l.suc(`Dalgon started. Initiating analysis and auto-trading cycle...`, 0, true);
 
@@ -284,7 +315,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			if (assetToInvestIn) {
 				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
 				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
-					await order.autoTrade(assetToInvestIn, getTicker, addOrder);
+					await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
 				}
 			}
 			viberBot.recordHistory(message);
@@ -333,25 +364,30 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		});
 
 		// Set Profit Percentage ASSET_SYMBOL AMOUNT
-		viberBot.getBot().onTextMessage(/^(set )?profit percent (\S+)( |=)(\S+)$/i, async (message, response) => {
-			let matches = message.text.match(/^(set )?profit percent (\S+)( |=)(\S+)$/i);
-			let assetName = matches[2].toUpperCase();
-			let profitPercent = parseFloat(matches[4]);
-			if (!autoTradeCurrencies[assetName]) {
-				viberBot.sendTextMessage(`Failed to set profit percent: auto-trading currency ${assetName} not found.`);
-			}else {
-				autoTradeCurrencies[assetName].profitPercent = profitPercent;
-				viberBot.sendTextMessage(`${assetName} profit percent set to ${profitPercent}.`);
-			}
+		viberBot.getBot().onTextMessage(/^(set )?profit percent (\S+)$/i, async (message, response) => {
+			let matches = message.text.match(/^(set )?profit percent (\S+)$/i);
+			let newProfitPercent = parseFloat(matches[2]);
+			profitPercent = newProfitPercent;
+			viberBot.sendTextMessage(`${assetName} profit percent set to ${profitPercent}.`);
 			viberBot.recordHistory(message);
 		});
 
 		// Get Auto-Trading Configuration
 		viberBot.getBot().onTextMessage(/^(get )?(auto)?( |-)?trading config(uration)?$/i, async (message, response) => {
+			viberBot.sendTextMessage(`AUTOTRADE_CURRENCIES:`);
 			for (let assetName in autoTradeCurrencies) {
 				viberBot.sendTextMessage(`${JSON.stringify(autoTradeCurrencies[assetName], null, 2)}.`);
 				await sleep(1000);
 			}
+			viberBot.sendTextMessage(`BUY_EXCEPTIONS=${buyExceptions}`);
+			await sleep(1000);
+			viberBot.sendTextMessage(`BUY_WHITELIST=${buyWhiteList}`);
+			await sleep(1000);
+			viberBot.sendTextMessage(`PROFIT_PERCENT=${profitPercent}`);
+			await sleep(1000);
+			viberBot.sendTextMessage(`STALE_ORDER_DAYS=${staleOrderDays}`);
+			await sleep(1000);
+			viberBot.sendTextMessage(`STALE_ORDER_PRICE_DIFFERENCE_PERCENT=${staleOrderPriceDifferencePercent}`);
 			viberBot.recordHistory(message);
 		});
 
@@ -421,7 +457,9 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			if (viberBot) {
 				// Cancel and sell any take-profit orders that went stale
-				let staleResult = await Order.sellStaleProfitOrders(STALE_ORDER_DAYS, STALE_ORDER_PRICE_DIFFERENCE_PERCENT, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l)
+				let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l);
+				priceToMarketSeries = staleResult.priceToMarketSeries;
+				Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
 				if (staleResult.result) viberBot.sendBigTextMessage(staleResult.report);
 			}
 
@@ -513,7 +551,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);
 					// If prerequisites to auto-trade are met, submit the limit Order with conditional take-profit
 					if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
-						let autoTradeResult = await order.autoTrade(assetToInvestIn, getTicker, addOrder);
+						let autoTradeResult = await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
 						if (!autoTradeResult) {
 							viberBot.canStartTrading = false;
 							viberBot.sendTextMessage(`I stopped auto-trading. Awaiting instructions.`);

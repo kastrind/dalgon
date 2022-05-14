@@ -1,0 +1,115 @@
+{
+	"error": [],
+	"result": {
+	  "open": {
+		"1O6Z4CS-S5LIA-IOU4TR": {
+		  "refid": "1OC5NNB-7FWFT-FXCBU5",
+		  "userref": 1,
+		  "status": "open",
+		  "opentm": 1652460788.1450276,
+		  "starttm": 0,
+		  "expiretm": 0,
+		  "descr": {
+			"pair": "KNCXBT",
+			"type": "sell",
+			"ordertype": "take-profit",
+			"price": "0.00006064",
+			"price2": "0",
+			"leverage": "none",
+			"order": "sell 10.09251471 KNCXBT @ take profit 0.00006064",
+			"close": ""
+		  },
+		  "vol": "10.09251471",
+		  "vol_exec": "0.00000000",
+		  "cost": "0.000000000",
+		  "fee": "0.000000000",
+		  "price": "0.000000000",
+		  "stopprice": "0.000000000",
+		  "limitprice": "0.000000000",
+		  "misc": "",
+		  "oflags": "fcib"
+		},
+		"1OW27RX-YWQBE-2ZZYP7": {
+		  "refid": "1O3XOXX-SPHYY-BSZQA3",
+		  "userref": 1,
+		  "status": "open",
+		  "opentm": 1652459189.0313766,
+		  "starttm": 0,
+		  "expiretm": 0,
+		  "descr": {
+			"pair": "MANAXBT",
+			"type": "sell",
+			"ordertype": "take-profit",
+			"price": "0.00003659",
+			"price2": "0",
+			"leverage": "none",
+			"order": "sell 16.72706997 MANAXBT @ take profit 0.00003659",
+			"close": ""
+		  },
+		  "vol": "16.72706997",
+		  "vol_exec": "0.00000000",
+		  "cost": "0.000000000",
+		  "fee": "0.000000000",
+		  "price": "0.000000000",
+		  "stopprice": "0.000000000",
+		  "limitprice": "0.000000000",
+		  "misc": "",
+		  "oflags": "fcib"
+		},
+		"1OOV7GI-OVXI2-KKPO2V": {
+		  "refid": "1O3EVJL-WA6OC-JDM6OF",
+		  "userref": 1,
+		  "status": "open",
+		  "opentm": 1652455822.0098357,
+		  "starttm": 0,
+		  "expiretm": 0,
+		  "descr": {
+			"pair": "NANOXBT",
+			"type": "sell",
+			"ordertype": "take-profit",
+			"price": "0.000041497",
+			"price2": "0",
+			"leverage": "none",
+			"order": "sell 14.74817491 NANOXBT @ take profit 0.000041497",
+			"close": ""
+		  },
+		  "vol": "14.74817491",
+		  "vol_exec": "0.00000000",
+		  "cost": "0.000000000",
+		  "fee": "0.000000000",
+		  "price": "0.000000000",
+		  "stopprice": "0.000000000",
+		  "limitprice": "0.000000000",
+		  "misc": "",
+		  "oflags": "fcib"
+		},
+		"1O7TBWY-TZ2FA-2JS27W": {
+		  "refid": "1OL2R7C-ZOIKH-FD2XCX",
+		  "userref": 1,
+		  "status": "open",
+		  "opentm": 1652452017.8013167,
+		  "starttm": 0,
+		  "expiretm": 0,
+		  "descr": {
+			"pair": "ALGOXBT",
+			"type": "sell",
+			"ordertype": "take-profit",
+			"price": "0.00001672",
+			"price2": "0",
+			"leverage": "none",
+			"order": "sell 36.60768761 ALGOXBT @ take profit 0.00001672",
+			"close": ""
+		  },
+		  "vol": "36.60768761",
+		  "vol_exec": "0.00000000",
+		  "cost": "0.000000000",
+		  "fee": "0.000000000",
+		  "price": "0.000000000",
+		  "stopprice": "0.000000000",
+		  "limitprice": "0.000000000",
+		  "misc": "",
+		  "oflags": "fcib"
+		}
+	  }
+	}
+  }

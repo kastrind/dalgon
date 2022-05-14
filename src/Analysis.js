@@ -143,7 +143,7 @@ class Analysis {
 			let isCandidate = false;
 			let currAssetReport = "";
 			let currAssetResult = {};
-			if (
+			if (	(changeDay24h < 0.15) &&
 					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.005)
 				)
 			{
