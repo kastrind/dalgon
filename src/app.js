@@ -368,15 +368,14 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let matches = message.text.match(/^(set )?profit percent (\S+)$/i);
 			let newProfitPercent = parseFloat(matches[2]);
 			profitPercent = newProfitPercent;
-			viberBot.sendTextMessage(`${assetName} profit percent set to ${profitPercent}.`);
+			viberBot.sendTextMessage(`Profit percent set to ${profitPercent}.`);
 			viberBot.recordHistory(message);
 		});
 
 		// Get Auto-Trading Configuration
 		viberBot.getBot().onTextMessage(/^(get )?(auto)?( |-)?trading config(uration)?$/i, async (message, response) => {
-			viberBot.sendTextMessage(`AUTOTRADE_CURRENCIES:`);
 			for (let assetName in autoTradeCurrencies) {
-				viberBot.sendTextMessage(`${JSON.stringify(autoTradeCurrencies[assetName], null, 2)}.`);
+				viberBot.sendTextMessage(`AUTOTRADE_CURRENCIES:\n${JSON.stringify(autoTradeCurrencies[assetName], null, 2)}.`);
 				await sleep(1000);
 			}
 			viberBot.sendTextMessage(`BUY_EXCEPTIONS=${buyExceptions}`);
