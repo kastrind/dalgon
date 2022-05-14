@@ -53,7 +53,7 @@ class DalgonViberBot {
 			"set min balance ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL the desired amount of the remaining balance not to be used for trading\n
 			"set trading min ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL minimum trading amount to the given amount\n
 			"set trading percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL trading percent to the given percent\n
-			"set profit percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL profit to the given percent\n
+			"set profit percent AMOUNT": set profit to the given percent\n
 			"[get] [auto-]trading config[uration]": get auto trading configuration\n
 			"history": get recent messages history\n
 			"portfolio|holdings": holdings on CoinGecko\n
