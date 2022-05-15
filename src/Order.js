@@ -257,7 +257,7 @@ class Order {
 					let differencePercent = 0;
 					let currPrice;
 					let canSellForProfit = false;
-					await sleep(100);
+					await sleep(1000);
 					if (ticker) {
 						let price = parseFloat(currOpenOrder.descr.price);
 						currPrice = parseFloat(ticker.lastTradeClosedPrice);
@@ -297,7 +297,7 @@ class Order {
 							report += l.i(`Can sell for profit: ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 						}
 						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
-						/*
+
 						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
 						await sleep(1000);
 						// Cancel order succeeded
@@ -329,7 +329,7 @@ class Order {
 								report += l.err(`Response: ${JSON.stringify(cancelOrderResponseBody, null, 2)}`, 2, true) + '\n';
 							}
 							report += l.err(`Proceed manually.`, 2, true) + '\n';
-						}*/
+						}
 					}
 				}
 			}
