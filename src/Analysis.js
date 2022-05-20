@@ -52,6 +52,7 @@ class Analysis {
 			let ohlcPastHour = await (OHLC.request(getOHLC, assetPair, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
 			if (!ohlcPastHour) return [];
 			let changePastHour = ohlcPastHour.getChange();
+			let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
 
 			await sleep(2000);
 
@@ -102,6 +103,8 @@ class Analysis {
 				macdCurrent = 'N/A';
 				macdPrevious = 'N/A';
 			}
+			let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
+			let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 
 			let ohlcMonthHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcMonthHalf.setTicks(ohlcMonth.getTicks().slice(Math.ceil(ohlcMonth.getTicks().length/2), ohlcMonth.getTicks().length));
@@ -143,17 +146,19 @@ class Analysis {
 			let isCandidate = false;
 			let currAssetReport = "";
 			let currAssetResult = {};
-			if (	(changeDay24h < 0.15) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.005)
+			if (	(latestClosingPriceDiff8DaysEMAPercent <= -0.03) &&
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.001)
 				)
 			{
 				isCandidate = true;
 				currAssetResult = {
 					name: asset,
+					latestClosingPrice: latestClosingPrice,
 					score: (((macdCurrent + Math.abs(macdPrevious)) / ohlcPastHour.getAverage()) - candleStickScore).toFixed(3),
 					candleStickScore: candleStickScore,
 					macdCurrent: macdCurrent.toFixed(3),
 					macdPrevious: macdPrevious.toFixed(3),
+					eightDaysEMA: eightDaysEMA,
 					report: "",
 					changePastHour: changePastHour,
 					change3h: change3h,
@@ -172,6 +177,7 @@ class Analysis {
 
 				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 1) + '\n';
+				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 1) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 1) + '\n\n';

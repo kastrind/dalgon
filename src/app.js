@@ -77,6 +77,7 @@ var addOrder          = dalgon.createPrivateFunction('/0/private/AddOrder',     
 var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',    privateHeaderObj, 'Request for Cancel Order');
 
 (async function () {
+
 	let priceToMarketSeriesFilePath = properties.get('main.PRICE_TO_MARKET_SERIES_FILE');
 	let priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFilePath, l);
 	let staleOrderExceptions = properties.get('main.STALE_ORDER_EXCEPTIONS').split(' ');
