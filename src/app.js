@@ -314,7 +314,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.sendTextMessage(`Please wait.`);
 			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1].toUpperCase();
 			if (assetToInvestIn) {
-				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
+				let order = new Order(3, 'limit', 'buy', viberBot, l, SIMULATION, true);
 				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
 					await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
 				}
