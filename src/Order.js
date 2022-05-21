@@ -200,6 +200,8 @@ class Order {
 			report = "There are no open orders.\n"; }
 		else {
 			for(let txid in openOrdersResponseBody.result.open) {
+				let userref = parseInt(openOrdersResponseBody.result.open[txid].userref);
+				let userrefPart = !isEmpty(userref) ? `userref: ${userref}\n`: '';
 				let date = new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[txid].opentm)*1000))).toLocaleString("en-US", options);
 				let description = openOrdersResponseBody.result.open[txid].descr.order;
 
@@ -216,7 +218,7 @@ class Order {
 					}
 				}
 
-				report += `${date}\ntxid: ${txid}\n${description}${currPriceReportPart}\n\n`;
+				report += `${date}\ntxid: ${txid}\n${userrefPart}${description}${currPriceReportPart}\n\n`;
 			}
 		}
 		return report;
@@ -242,10 +244,11 @@ class Order {
 				}
 
 				let currOpenOrder = openOrdersResponseBody.result.open[txid];
+				let userref = parseInt(openOrdersResponseBody.result.open[txid].userref);
 				let type = currOpenOrder.descr.type;
 				let orderType = currOpenOrder.descr.ordertype;
 				let description = currOpenOrder.descr.order;
-				if (type == 'sell' && orderType == 'take-profit') {
+				if (userref == 1 && type == 'sell' && orderType == 'take-profit') {
 					let dateFull = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).toLocaleString("en-US", options);
 					let date = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).getTime();
 					let daysDiff = (dateNow - date)/(1000*60*60*24);
@@ -305,7 +308,7 @@ class Order {
 							report += l.suc(`Order ${txid} cancelled.`, 2, true) + '\n';
 							report += l.i(`Placing market order...`, 2) + '\n';
 							let vol = currOpenOrder.vol;
-							let order = new Order(1, 'market', 'sell', null, null, simAddOrderObj==true, false);
+							let order = new Order(2, 'market', 'sell', null, null, simAddOrderObj==true, false);
 							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, { volume: vol } ), simAddOrderObj);
 							await sleep(1000);
 							let orderResponseBody = JSON.parse(orderResponse.body);
