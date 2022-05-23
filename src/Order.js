@@ -269,17 +269,25 @@ class Order {
 
 						// if selling is profitable
 						if (differencePercent <= profitPercent -1) {
-							if (!isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length>=2) {
-								let lastTwo = priceToMarketSeries[txid].slice(-2);
-								// if current price to market > last one, and
-								// last price to market > the second-to-last, time to sell
-								// if (differencePercent > lastTwo[1] && lastTwo[1] > lastTwo[0] &&
-								// 	lastTwo[1] < profitPercent && lastTwo[0] < profitPercent) {
-
-								// if current price to market > last one
-								if (differencePercent >= lastTwo[1] && lastTwo[1] < profitPercent) {
-									canSellForProfit = true;
-								}//else keep waiting, in attempt to maximize profit
+							if (!isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length >= 1) {
+								let lastOne = priceToMarketSeries[txid][priceToMarketSeries.length -1];
+								
+								//if only one past price to market in the series,
+								if (priceToMarketSeries[txid].length == 1) {
+									// if current price to market > last one + 0.3, 
+									if (differencePercent >= lastOne + 0.3 && lastOne < profitPercent) {
+										canSellForProfit = true;
+									}
+								//if more than one past price to market in the series,
+								}else if (priceToMarketSeries[txid].length > 1) {
+									let beforeLastOne = priceToMarketSeries[txid][priceToMarketSeries.length -2];
+									// if current price to market > last one + 0.3 OR
+									//    current price to market > last one and second-to-last one
+									if ( (differencePercent >= lastOne + 0.3 || differencePercent >= lastOne && differencePercent >= beforeLastOne) && lastOne < profitPercent) {
+										canSellForProfit = true;
+									}
+								}
+								//else keep waiting, in attempt to maximize profit
 							}
 						}
 					}
