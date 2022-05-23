@@ -27,8 +27,43 @@ class Analysis {
 		this.simObjOHLCQuarter = simObjOHLCQuarter;
 	}
 
-	async recommend(getOHLC, reportFilePath) {
+	async analyseBitcoin(getOHLC) {
+		let pastHour = new Date();
+		pastHour.setHours(pastHour.getHours() - 1);
+		let ohlcPastHour = await (OHLC.request(getOHLC, 'BTC' + this.baseCurrency, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+		if (!ohlcPastHour) return { result: 'failure' };
+		
+		let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
+		await sleep(2000);
 
+		let month = new Date();
+		month.setHours(month.getHours() - 24*30);
+		let ohlcMonth = await (OHLC.request(getOHLC, 'BTC' + this.baseCurrency, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+		if (!ohlcMonth) return { result: "failure" };
+		let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
+		let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
+		await sleep(2000);
+		return {result: 'success',
+				eightDaysEMA: eightDaysEMA,
+				latestClosingPriceDiff8DaysEMAPercent: latestClosingPriceDiff8DaysEMAPercent
+				};
+
+	}
+
+	async recommend(getOHLC, reportFilePath) {
+		let report = this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
+		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
+		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.02;
+		let bitcoinAnalysisReportPart = '';
+		if (isBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`) + '\n'; }
+		else if (bitcoinAnalysis.result == 'success') { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
+		if (bitcoinAnalysis.result == 'success') {
+			bitcoinAnalysisReportPart += this.l.i(`BTC${this.baseCurrency} 8-days EMA is: ${bitcoinAnalysis.eightDaysEMA} (${prcnt(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent)}%)`, 1) + '\n';
+		}else {
+			bitcoinAnalysisReportPart += this.l.w(`Failed to analyse BTC${this.baseCurrency} 8-days EMA! Considering it bearish.`, 1, true) + '\n';
+		}
+		report += bitcoinAnalysisReportPart;
+		
 		let pastHour = new Date();
 		pastHour.setHours(pastHour.getHours() - 1);
 		let past6h = new Date();
@@ -41,13 +76,13 @@ class Analysis {
 		month.setHours(month.getHours() - 24*30);
 		let quarter = new Date();
 		quarter.setHours(quarter.getHours() - 24*30*3);
-		let report = "";
+
 		let assetResults = [];
 		for (let i=0; i < this.assets.length; i++) {
 			let asset = this.assets[i];
 			let assetPair = `${asset}${this.baseCurrency}`;
 
-			report = this.l.i(`EVALUATING ASSET: ${asset} - START`) + '\n';
+			report = this.l.i(`EVALUATING ASSET: ${asset} - START`, 1) + '\n';
 
 			let ohlcPastHour = await (OHLC.request(getOHLC, assetPair, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
 			if (!ohlcPastHour) return [];
@@ -144,9 +179,9 @@ class Analysis {
 			}
 
 			let isCandidate = false;
-			let currAssetReport = "";
+			let currAssetReport = '';
 			let currAssetResult = {};
-			if (	(latestClosingPriceDiff8DaysEMAPercent <= -0.03) &&
+			if (	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.03) &&
 					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.001)
 				)
 			{
@@ -175,28 +210,29 @@ class Analysis {
 					priceOverHighestMonth: priceOverHighestMonth
 				};
 
-				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 1) + '\n';
-				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 1) + '\n';
-				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 1) + '\n';
-				currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 1) + '\n';
-				currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 1) + '\n';
-				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 1) + '\n\n';
+				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n\n';
 
 				currAssetResult.report = currAssetReport;
-				currAssetReport = "";
+				currAssetReport = '';
 				assetResults.push(currAssetResult);
 
 				assetResults.sort(function (a, b) {
 					return a.score - b.score;
 				});
-				report = "";
+				report = assetResults.length ? bitcoinAnalysisReportPart : '';
 				assetResults.forEach(element => {
 					report += element.report;
 				});
 				fs.writeFile(reportFilePath, report, function(err) { if (err) this.l.err(err, 0, true); } );
 			}
-			report += this.l.i(`EVALUATING ASSET: ${asset} - END`);
+			report += this.l.i(`EVALUATING ASSET: ${asset} - END`, 1);
 		}
+		report += this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - END`) + '\n';
 
 		if (isEmpty(assetResults)) {
 			fs.writeFile(reportFilePath, '', function(err) { if (err) this.l.err(err, 0, true); } );
