@@ -274,16 +274,19 @@ class Order {
 								
 								//if only one past price to market in the series,
 								if (priceToMarketSeries[txid].length == 1) {
-									// if current price to market > last one + 0.3, 
-									if (differencePercent >= lastOne + 0.3 && lastOne < profitPercent) {
+									// if current price to market > last one + 0.3 (price lost considerable ground)
+									if (differencePercent > lastOne + 0.3 && lastOne < profitPercent) {
 										canSellForProfit = true;
 									}
 								//if more than one past price to market in the series,
 								}else if (priceToMarketSeries[txid].length > 1) {
 									let beforeLastOne = priceToMarketSeries[txid][priceToMarketSeries.length -2];
-									// if current price to market > last one + 0.3 OR
-									//    current price to market > last one and second-to-last one
-									if ( (differencePercent >= lastOne + 0.3 || differencePercent >= lastOne && differencePercent >= beforeLastOne) && lastOne < profitPercent) {
+									// if current price to market > last one + 0.3 OR (price lost considerable ground)
+									//    current price to market > last one and second-to-last one OR (price lost ground two consecutive times)
+									//    current price to market < last one and last one > second-to-last one (price gained less ground it lost)
+									if ( (differencePercent > lastOne + 0.3 ||
+										  differencePercent > lastOne && differencePercent > beforeLastOne ||
+										  differencePercent < lastOne && lastOne > beforeLastOne) && lastOne < profitPercent) {
 										canSellForProfit = true;
 									}
 								}
