@@ -239,7 +239,7 @@ class Order {
 			for(let txid in openOrdersResponseBody.result.open) {
 
 				if (staleOrderExceptions.includes(txid)) {
-					report += l.i(`Skipping order ${txid} because it is excepted.`, 2) + '\n';
+					report += l.i(`Skipping order ${txid} because it is excepted.`, 1) + '\n';
 					continue;
 				}
 
@@ -252,7 +252,7 @@ class Order {
 					let dateFull = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).toLocaleString("en-US", options);
 					let date = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).getTime();
 					let daysDiff = (dateNow - date)/(1000*60*60*24);
-					report += l.i(`Order ${txid}: ${description}`) + '\n';
+					report += l.i(`Order ${txid}: ${description}`, 1) + '\n';
 					report += l.i(`Took place on ${dateFull}, ${daysDiff.toFixed(2)} days ago.`, 2) + '\n';
 
 					let pair = currOpenOrder.descr.pair;
@@ -265,28 +265,46 @@ class Order {
 						let price = parseFloat(currOpenOrder.descr.price);
 						currPrice = parseFloat(ticker.lastTradeClosedPrice);
 						differencePercent = (price - currPrice)*100/currPrice;
+
+						// only for testing
+						if (!isEmpty(simOpenOrdersObj) && txid =="1O6Z4CS-S5LIA-IOU4TR") { differencePercent = 48.5; }
+						l.d(`differencePercent ${differencePercent} profitPercent ${profitPercent}`, 0);
+
 						report += l.i(`Curr price is ${currPrice}, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 
 						// if selling is profitable
 						if (differencePercent <= profitPercent -1) {
 							if (!isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length >= 1) {
-								let lastOne = priceToMarketSeries[txid][priceToMarketSeries.length -1];
+								let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
+								l.d("selling is profitable and series exists and has >=1 length");
 								
 								//if only one past price to market in the series,
 								if (priceToMarketSeries[txid].length == 1) {
+									l.d("series has one");
+									l.d(`lastOne ${lastOne}`);
 									// if current price to market > last one + 0.3 (price lost considerable ground)
 									if (differencePercent > lastOne + 0.3 && lastOne < profitPercent) {
+										l.d(`canSellForProfit 1A`);
 										canSellForProfit = true;
 									}
 								//if more than one past price to market in the series,
 								}else if (priceToMarketSeries[txid].length > 1) {
-									let beforeLastOne = priceToMarketSeries[txid][priceToMarketSeries.length -2];
+									let beforeLastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -2];
+									l.d("series has more than one");
+									l.d(`lastOne ${lastOne} beforeLastOne ${beforeLastOne}`);
 									// if current price to market > last one + 0.3 OR (price lost considerable ground)
 									//    current price to market > last one and second-to-last one OR (price lost ground two consecutive times)
 									//    current price to market < last one and last one > second-to-last one (price gained less ground it lost)
-									if ( (differencePercent > lastOne + 0.3 ||
-										  differencePercent > lastOne && differencePercent > beforeLastOne ||
-										  differencePercent < lastOne && lastOne > beforeLastOne) && lastOne < profitPercent) {
+									if (differencePercent > lastOne + 0.3 && lastOne < profitPercent) {
+										l.d(`canSellForProfit 2A`);
+										canSellForProfit = true;
+									}
+									if (differencePercent > lastOne && differencePercent > beforeLastOne && lastOne < profitPercent) {
+										l.d(`canSellForProfit 2B`);
+										canSellForProfit = true;
+									}
+									if (differencePercent < lastOne && lastOne > beforeLastOne && lastOne < profitPercent) {
+										l.d(`canSellForProfit 2C`);
 										canSellForProfit = true;
 									}
 								}
@@ -311,6 +329,8 @@ class Order {
 							report += l.i(`Can sell for profit: ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 						}
 						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
+
+						if (!isEmpty(simOpenOrdersObj)) return {};
 
 						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
 						await sleep(1000);

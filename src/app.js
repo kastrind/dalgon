@@ -81,29 +81,17 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let priceToMarketSeriesFilePath = properties.get('main.PRICE_TO_MARKET_SERIES_FILE');
 	let priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFilePath, l);
 	let staleOrderExceptions = properties.get('main.STALE_ORDER_EXCEPTIONS').split(' ');
-
-	/*
-	const simOpenOrdersObj = require('../assets/open.Orders.sim.response.json');
-	var dalgon2 = new Dalgon(APIKEY, PRIVATEAPIKEY, l, false);
-	var getTicker2 = dalgon2.createPublicFunction('/0/public/Ticker', 'Request for Get Ticker2');
-	let priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFilePath, l);
-	l.i(JSON.stringify(priceToMarketSeries, null, 2));
-	let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker2, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
-	//l.i(JSON.stringify(staleResult, null, 2));
-	priceToMarketSeries = staleResult.priceToMarketSeries;
-	Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
-
-	staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker2, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
-	//l.i(JSON.stringify(staleResult, null, 2));
-	priceToMarketSeries = staleResult.priceToMarketSeries;
-	Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
-
-	staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker2, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
-	//l.i(JSON.stringify(staleResult, null, 2));
-	priceToMarketSeries = staleResult.priceToMarketSeries;
-	Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
-	return;
-	*/
+	
+	// const simOpenOrdersObj = require('../assets/open.Orders.sim.response.json');
+	// var dalgon2 = new Dalgon(APIKEY, PRIVATEAPIKEY, l, false);
+	// var getTicker2 = dalgon2.createPublicFunction('/0/public/Ticker', 'Request for Get Ticker2');
+	// //l.i(JSON.stringify(priceToMarketSeries, null, 2));
+	// let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker2, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+	// //l.i(JSON.stringify(staleResult, null, 2));
+	// priceToMarketSeries = staleResult.priceToMarketSeries;
+	// Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
+	// return;
+	
 
 	l.suc(`Dalgon started. Initiating analysis and auto-trading cycle...`, 0, true);
 
