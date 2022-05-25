@@ -2,9 +2,10 @@ import { getDateTime } from './utils.js';
 
 class Logger {
 
-	constructor(verbose, debug) {
+	constructor(verbose, debug, forceHide=false) {
 		this.verbose = verbose;
 		this.debug = debug;
+		this.forceHide = forceHide;
 
 		this.reset = "\x1b[0m";
 		this.bright = "\x1b[1m";
@@ -43,38 +44,38 @@ class Logger {
 	}
 	
 	l(msg, indentation=0) {
-		console.log(`${'  '.repeat(indentation)}${this.getLogMsg(msg, indentation)}`);
+		if (!this.forceHide) console.log(`${'  '.repeat(indentation)}${this.getLogMsg(msg, indentation)}`);
 		return msg;
 	}
 	
 	i(msg, indentation=0) {
-		console.info(`${'  '.repeat(indentation)}${this.bgBlue}${this.fgWhite}(i) [INFO] ${getDateTime()}    ${this.getLogMsg(msg, indentation, `${this.bgBlue}${this.fgWhite}`)} ${this.reset}`);
+		if (!this.forceHide) console.info(`${'  '.repeat(indentation)}${this.bgBlue}${this.fgWhite}(i) [INFO] ${getDateTime()}    ${this.getLogMsg(msg, indentation, `${this.bgBlue}${this.fgWhite}`)} ${this.reset}`);
 		return msg;
 	}
 
 	d(msg, indentation=0) {
 		if (this.debug) {
-			console.debug(`${'  '.repeat(indentation)}${this.bgGrey}${this.fgDarkGreen}(*) [DEBUG] ${getDateTime()}   ${this.getLogMsg(msg, indentation, `${this.bgGrey}${this.fgDarkGreen}`)} ${this.reset}`);
+			if (!this.forceHide) console.debug(`${'  '.repeat(indentation)}${this.bgGrey}${this.fgDarkGreen}(*) [DEBUG] ${getDateTime()}   ${this.getLogMsg(msg, indentation, `${this.bgGrey}${this.fgDarkGreen}`)} ${this.reset}`);
 			return msg;
 		} else return "";
 	}
 	
 	w(msg, indentation=0, forceVerbose=false) {
 		if (this.verbose || forceVerbose) {
-			console.warn(`${'  '.repeat(indentation)}${this.bgYellow}${this.fgBlack}(!) [WARN] ${getDateTime()}    ${this.getLogMsg(msg, indentation, `${this.bgYellow}${this.fgBlack}`)} ${this.reset}`);
+			if (!this.forceHide) console.warn(`${'  '.repeat(indentation)}${this.bgYellow}${this.fgBlack}(!) [WARN] ${getDateTime()}    ${this.getLogMsg(msg, indentation, `${this.bgYellow}${this.fgBlack}`)} ${this.reset}`);
 			return msg;
 		}else return "";
 	}
 	suc(msg, indentation=0, forceVerbose=false) {
 		if (this.verbose || forceVerbose) {
-			console.info(`${'  '.repeat(indentation)}${this.bgGreen}${this.fgBlack}(v) [SUCCESS] ${getDateTime()} ${this.getLogMsg(msg, indentation, `${this.bgGreen}${this.fgBlack}`)} ${this.reset}`);
+			if (!this.forceHide) console.info(`${'  '.repeat(indentation)}${this.bgGreen}${this.fgBlack}(v) [SUCCESS] ${getDateTime()} ${this.getLogMsg(msg, indentation, `${this.bgGreen}${this.fgBlack}`)} ${this.reset}`);
 			return msg;
 		}else return "";
 	}
 	
 	err(msg, indentation=0, forceVerbose=false) {
 		if (this.verbose || forceVerbose) {
-			console.error(`${'  '.repeat(indentation)}${this.bgRed}${this.fgWhite}(x) [ERROR] ${getDateTime()}   ${this.getLogMsg(msg, indentation, `${this.bgRed}${this.fgWhite}`)} ${this.reset}`);
+			if (!this.forceHide) console.error(`${'  '.repeat(indentation)}${this.bgRed}${this.fgWhite}(x) [ERROR] ${getDateTime()}   ${this.getLogMsg(msg, indentation, `${this.bgRed}${this.fgWhite}`)} ${this.reset}`);
 			return msg;
 		}else return "";
 	}

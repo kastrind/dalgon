@@ -12,6 +12,7 @@ var ENV = 'default';
 var PRIVATEAPIKEY = "NO_KEY_NEEDED_BECAUSE_WE_RUN_SIMULATIONS";
 var VERBOSE = false;
 var DEBUG = false;
+var FORCE_HIDE = true;
 var SIMULATION = true;
 
 // load config file
@@ -21,7 +22,7 @@ var APIKEY = properties.get("main.APIKEY");
 var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
 
 // logger
-var l = new Logger(VERBOSE, DEBUG);
+var l = new Logger(VERBOSE, DEBUG, FORCE_HIDE);
 
 
 

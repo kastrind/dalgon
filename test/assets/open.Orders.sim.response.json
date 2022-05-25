@@ -2,6 +2,33 @@
 	"error": [],
 	"result": {
 	  "open": {
+		"11O6Z4CS-S5LIA-IOU4TR": {
+			"refid": "11OC5NNB-7FWFT-FXCBU5",
+			"userref": 1,
+			"status": "open",
+			"opentm": 1642460788.1450276,
+			"starttm": 0,
+			"expiretm": 0,
+			"descr": {
+			  "pair": "KNCXBT",
+			  "type": "sell",
+			  "ordertype": "take-profit",
+			  "price": "0.00006064",
+			  "price2": "0",
+			  "leverage": "none",
+			  "order": "sell 10.09251471 KNCXBT @ take profit 0.00006064",
+			  "close": ""
+			},
+			"vol": "10.09251471",
+			"vol_exec": "0.00000000",
+			"cost": "0.000000000",
+			"fee": "0.000000000",
+			"price": "0.000000000",
+			"stopprice": "0.000000000",
+			"limitprice": "0.000000000",
+			"misc": "",
+			"oflags": "fcib"
+		},
 		"1O6Z4CS-S5LIA-IOU4TR": {
 		  "refid": "1OC5NNB-7FWFT-FXCBU5",
 		  "userref": 1,
