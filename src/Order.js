@@ -299,11 +299,14 @@ class Order {
 										l.d(`canSellForProfit 2A`);
 										canSellForProfit = true;
 									}
-									if (differencePercent > lastOne && differencePercent > beforeLastOne && lastOne < profitPercent) {
+									if (differencePercent > lastOne && lastOne > beforeLastOne && lastOne < profitPercent) {
 										l.d(`canSellForProfit 2B`);
 										canSellForProfit = true;
 									}
-									if (differencePercent < lastOne && lastOne > beforeLastOne && lastOne < profitPercent) {
+									if (Math.abs(differencePercent - lastOne) < (lastOne - beforeLastOne) &&
+										(differencePercent - lastOne) < 0 &&
+										(lastOne - beforeLastOne) > 0 &&
+										lastOne < profitPercent) {
 										l.d(`canSellForProfit 2C`);
 										canSellForProfit = true;
 									}
@@ -313,9 +316,12 @@ class Order {
 						}
 					}
 
-					if (!Object.keys(priceToMarketSeries).includes(txid)) priceToMarketSeries[txid] = [differencePercent];
-					else priceToMarketSeries[txid].push(differencePercent);
-					if (priceToMarketSeries[txid].length>2) priceToMarketSeries[txid].shift();
+					// if not testing, update the price to market series
+					if (isEmpty(simOpenOrdersObj)) {
+						if (!Object.keys(priceToMarketSeries).includes(txid)) priceToMarketSeries[txid] = [differencePercent];
+						else priceToMarketSeries[txid].push(differencePercent);
+						if (priceToMarketSeries[txid].length>2) priceToMarketSeries[txid].shift();
+					}
 
 					// if order eligible for cancellation, that is:
 					// if order too old and desired market price diverged too much, or 
@@ -330,7 +336,8 @@ class Order {
 						}
 						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
 
-						if (!isEmpty(simOpenOrdersObj)) return {};
+						// if testing, return here
+						if (!isEmpty(simOpenOrdersObj)) return {result: result, report: report, priceToMarketSeries: priceToMarketSeries};
 
 						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
 						await sleep(1000);
