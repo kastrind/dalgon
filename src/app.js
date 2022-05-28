@@ -425,6 +425,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	l.i(`Auto-tradeable assets: ${tradeableAssets}`);
 	l.i(`#Auto-tradeable assets: ${tradeableAssets.length}`);
 	let prevRecommendedAssets;
+	let oldOrdersReminderSent = false;
 
 	while(true) {
 
@@ -472,26 +473,45 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
 
-			// If allowed to auto-trade
-			if (viberBot && viberBot.canStartTrading) {
+			// Get the Open Orders
+			let openOrderAssetPairs = [];
+			let existOldOrders = false;
+			let openOrdersResponseBody = await Order.request(getOpenOrders, {});
+			await sleep(1000);
+			if (openOrdersResponseBody && openOrdersResponseBody.result) {
+				if (!isEmpty(openOrdersResponseBody.result.open)) {
+					for(let txid in openOrdersResponseBody.result.open) {
+						let openOrderAssetPair = openOrdersResponseBody.result.open[txid].descr.pair;
+						openOrderAssetPairs.push(openOrderAssetPair);
 
-				// Get the Open Orders
-				let openOrderAssetPairs = [];
-				let openOrdersResponseBody = await Order.request(getOpenOrders, {});
-				await sleep(1000);
-				if (openOrdersResponseBody && openOrdersResponseBody.result) {
-					if (!isEmpty(openOrdersResponseBody.result.open)) {
-						for(let txid in openOrdersResponseBody.result.open) {
-							let openOrderAssetPair = openOrdersResponseBody.result.open[txid].descr.pair;
-							openOrderAssetPairs.push(openOrderAssetPair);
+						let dateNow = new Date().getTime();
+						let date = new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[txid].opentm)*1000))).getTime();
+						let daysDiff = (dateNow - date)/(1000*60*60*24);
+						if (daysDiff >= staleOrderDays) {
+							existOldOrders = true;
 						}
 					}
 				}
+			}
+			if (viberBot && existOldOrders && (new Date()).getHours == 9 && oldOrdersReminderSent == false) {
+				viberBot.sendTextMessage(`Reminder: there are open orders more than ${staleOrderDays} days old remaining. Monitor for selling opportunities.`);
+				oldOrdersReminderSent = true;
+			}else if ((new Date()).getHours != 9) {
+				oldOrdersReminderSent = false;
+			}
+
+			// If allowed to auto-trade
+			if (viberBot && viberBot.canStartTrading) {
 
 				let assetResultsReversed = recommendedAssets.reverse();
 				let assetToInvestIn;
 				// Attempt to auto-trade each recommended asset, starting from the best recommendation
 				for (let i=0; i<assetResultsReversed.length; i++) {
+
+					if (assetResultsReversed.length < 3) {
+						l.w(`Will not proceed to auto-trade: there must be at least 3 recommendations.`, 1, true);
+						break;
+					}
 
 					assetToInvestIn = assetResultsReversed[i].name;
 					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
@@ -499,11 +519,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					// Asset should hit bottom and about to trend upwards
 					if (assetResultsReversed[i].candleStickScore < 0.000) {
 						l.w(`Will not proceed to order ${assetToInvestIn}: candlestick score < 0.000.`, 1, true);
-						continue;
-					}
-					// Asset should have its MACD above 0 and previously below 0
-					if (! (assetResultsReversed[i].macdPrevious < 0 && assetResultsReversed[i].macdCurrent > 0)) {
-						l.w(`Will not proceed to order ${assetToInvestIn}: MACD did not transition from negative to positive.`, 1, true);
 						continue;
 					}
 
