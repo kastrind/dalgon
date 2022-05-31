@@ -487,7 +487,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 						let dateNow = new Date().getTime();
 						let date = new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[txid].opentm)*1000))).getTime();
 						let daysDiff = (dateNow - date)/(1000*60*60*24);
-						if (daysDiff >= staleOrderDays) {
+						if (daysDiff >= staleOrderDays -1) {
 							existOldOrders = true;
 						}
 					}
