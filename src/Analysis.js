@@ -181,7 +181,7 @@ class Analysis {
 			let isCandidate = false;
 			let currAssetReport = '';
 			let currAssetResult = {};
-			if (	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.03) &&
+			if (	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.01) &&
 					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.001)
 				)
 			{
