@@ -493,13 +493,15 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					}
 				}
 			}
-			if (viberBot && existOldOrders && (new Date()).getHours == 9 && oldOrdersReminderSent == false) {
-				viberBot.sendTextMessage(`Reminder: there are open orders more than ${staleOrderDays} days old remaining. Monitor for selling opportunities.`);
+			
+			// Remind of old orders to monitor
+			if (viberBot && existOldOrders && (new Date()).getHours() == 11 && oldOrdersReminderSent == false) {
+				viberBot.sendTextMessage(l.i(`Reminder: there are open orders more than ${staleOrderDays} days old remaining. Monitor for selling opportunities.`, 1));
 				oldOrdersReminderSent = true;
-			}else if ((new Date()).getHours != 9) {
+			}else if ((new Date()).getHours() != 11) {
 				oldOrdersReminderSent = false;
 			}
-
+			
 			// If allowed to auto-trade
 			if (viberBot && viberBot.canStartTrading) {
 
