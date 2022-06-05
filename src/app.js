@@ -458,12 +458,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION);
 			let recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
-			if (isEmpty(recommendedAssets)) {
-				l.i("No recommended assets. Sleeping...");
-				await sleep(5 * 60000);
-				continue;
-			}
-
 			// If first time sending recommended assets, or assets different than previous
 			// and macd previous < 0 and macd current > 0, then send recommended assets
 			if ((isEmpty(prevRecommendedAssets) || (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(','))) &&
@@ -495,11 +489,17 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			}
 			
 			// Remind of old orders to monitor
-			if (viberBot && existOldOrders && (new Date()).getHours() == 11 && oldOrdersReminderSent == false) {
+			if (viberBot && existOldOrders && (new Date()).getHours() == 12 && oldOrdersReminderSent == false) {
 				viberBot.sendTextMessage(l.i(`Reminder: there are open orders more than ${staleOrderDays} days old remaining. Monitor for selling opportunities.`, 1));
 				oldOrdersReminderSent = true;
-			}else if ((new Date()).getHours() != 11) {
+			}else if ((new Date()).getHours() != 12) {
 				oldOrdersReminderSent = false;
+			}
+
+			if (isEmpty(recommendedAssets)) {
+				l.i("No recommended assets. Sleeping...");
+				await sleep(5 * 60000);
+				continue;
 			}
 			
 			// If allowed to auto-trade
