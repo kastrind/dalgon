@@ -59,6 +59,10 @@ class OHLC {
 		return this.ticks.reduce((prev, curr, i) => { if(i===1) prev=prev.close; return prev + curr.close; }) / this.ticks.length;
 	}
 
+	getDerivative() {
+		return ( this.ticks[this.ticks.length - 1].close - this.ticks[0].close ) / ( this.ticks[this.ticks.length - 1].time - this.ticks[0].time );
+	}
+
 	getEMA(numPeriods, smoothing, offset=0, property='close') {
 		return this.ticks.getEMA(numPeriods, smoothing, offset, property);
 	}

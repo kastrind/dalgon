@@ -88,6 +88,7 @@ class Analysis {
 			if (!ohlcPastHour) return [];
 			let changePastHour = ohlcPastHour.getChange();
 			let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
+			let derivativePastHour = ohlcPastHour.getDerivative();
 
 			await sleep(2000);
 
@@ -98,6 +99,7 @@ class Analysis {
 			let ohlc3h = new OHLC(assetPair, this.l, this.simulationMode, null);
 			ohlc3h.setTicks(ohlc6h.getTicks().slice(Math.ceil(ohlc6h.getTicks().length/2), ohlc6h.getTicks().length));
 			let change3h = ohlc3h.getChange();
+			let derivative3h = ohlc3h.getDerivative();
 
 			await sleep(2000);
 
@@ -181,10 +183,17 @@ class Analysis {
 			let isCandidate = false;
 			let currAssetReport = '';
 			let currAssetResult = {};
-			if (	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.001)
+			// if BTC is bullish or asset price difference to 8-days EMA <= -2% AND
+			// price dropping rate in 1h less than it dropped in 3h halved AND
+			// price not the lowest of the month AND
+			// MACD went positive
+			if 	(	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) &&
+					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) &&
+					(priceOverLowestMonth > 0) &&
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
 				)
 			{
+
 				isCandidate = true;
 				currAssetResult = {
 					name: asset,
