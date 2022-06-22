@@ -184,13 +184,31 @@ class Analysis {
 			let currAssetReport = '';
 			let currAssetResult = {};
 			// if BTC is bullish or asset price difference to 8-days EMA <= -2% AND
+
 			// price dropping rate in 1h less than it dropped in 3h halved AND
 			// price not the lowest of the month AND
 			// MACD went positive
+
+			// OR
+
+			// price dropping rate in 1h less than it dropped in 3h halved AND
+			// price not the lowest of the month AND
+			// MACD is positive
 			if 	(	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) &&
-					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) &&
-					(priceOverLowestMonth > 0) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
+					(
+						(
+							(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) &&
+							(priceOverLowestMonth >= 0.02) &&
+							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
+						)
+						||
+						(
+							(change3h <= -0.02) &&
+							(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) &&
+							(priceOverLowestMonth >= 0.02)	&&
+							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002)
+						)
+					)
 				)
 			{
 
