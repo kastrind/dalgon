@@ -324,7 +324,7 @@ class Order {
 							}
 						}else if (differencePercent > profitPercent -1 && differencePercent < profitPercent &&
 								  !isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length > 1) {
-									lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
+									let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
 									if (lastOne <= differencePercent -1) {
 										report += l.d(`canSellForProfit 3A`) + '\n';
 										canSellForProfit = true;
