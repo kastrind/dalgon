@@ -291,7 +291,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.sendTextMessage(`Please wait.`);
 			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1].toUpperCase();
 			if (assetToInvestIn) {
-				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
+				let order = new Order(2, 'limit', 'buy', viberBot, l, SIMULATION, true);
 				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
 					await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
 				}
@@ -424,7 +424,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let tradeableAssets = await TradeableAssetPair.findTradeableAssets(assets, getTradeableAssetPairs, autoTradeCurrencies, l, SIMULATION);
 	l.i(`Auto-tradeable assets: ${tradeableAssets}`);
 	l.i(`#Auto-tradeable assets: ${tradeableAssets.length}`);
-	let prevRecommendedAssets;
+	let recommendedAssets = [];
+	let prevRecommendedAssets = [];
 	let oldOrdersReminderSent = false;
 
 	while(true) {
@@ -435,7 +436,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			if (viberBot) {
 				// Cancel and sell any take-profit orders that went stale
-				let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l);
+				let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssets.length, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l);
 				priceToMarketSeries = staleResult.priceToMarketSeries;
 				Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
 				if (staleResult.result) viberBot.sendBigTextMessage(staleResult.report);
@@ -456,7 +457,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			}
 			// Analyse assets to recommend for trading
 			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION);
-			let recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
+			recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
 			// If first time sending recommended assets, or assets different than previous
 			// and macd previous < 0 and macd current > 0, then send recommended assets

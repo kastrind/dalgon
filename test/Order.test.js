@@ -41,11 +41,13 @@ var cancelOrder       = null;
 
 const simOpenOrdersObj = require('../test/assets/open.Orders.sim.response.json');
 
+var recommendedAssetsLength = 1;
+
 (async function () {
 
 	describe('Sell Stale Take-profit Orders Search Test', () => {
 		it('should sell stale Order', async () => {
-			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
 			delete priceToMarketSeries['11O6Z4CS-S5LIA-IOU4TR'];
 			delete simOpenOrdersObj.result.open['11O6Z4CS-S5LIA-IOU4TR'];
 			assert.equal(staleResult.report.indexOf('Order is stale:')>=0, true);
@@ -53,28 +55,28 @@ const simOpenOrdersObj = require('../test/assets/open.Orders.sim.response.json')
 		});
 
 		it('should sell profitable Order at the optimal moment to maximize profit: 1A', async () => {
-			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
 			delete priceToMarketSeries['1O6Z4CS-S5LIA-IOU4TR'];
 			delete simOpenOrdersObj.result.open['1O6Z4CS-S5LIA-IOU4TR'];
 			assert.equal(staleResult.report.indexOf('canSellForProfit 1A')>=0, true);
 		});
 
 		it('should sell profitable Order at the optimal moment to maximize profit: 2A', async () => {
-			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
 			delete priceToMarketSeries['1OW27RX-YWQBE-2ZZYP7'];
 			delete simOpenOrdersObj.result.open['1OW27RX-YWQBE-2ZZYP7'];
 			assert.equal(staleResult.report.indexOf('canSellForProfit 2A')>=0, true);
 		});
 
 		it('should sell profitable Order at the optimal moment to maximize profit: 2B', async () => {
-			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
 			delete priceToMarketSeries['1OOV7GI-OVXI2-KKPO2V'];
 			delete simOpenOrdersObj.result.open['1OOV7GI-OVXI2-KKPO2V'];
 			assert.equal(staleResult.report.indexOf('canSellForProfit 2B')>=0, true);
 		});
 
 		it('should sell profitable Order at the optimal moment to maximize profit: 2C', async () => {
-			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
 			assert.equal(staleResult.report.indexOf('canSellForProfit 2C')>=0, true);
 		});
 

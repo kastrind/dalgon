@@ -224,7 +224,7 @@ class Order {
 		return report;
 	}
 
-	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, getOpenOrders, timeZone, getTicker, cancelOrder, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, simAddOrderObj={}) {
+	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, timeZone, getTicker, cancelOrder, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, simAddOrderObj={}) {
 		let result = false;
 		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
 		report += l.i(`Desired profit percentage: ${profitPercent}%.`) + '\n';
@@ -322,6 +322,7 @@ class Order {
 								}
 								//else keep waiting, in attempt to maximize profit
 							}
+						//else if current price to market lost ground such that selling is less than 1% profitable
 						}else if (differencePercent > profitPercent -1 && differencePercent < profitPercent &&
 								  !isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length > 1) {
 									let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
@@ -340,9 +341,9 @@ class Order {
 					}
 
 					// if order eligible for cancellation, that is:
-					// if order too old or desired market price diverged too much, or 
+					// if order too old and either the desired market price diverged too much or there are other recommended assets currently, or
 					// order is profitabe enough
-					if ((daysDiff >= staleOrderDays || differencePercent > staleOrderPriceDifferencePercent) ||
+					if ((daysDiff >= staleOrderDays && (differencePercent > staleOrderPriceDifferencePercent || recommendedAssetsLength > 2)) ||
 						canSellForProfit) {
 						result = true;
 						if (!canSellForProfit) {
