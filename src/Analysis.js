@@ -116,7 +116,7 @@ class Analysis {
 			let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
 			if (!ohlcWeek) { await sleep(2000); continue; }
 			let changeWeek = ohlcWeek.getChange();
-			let candleStickScore = ohlcWeek.getCandleStickScore();
+			// let candleStickScore = ohlcWeek.getCandleStickScore();
 
 			let ohlcWeekHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcWeekHalf.setTicks(ohlcWeek.getTicks().slice(Math.ceil(ohlcWeek.getTicks().length/2), ohlcWeek.getTicks().length));
@@ -143,21 +143,33 @@ class Analysis {
 			let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
 			let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 
+			// look for a green hammer, inverted or normal, in the past 3 hours
+			let ohlcMonthLastTick = ohlcMonth.getLastTick();
+			let isGreenHammer = ohlcMonthLastTick.isGreen() && ( ohlcMonthLastTick.isHammer() || ohlcMonthLastTick.isInvertedHammer() );
+
+			let ohlcMonth2ndLastTick = ohlcMonth.getTicks()[ohlcMonth.getTicks().length - 2];
+			let isGreenHammer2 = ohlcMonth2ndLastTick.isGreen() && ( ohlcMonth2ndLastTick.isHammer() || ohlcMonth2ndLastTick.isInvertedHammer() );
+
+			let ohlcMonth3rdLastTick = ohlcMonth.getTicks()[ohlcMonth.getTicks().length - 3];
+			let isGreenHammer3 = ohlcMonth3rdLastTick.isGreen() && ( ohlcMonth3rdLastTick.isHammer() || ohlcMonth3rdLastTick.isInvertedHammer() );
+
+			let existsGreenHammer3h = isGreenHammer || isGreenHammer2 || isGreenHammer3;
+
 			let ohlcMonthHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcMonthHalf.setTicks(ohlcMonth.getTicks().slice(Math.ceil(ohlcMonth.getTicks().length/2), ohlcMonth.getTicks().length));
 			let changeMonthHalf = ohlcMonthHalf.getChange();
 
 			await sleep(2000);
 
-			let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
-			if (!ohlcQuarter) { await sleep(3000); continue; }
-			let changeQuarter = ohlcQuarter.getChange();
+			// let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+			// if (!ohlcQuarter) { await sleep(3000); continue; }
+			// let changeQuarter = ohlcQuarter.getChange();
 
-			let ohlcQuarterHalf = new OHLC(assetPair, this.l, this.simulationMode);
-			ohlcQuarterHalf.setTicks(ohlcQuarter.getTicks().slice(Math.ceil(ohlcQuarter.getTicks().length/2), ohlcQuarter.getTicks().length));
-			let changeQuarterHalf = ohlcQuarterHalf.getChange();
+			// let ohlcQuarterHalf = new OHLC(assetPair, this.l, this.simulationMode);
+			// ohlcQuarterHalf.setTicks(ohlcQuarter.getTicks().slice(Math.ceil(ohlcQuarter.getTicks().length/2), ohlcQuarter.getTicks().length));
+			// let changeQuarterHalf = ohlcQuarterHalf.getChange();
 
-			await sleep(2000);
+			// await sleep(2000);
 
 			let lowestCloseWeek = ohlcWeek.getLowestClose().close;
 			let priceOverLowestWeek = 0;
@@ -187,26 +199,30 @@ class Analysis {
 
 			// price dropping rate in 1h less than it dropped in 3h halved AND
 			// price not the lowest of the month AND
-			// MACD went positive
+			// MACD went positive and
+			// exists green hammer, inverted or normal in the past 3 hours
 
 			// OR
 
 			// price dropping rate in 1h less than it dropped in 3h halved AND
 			// price not the lowest of the month AND
-			// MACD is positive
-			if 	(	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) &&
+			// MACD is positive and
+			// exists green hammer, inverted or normal in the past 3 hours
+			if 	((isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) &&
 					(
 						(
 							(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) &&
 							(priceOverLowestMonth >= 0.02) &&
-							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
+							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002) &&
+							existsGreenHammer3h
 						)
 						||
 						(
 							(change3h <= -0.02) &&
 							(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) &&
 							(priceOverLowestMonth >= 0.02)	&&
-							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002)
+							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002 && macdPrevious <= macdCurrent) &&
+							existsGreenHammer3h
 						)
 					)
 				)
@@ -216,8 +232,9 @@ class Analysis {
 				currAssetResult = {
 					name: asset,
 					latestClosingPrice: latestClosingPrice,
-					score: (((macdCurrent + Math.abs(macdPrevious)) / ohlcPastHour.getAverage()) - candleStickScore).toFixed(3),
-					candleStickScore: candleStickScore,
+					score: (((macdCurrent - macdPrevious) / ohlcPastHour.getAverage())).toFixed(3),
+					// candleStickScore: candleStickScore,
+					existsGreenHammer3h: existsGreenHammer3h,
 					macdCurrent: macdCurrent.toFixed(3),
 					macdPrevious: macdPrevious.toFixed(3),
 					eightDaysEMA: eightDaysEMA,
@@ -231,16 +248,18 @@ class Analysis {
 					changeWeek: changeWeek,
 					changeMonthHalf: changeMonthHalf,
 					changeMonth: changeMonth,
-					changeQuarterHalf: changeQuarterHalf,
-					changeQuarter: changeQuarter,
+					// changeQuarterHalf: changeQuarterHalf,
+					// changeQuarter: changeQuarter,
 					priceOverHighestWeek: priceOverHighestWeek,
 					priceOverHighestMonth: priceOverHighestMonth
 				};
 
-				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 2) + '\n';
+				// currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 2) + '\n';
+				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 2) + '\n';
+				// currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n\n';
 

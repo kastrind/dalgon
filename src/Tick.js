@@ -22,31 +22,31 @@ class Tick {
 
 	isCandle() {
 		if (this.isRed()) {
-			return	this.open - this.close > this.close - this.low &&
-					this.open - this.close > this.high - this.open;
+			return	this.open - this.close > (this.close - this.low)*2 &&
+					this.open - this.close > (this.high - this.open)*2;
 		}else {
-			return	this.close - this.open > this.open - this.low &&
-					this.close - this.open > this.high - this.close;
+			return	this.close - this.open > (this.open - this.low)*2 &&
+					this.close - this.open > (this.high - this.close)*2;
 		}
 	}
 
 	isHammer() {
 		if (this.isRed()) {
 			//lower hammer handle bigger than upper and bigger than hammerhead
-			return this.close - this.low > this.high - this.open && !this.isCandle();
+			return this.close - this.low > (this.high - this.open)*2 && !this.isCandle();
 		}else {
 			//lower hammer handle bigger than upper and bigger than hammerhead
-			return this.open - this.low > this.high - this.close && !this.isCandle();
+			return this.open - this.low > (this.high - this.close)*2 && !this.isCandle();
 		}
 	}
 
 	isInvertedHammer() {
 		if (this.isRed()) {
 			//upper hammer handle bigger than lower and bigger than hammerhead 
-			return this.close - this.low < this.high - this.open && !this.isCandle();
+			return (this.close - this.low)*2 < this.high - this.open && !this.isCandle();
 		}else {
 			//upper hammer handle bigger than lower and bigger than hammerhead
-			return this.open - this.low < this.high - this.close && !this.isCandle();
+			return (this.open - this.low)*2 < this.high - this.close && !this.isCandle();
 		}
 	}
 

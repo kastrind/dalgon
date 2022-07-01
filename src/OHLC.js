@@ -27,6 +27,10 @@ class OHLC {
 		return this.ticks;
 	}
 
+	getLastTick() {
+		return this.ticks[this.ticks.length - 1];
+	}
+
 	getHighest() {
 		return this.ticks.reduce((prev, curr) => { if ( curr.high > prev.high ) return curr; else return prev; });
 	}
