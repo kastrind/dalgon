@@ -520,10 +520,10 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
 
 					// Asset should hit bottom and about to trend upwards
-					if (assetResultsReversed[i].candleStickScore < 0.000) {
-						l.w(`Will not proceed to order ${assetToInvestIn}: candlestick score < 0.000.`, 1, true);
-						continue;
-					}
+					// if (assetResultsReversed[i].candleStickScore < 0.000) {
+					// 	l.w(`Will not proceed to order ${assetToInvestIn}: candlestick score < 0.000.`, 1, true);
+					// 	continue;
+					// }
 
 					// If there is an open order for the asset to invest in, do not trade
 					let assetInfos = await AssetInfo.request(getAssetInfo, {searchParams: { asset: assetToInvestIn }}, l, SIMULATION);
