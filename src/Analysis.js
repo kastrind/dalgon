@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs, { exists } from 'fs';
 import OHLC from './OHLC.js';
 import { sleep, prcnt, isEmpty } from './utils.js';
 
@@ -95,6 +95,7 @@ class Analysis {
 			let ohlc6h = await (OHLC.request(getOHLC, assetPair, past6h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
 			if (!ohlc6h) { await sleep(2000); continue; }
 			let change6h = ohlc6h.getChange();
+			let derivative6h = ohlc6h.getDerivative();
 
 			let ohlc3h = new OHLC(assetPair, this.l, this.simulationMode, null);
 			ohlc3h.setTicks(ohlc6h.getTicks().slice(Math.ceil(ohlc6h.getTicks().length/2), ohlc6h.getTicks().length));
@@ -110,6 +111,7 @@ class Analysis {
 			let ohlc12h = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlc12h.setTicks(ohlcDay24h.getTicks().slice(Math.ceil(ohlcDay24h.getTicks().length/2), ohlcDay24h.getTicks().length));
 			let change12h = ohlc12h.getChange();
+			let derivative12h = ohlc12h.getDerivative();
 
 			await sleep(2000);
 
@@ -197,31 +199,60 @@ class Analysis {
 			let currAssetResult = {};
 			// if BTC is bullish or asset price difference to 8-days EMA <= -2% AND
 
-			// price dropping rate in 1h less than it dropped in 3h halved AND
+			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
-			// MACD went positive and
-			// exists green hammer, inverted or normal in the past 3 hours
+			// MACD went positive
 
 			// OR
 
-			// price dropping rate in 1h less than it dropped in 3h halved AND
+			// change 3h <= -2% or 6h <= -3% or 12h <= -4% AND
+			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
-			// MACD is positive and
-			// exists green hammer, inverted or normal in the past 3 hours
+			// MACD >= 0.002 and >= previous
+
+			// OR
+
+			// change 3h <= -2% or 6h <= -3% or 12h <= -4% AND
+			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
+			// price not the lowest of the month AND
+			// MACD is >= 0.001 AND
+			// existsGreenHammer3h
+
 			if 	((isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) &&
 					(
 						(
-							(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) &&
+							(
+								(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+								(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+								(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+
+							) &&
 							(priceOverLowestMonth >= 0.02) &&
-							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002) &&
-							existsGreenHammer3h
+							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
 						)
 						||
 						(
-							(change3h <= -0.02) &&
-							(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) &&
+							(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
+							(
+								(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+								(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+								(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+
+							) &&
 							(priceOverLowestMonth >= 0.02)	&&
-							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002 && macdPrevious <= macdCurrent) &&
+							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002 && macdPrevious <= macdCurrent)
+						)
+						||
+						(
+							(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
+							(
+								(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+								(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+								(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+
+							) &&
+							(priceOverLowestMonth >= 0.02)	&&
+							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.001) &&
 							existsGreenHammer3h
 						)
 					)
