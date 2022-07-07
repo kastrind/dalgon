@@ -195,6 +195,7 @@ class Analysis {
 			}
 
 			let isCandidate = false;
+			let candidateGrade = -1;
 			let currAssetReport = '';
 			let currAssetResult = {};
 			// if BTC is bullish or asset price difference to 8-days EMA <= -2% AND
@@ -218,53 +219,66 @@ class Analysis {
 			// MACD is >= 0.001 AND
 			// existsGreenHammer3h
 
-			if 	((isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) &&
+			if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) {
+
+				if (
 					(
-						(
-							(
-								(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-								(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-								(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+						(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+						(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+						(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
 
-							) &&
-							(priceOverLowestMonth >= 0.02) &&
-							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
-						)
-						||
-						(
-							(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
-							(
-								(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-								(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-								(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+					) &&
+					(priceOverLowestMonth >= 0.02) &&
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
+				) {
+					isCandidate = true;
+					candidateGrade = 5;
 
-							) &&
-							(priceOverLowestMonth >= 0.02)	&&
-							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002 && macdPrevious <= macdCurrent)
-						)
-						||
-						(
-							(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
-							(
-								(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-								(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-								(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
 
-							) &&
-							(priceOverLowestMonth >= 0.02)	&&
-							(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.001) &&
-							existsGreenHammer3h
-						)
-					)
-				)
-			{
+				}else if (
+					(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
+					(
+						(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+						(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+						(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
 
-				isCandidate = true;
+					) &&
+					(priceOverLowestMonth >= 0.02)	&&
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002 && macdPrevious <= macdCurrent)
+				) {
+					isCandidate = true;
+					candidateGrade = 3;
+
+
+				}else if (
+					(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
+					(
+						(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+						(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+						(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+
+					) &&
+					(priceOverLowestMonth >= 0.02)	&&
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.001)
+				) {
+					isCandidate = true;
+					candidateGrade = 1;
+				}
+
+
+				if (existsGreenHammer3h) {
+					candidateGrade += 1;
+				}
+
+			}
+
+			if 	(isCandidate) {
 				currAssetResult = {
 					name: asset,
 					latestClosingPrice: latestClosingPrice,
-					score: (((macdCurrent - macdPrevious) / ohlcPastHour.getAverage())).toFixed(3),
+					score: (candidateGrade*((macdCurrent - macdPrevious) / ohlcPastHour.getAverage())).toFixed(3),
 					// candleStickScore: candleStickScore,
+					candidateGrade: candidateGrade,
 					existsGreenHammer3h: existsGreenHammer3h,
 					macdCurrent: macdCurrent.toFixed(3),
 					macdPrevious: macdPrevious.toFixed(3),
@@ -292,6 +306,7 @@ class Analysis {
 				// currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n\n';
 
 				currAssetResult.report = currAssetReport;

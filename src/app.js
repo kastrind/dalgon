@@ -525,6 +525,12 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					// 	continue;
 					// }
 
+					//Asset should have grade 4, 5 or 6
+					if (assetResultsReversed[i].candidateGrade <= 3) {
+						l.w(`Will not proceed to order ${assetToInvestIn}: candidate grade must be >3, is ${assetResultsReversed[i].candidateGrade}.`, 1, true);
+						continue;
+					}
+
 					// If there is an open order for the asset to invest in, do not trade
 					let assetInfos = await AssetInfo.request(getAssetInfo, {searchParams: { asset: assetToInvestIn }}, l, SIMULATION);
 					await sleep(1000);
