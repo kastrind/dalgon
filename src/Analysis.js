@@ -32,7 +32,7 @@ class Analysis {
 	async analyseBitcoin(getOHLC) {
 		let pastHour = new Date();
 		pastHour.setHours(pastHour.getHours() - 1);
-		let ohlcPastHour = await (OHLC.request(getOHLC, 'BTC' + this.baseCurrency, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
+		let ohlcPastHour = await (OHLC.request(getOHLC, 'BTCEUR', pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
 		if (!ohlcPastHour) return { result: 'failure' };
 		
 		let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
@@ -40,7 +40,7 @@ class Analysis {
 
 		let month = new Date();
 		month.setHours(month.getHours() - 24*30);
-		let ohlcMonth = await (OHLC.request(getOHLC, 'BTC' + this.baseCurrency, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+		let ohlcMonth = await (OHLC.request(getOHLC, 'BTCEUR', month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
 		if (!ohlcMonth) return { result: "failure" };
 		let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
 		let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
@@ -200,7 +200,7 @@ class Analysis {
 			let candidateGrade = -1;
 			let currAssetReport = '';
 			let currAssetResult = {};
-			
+
 			// if BTC is bullish or asset price difference to 8-days EMA <= -2% AND
 
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
