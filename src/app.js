@@ -96,6 +96,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let buyWhiteList = properties.get("main.BUY_WHITELIST");
 
 	l.i(`Auto-trade currencies: ${JSON.stringify(autoTradeCurrencies, null, 2)}`);
+	l.i(`Auto-trade grade threshold: ${autoTradeGradeThreshold}`);
 	l.i(`Auto-trade exceptions: ${buyExceptions}`);
 	l.i(`Auto-trade whitelist: ${buyWhiteList}`);
 
