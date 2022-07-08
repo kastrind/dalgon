@@ -45,6 +45,8 @@ var properties = new PropertiesReader(`env/${ENV}.properties`);
 var APIKEY = properties.get("main.APIKEY");
 var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
 l.i(`Base currency: ${BASE_CURRENCY}`);
+var ANALYSIS_CURRENCY = properties.get("main.ANALYSIS_CURRENCY");
+l.i(`Analysis currency: ${ANALYSIS_CURRENCY}`);
 var TIMEZONE = properties.get("main.TIMEZONE");
 l.i(`Timezone: ${TIMEZONE}`);
 var profitPercent = parseFloat(properties.get("main.PROFIT_PERCENT"));
@@ -89,6 +91,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	fs.writeFile(reportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
 
 	let autoTradeCurrencies = JSON.parse(properties.get("main.AUTOTRADE_CURRENCIES"));
+	let autoTradeGradeThreshold = parseFloat(properties.get("main.AUTOTRADE_GRADE_THRESHOLD"));
 	let buyExceptions = properties.get("main.BUY_EXCEPTIONS").split(' ');
 	let buyWhiteList = properties.get("main.BUY_WHITELIST");
 
@@ -456,7 +459,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
 			// Analyse assets to recommend for trading
-			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION);
+			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, ANALYSIS_CURRENCY, l, SIMULATION);
 			recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
 			// If first time sending recommended assets, or assets different than previous
@@ -525,9 +528,9 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					// 	continue;
 					// }
 
-					//Asset should have grade 4, 5 or 6
-					if (assetResultsReversed[i].candidateGrade <= 3) {
-						l.w(`Will not proceed to order ${assetToInvestIn}: candidate grade must be >3, is ${assetResultsReversed[i].candidateGrade}.`, 1, true);
+					//Asset should have high enough grade
+					if (assetResultsReversed[i].candidateGrade < autoTradeGradeThreshold) {
+						l.w(`Will not proceed to order ${assetToInvestIn}: candidate grade must not be < ${autoTradeGradeThreshold}, is ${assetResultsReversed[i].candidateGrade}.`, 1, true);
 						continue;
 					}
 

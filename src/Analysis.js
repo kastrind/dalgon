@@ -16,21 +16,23 @@ class Analysis {
 		this.simObjOHLCWeek = {};
 		this.simObjOHLCMonth = {};
 		this.simObjOHLCQuarter = {};
+		this.simObjOHLCBitcoin = {};
 	}
 
-	setSims(simObjOHLCPastHour, simObjOHLC6h, simObjOHLCDay24h, simObjOHLCWeek, simObjOHLCMonth, simObjOHLCQuarter) {
+	setSims(simObjOHLCPastHour, simObjOHLC6h, simObjOHLCDay24h, simObjOHLCWeek, simObjOHLCMonth, simObjOHLCQuarter, simObjOHLCBitcoin) {
 		this.simObjOHLCPastHour = simObjOHLCPastHour;
 		this.simObjOHLC6h = simObjOHLC6h;
 		this.simObjOHLCDay24h = simObjOHLCDay24h;
 		this.simObjOHLCWeek = simObjOHLCWeek;
 		this.simObjOHLCMonth = simObjOHLCMonth;
 		this.simObjOHLCQuarter = simObjOHLCQuarter;
+		this.simObjOHLCBitcoin = simObjOHLCBitcoin;
 	}
 
 	async analyseBitcoin(getOHLC) {
 		let pastHour = new Date();
 		pastHour.setHours(pastHour.getHours() - 1);
-		let ohlcPastHour = await (OHLC.request(getOHLC, 'BTC' + this.baseCurrency, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+		let ohlcPastHour = await (OHLC.request(getOHLC, 'BTC' + this.baseCurrency, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
 		if (!ohlcPastHour) return { result: 'failure' };
 		
 		let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
@@ -84,7 +86,7 @@ class Analysis {
 
 			report = this.l.i(`EVALUATING ASSET: ${asset} - START`, 1) + '\n';
 
-			let ohlcPastHour = await (OHLC.request(getOHLC, assetPair, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+			let ohlcPastHour = await (OHLC.request(getOHLC, assetPair, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCPastHour));
 			if (!ohlcPastHour) return [];
 			let changePastHour = ohlcPastHour.getChange();
 			let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
@@ -92,7 +94,7 @@ class Analysis {
 
 			await sleep(2000);
 
-			let ohlc6h = await (OHLC.request(getOHLC, assetPair, past6h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+			let ohlc6h = await (OHLC.request(getOHLC, assetPair, past6h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLC6h));
 			if (!ohlc6h) { await sleep(2000); continue; }
 			let change6h = ohlc6h.getChange();
 			let derivative6h = ohlc6h.getDerivative();
@@ -104,7 +106,7 @@ class Analysis {
 
 			await sleep(2000);
 
-			let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+			let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCDay24h));
 			if (!ohlcDay24h) { await sleep(2000); continue; }
 			let changeDay24h = ohlcDay24h.getChange();
 
@@ -115,7 +117,7 @@ class Analysis {
 
 			await sleep(2000);
 
-			let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+			let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCWeek));
 			if (!ohlcWeek) { await sleep(2000); continue; }
 			let changeWeek = ohlcWeek.getChange();
 			// let candleStickScore = ohlcWeek.getCandleStickScore();
@@ -126,7 +128,7 @@ class Analysis {
 
 			await sleep(2000);
 
-			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCMonth));
 			if (!ohlcMonth) { await sleep(2000); continue; }
 			let changeMonth = ohlcMonth.getChange();
 			let macd_a = 12;
@@ -163,7 +165,7 @@ class Analysis {
 
 			await sleep(2000);
 
-			// let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+			// let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCQuarter));
 			// if (!ohlcQuarter) { await sleep(3000); continue; }
 			// let changeQuarter = ohlcQuarter.getChange();
 
@@ -198,6 +200,7 @@ class Analysis {
 			let candidateGrade = -1;
 			let currAssetReport = '';
 			let currAssetResult = {};
+			
 			// if BTC is bullish or asset price difference to 8-days EMA <= -2% AND
 
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
@@ -217,7 +220,11 @@ class Analysis {
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
 			// MACD is >= 0.001 AND
-			// existsGreenHammer3h
+
+			// OR 
+
+			// price not the lowest of the month AND
+			// MACD went positive
 
 			if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) {
 
@@ -232,6 +239,21 @@ class Analysis {
 					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
 				) {
 					isCandidate = true;
+					candidateGrade = 7;
+
+
+				}else if (
+					(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
+					(
+						(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+						(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+						(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+
+					) &&
+					(priceOverLowestMonth >= 0.02) &&
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002 && macdPrevious <= macdCurrent)
+				) {
+					isCandidate = true;
 					candidateGrade = 5;
 
 
@@ -243,23 +265,16 @@ class Analysis {
 						(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
 
 					) &&
-					(priceOverLowestMonth >= 0.02)	&&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002 && macdPrevious <= macdCurrent)
+					(priceOverLowestMonth >= 0.02) &&
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.001)
 				) {
 					isCandidate = true;
 					candidateGrade = 3;
 
 
 				}else if (
-					(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
-					(
-						(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-						(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-						(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
-
-					) &&
-					(priceOverLowestMonth >= 0.02)	&&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.001)
+					(priceOverLowestMonth >= 0.02) &&
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
 				) {
 					isCandidate = true;
 					candidateGrade = 1;
@@ -267,7 +282,14 @@ class Analysis {
 
 
 				if (existsGreenHammer3h) {
-					candidateGrade += 1;
+					candidateGrade += 0.5;
+				}
+
+
+				if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
+					candidateGrade += 0.5;
+				}else if (derivative3h < 0 && derivative6h < derivative3h) {
+					candidateGrade += 0.25;
 				}
 
 			}
