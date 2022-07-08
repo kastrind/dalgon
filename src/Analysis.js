@@ -60,9 +60,9 @@ class Analysis {
 		if (isBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`) + '\n'; }
 		else if (bitcoinAnalysis.result == 'success') { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
 		if (bitcoinAnalysis.result == 'success') {
-			bitcoinAnalysisReportPart += this.l.i(`BTC${this.baseCurrency} 8-days EMA is: ${bitcoinAnalysis.eightDaysEMA} (${prcnt(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent)}%)`, 1) + '\n';
+			bitcoinAnalysisReportPart += this.l.i(`BTCEUR 8-days EMA is: ${bitcoinAnalysis.eightDaysEMA} (${prcnt(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent)}%)`, 1) + '\n';
 		}else {
-			bitcoinAnalysisReportPart += this.l.w(`Failed to analyse BTC${this.baseCurrency} 8-days EMA! Considering it bearish.`, 1, true) + '\n';
+			bitcoinAnalysisReportPart += this.l.w(`Failed to analyse BTCEUR 8-days EMA! Considering it bearish.`, 1, true) + '\n';
 		}
 		report += bitcoinAnalysisReportPart;
 		
