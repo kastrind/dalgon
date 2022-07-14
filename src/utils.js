@@ -31,7 +31,11 @@ Array.prototype.getEMA = function(numPeriods, smoothing, offset=0, property='clo
 		if (!isEmpty(property)) {
 			if (i===1) prev = parseFloat(prev[property]);
 			curr = parseFloat(curr[property]);
-		} 
+		}
+		//for debugging
+		// else {
+		// 	console.log("i: "+i+" prev: "+ prev + " curr: " + curr);
+		// } 
 		return prev + Math.pow(1 - smoothing, i)*curr; }) / wSum;
 		//return prev + curr});
 };

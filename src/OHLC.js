@@ -76,6 +76,9 @@ class OHLC {
 		let macdSeries = [];
 		for (let i=0; i<c; i++) {
 			macdSeries.push(this.getEMA(a, smoothing, i + offset, property) - this.getEMA(b, smoothing, i + offset, property));
+			// for debugging
+			// this.l.d(`EMA a=${a} i=${i} = ${this.getEMA(a, smoothing, i + offset, property)}`);
+			// this.l.d(`EMA b=${b} i=${i} = ${this.getEMA(b, smoothing, i + offset, property)}`);
 		}
 		this.l.d(`MACD series: ${macdSeries}`, 2);
 		let signal = macdSeries.getEMA(c, smoothing, 0, null);

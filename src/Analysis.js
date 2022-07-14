@@ -9,6 +9,7 @@ class Analysis {
 		this.maxNumOHLCResults = maxNumOHLCResults;
 		this.baseCurrency = baseCurrency;
 		this.l = loggerObj;
+		this.report = '';
 		this.simulationMode = simulationMode;
 		this.simObjOHLCPastHour = {};
 		this.simObjOHLC6h = {};
@@ -17,6 +18,7 @@ class Analysis {
 		this.simObjOHLCMonth = {};
 		this.simObjOHLCQuarter = {};
 		this.simObjOHLCBitcoin = {};
+		this.sleepMillis = this.simulationMode ? 0 : 2000;
 	}
 
 	setSims(simObjOHLCPastHour, simObjOHLC6h, simObjOHLCDay24h, simObjOHLCWeek, simObjOHLCMonth, simObjOHLCQuarter, simObjOHLCBitcoin) {
@@ -36,15 +38,15 @@ class Analysis {
 		if (!ohlcPastHour) return { result: 'failure' };
 		
 		let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
-		await sleep(2000);
+		await sleep(this.sleepMillis);
 
 		let month = new Date();
 		month.setHours(month.getHours() - 24*30);
-		let ohlcMonth = await (OHLC.request(getOHLC, 'BTCEUR', month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode));
+		let ohlcMonth = await (OHLC.request(getOHLC, 'BTCEUR', month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
 		if (!ohlcMonth) return { result: "failure" };
 		let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
 		let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
-		await sleep(2000);
+		await sleep(this.sleepMillis);
 		return {result: 'success',
 				eightDaysEMA: eightDaysEMA,
 				latestClosingPriceDiff8DaysEMAPercent: latestClosingPriceDiff8DaysEMAPercent
@@ -80,60 +82,95 @@ class Analysis {
 		quarter.setHours(quarter.getHours() - 24*30*3);
 
 		let assetResults = [];
+
 		for (let i=0; i < this.assets.length; i++) {
 			let asset = this.assets[i];
 			let assetPair = `${asset}${this.baseCurrency}`;
 
-			report = this.l.i(`EVALUATING ASSET: ${asset} - START`, 1) + '\n';
+			report += this.l.i(`EVALUATING ASSET: ${asset} - START`, 1) + '\n';
 
 			let ohlcPastHour = await (OHLC.request(getOHLC, assetPair, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCPastHour));
-			if (!ohlcPastHour) return [];
+			if (!ohlcPastHour) {
+				await sleep(this.sleepMillis);
+				report += this.l.err(`Failed to get ohlcPastHour!`, 2, true) + '\n';
+				continue;
+			}
 			let changePastHour = ohlcPastHour.getChange();
 			let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
 			let derivativePastHour = ohlcPastHour.getDerivative();
 
-			await sleep(2000);
+			// for testing
+			report += this.simulationMode ? this.l.d(`changePastHour: ${changePastHour}`, 2) + '\n' : '';
+			report += this.simulationMode ? this.l.d(`latestClosingPrice: ${latestClosingPrice}`, 2) + '\n' : '';
+			report += this.simulationMode ? this.l.d(`derivativePastHour: ${derivativePastHour}`, 2) + '\n' : '';
+
+			 await sleep(this.sleepMillis);
 
 			let ohlc6h = await (OHLC.request(getOHLC, assetPair, past6h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLC6h));
-			if (!ohlc6h) { await sleep(2000); continue; }
+			if (!ohlc6h) {
+				await sleep(this.sleepMillis);
+				report += this.l.err(`Failed to get ohlc6h!`, 2, true) + '\n';
+				continue;
+			}
 			let change6h = ohlc6h.getChange();
 			let derivative6h = ohlc6h.getDerivative();
+
+			// for testing
+			report += this.simulationMode ? this.l.d(`change6h: ${change6h}`, 2) + '\n' : '';
+			report += this.simulationMode ? this.l.d(`derivative6h: ${derivative6h}`, 2) + '\n' : '';
 
 			let ohlc3h = new OHLC(assetPair, this.l, this.simulationMode, null);
 			ohlc3h.setTicks(ohlc6h.getTicks().slice(Math.ceil(ohlc6h.getTicks().length/2), ohlc6h.getTicks().length));
 			let change3h = ohlc3h.getChange();
 			let derivative3h = ohlc3h.getDerivative();
 
-			await sleep(2000);
+			await sleep(this.sleepMillis);
 
 			let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCDay24h));
-			if (!ohlcDay24h) { await sleep(2000); continue; }
+			if (!ohlcDay24h) {
+				await sleep(this.sleepMillis);
+				report += this.l.err(`Failed to get ohlcDay24h!`, 2, true) + '\n';
+				continue;
+			}
 			let changeDay24h = ohlcDay24h.getChange();
+
+			// for testing
+			report += this.simulationMode ? this.l.d(`changeDay24h: ${changeDay24h}`, 2) + '\n' : '';
 
 			let ohlc12h = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlc12h.setTicks(ohlcDay24h.getTicks().slice(Math.ceil(ohlcDay24h.getTicks().length/2), ohlcDay24h.getTicks().length));
 			let change12h = ohlc12h.getChange();
 			let derivative12h = ohlc12h.getDerivative();
 
-			await sleep(2000);
+			await sleep(this.sleepMillis);
 
 			let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCWeek));
-			if (!ohlcWeek) { await sleep(2000); continue; }
+			if (!ohlcWeek) {
+				await sleep(this.sleepMillis);
+				report += this.l.err(`Failed to get ohlcWeek!`, 2, true) + '\n';
+				continue;
+			}
 			let changeWeek = ohlcWeek.getChange();
-			// let candleStickScore = ohlcWeek.getCandleStickScore();
+
+			// for testing
+			report += this.simulationMode ? this.l.d(`changeWeek: ${changeWeek}`, 2) + '\n' : '';
 
 			let ohlcWeekHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcWeekHalf.setTicks(ohlcWeek.getTicks().slice(Math.ceil(ohlcWeek.getTicks().length/2), ohlcWeek.getTicks().length));
 			let changeWeekHalf = ohlcWeekHalf.getChange();
 
-			await sleep(2000);
+			await sleep(this.sleepMillis);
 
 			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCMonth));
-			if (!ohlcMonth) { await sleep(2000); continue; }
+			if (!ohlcMonth) {
+				await sleep(this.sleepMillis);
+				report += this.l.err(`Failed to get ohlcMonth!`, 2, true) + '\n';
+				continue;
+			}
 			let changeMonth = ohlcMonth.getChange();
-			let macd_a = 12;
-			let macd_b = 26;
-			let macd_c = 9;
+			let macd_a = this.simulationMode ? 2 : 12;
+			let macd_b = this.simulationMode ? 3 : 26;
+			let macd_c = this.simulationMode ? 1 : 9;
 			let macdCurrent;
 			let macdPrevious;
 			// if there is enough ohlc data to calculate MACD
@@ -147,6 +184,14 @@ class Analysis {
 			let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
 			let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 
+			report += this.l.i(`MACD current  ${macdCurrent}`, 2) + '\n';
+			report += this.l.i(`MACD previous ${macdPrevious}`, 2) + '\n';
+
+			// for testing
+			report += this.simulationMode ? this.l.d(`changeMonth: ${changeMonth}`, 2) + '\n' : '';
+			report += this.simulationMode ? this.l.d(`macdCurrent: ${macdCurrent}`, 2) + '\n' : '';
+			report += this.simulationMode ? this.l.d(`eightDaysEMA: ${eightDaysEMA}`, 2) + '\n' : '';
+
 			// look for a green hammer, inverted or normal, in the past 3 hours
 			let ohlcMonthLastTick = ohlcMonth.getLastTick();
 			let isGreenHammer = ohlcMonthLastTick.isGreen() && ( ohlcMonthLastTick.isHammer() || ohlcMonthLastTick.isInvertedHammer() );
@@ -159,32 +204,55 @@ class Analysis {
 
 			let existsGreenHammer3h = isGreenHammer || isGreenHammer2 || isGreenHammer3;
 
+			// for testing
+			report += this.simulationMode ? this.l.d(`isGreenHammer: ${isGreenHammer}`, 2) + '\n' : '';
+
 			let ohlcMonthHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcMonthHalf.setTicks(ohlcMonth.getTicks().slice(Math.ceil(ohlcMonth.getTicks().length/2), ohlcMonth.getTicks().length));
 			let changeMonthHalf = ohlcMonthHalf.getChange();
 
-			await sleep(2000);
+			await sleep(this.sleepMillis);
 
 			// let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCQuarter));
-			// if (!ohlcQuarter) { await sleep(3000); continue; }
+			// if (!ohlcQuarter) {
+			// 	await sleep(this.sleepMillis);
+			// 	report += this.l.err(`Failed to get ohlcQuarter!`, 2, true) + '\n';
+			// 	continue;
+			// }
 			// let changeQuarter = ohlcQuarter.getChange();
 
 			// let ohlcQuarterHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			// ohlcQuarterHalf.setTicks(ohlcQuarter.getTicks().slice(Math.ceil(ohlcQuarter.getTicks().length/2), ohlcQuarter.getTicks().length));
 			// let changeQuarterHalf = ohlcQuarterHalf.getChange();
 
-			// await sleep(2000);
+			// await sleep(this.sleepMillis);
 
 			let lowestCloseWeek = ohlcWeek.getLowestClose().close;
+
+			// for testing
+			report += this.simulationMode ? this.l.d(`lowestCloseWeek: ${lowestCloseWeek}`, 2) + '\n' : '';
+
 			let priceOverLowestWeek = 0;
 			if ( lowestCloseWeek > 0) {
 				priceOverLowestWeek = ( ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close - lowestCloseWeek ) / lowestCloseWeek;
 			}
+
+			// for testing
+			report += this.simulationMode ? this.l.d(`priceOverLowestWeek: ${priceOverLowestWeek}`, 2) + '\n' : '';
+
 			let highestCloseWeek = ohlcWeek.getHighestClose().close;
+
+			// for testing
+			report += this.simulationMode ? this.l.d(`highestCloseWeek: ${highestCloseWeek}`, 2) + '\n' : '';
+
 			let priceOverHighestWeek = 0;
 			if ( highestCloseWeek > 0) {
 				priceOverHighestWeek = ( highestCloseWeek - ohlcDay24h.ticks[ohlcDay24h.ticks.length -1].close ) / highestCloseWeek;
 			}
+
+			// for testing
+			report += this.simulationMode ? this.l.d(`priceOverHighestWeek: ${priceOverHighestWeek}`, 2) + '\n' : '';
+
 			let lowestCloseMonth = ohlcMonth.getLowestClose().close;
 			let priceOverLowestMonth = 0;
 			if ( lowestCloseMonth > 0) {
@@ -212,14 +280,14 @@ class Analysis {
 			// change 3h <= -2% or 6h <= -3% or 12h <= -4% AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
-			// MACD >= 0.002 and >= previous
+			// MACD positive and >= previous
 
 			// OR
 
 			// change 3h <= -2% or 6h <= -3% or 12h <= -4% AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
-			// MACD is >= 0.001 AND
+			// MACD positive
 
 			// OR 
 
@@ -236,7 +304,7 @@ class Analysis {
 
 					) &&
 					(priceOverLowestMonth >= 0.02) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 				) {
 					isCandidate = true;
 					candidateGrade = 7;
@@ -251,7 +319,7 @@ class Analysis {
 
 					) &&
 					(priceOverLowestMonth >= 0.02) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.002 && macdPrevious <= macdCurrent)
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdPrevious <= macdCurrent && macdCurrent > 0)
 				) {
 					isCandidate = true;
 					candidateGrade = 5;
@@ -266,7 +334,7 @@ class Analysis {
 
 					) &&
 					(priceOverLowestMonth >= 0.02) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent >= 0.001)
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0)
 				) {
 					isCandidate = true;
 					candidateGrade = 3;
@@ -274,7 +342,7 @@ class Analysis {
 
 				}else if (
 					(priceOverLowestMonth >= 0.02) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0 && macdCurrent + Math.abs(macdPrevious) >= 0.002)
+					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 				) {
 					isCandidate = true;
 					candidateGrade = 1;
@@ -321,11 +389,14 @@ class Analysis {
 					priceOverHighestMonth: priceOverHighestMonth
 				};
 
+				report += this.l.suc(`It's a candidate!`, 2, true) + '\n';
+				report += this.l.suc(`Candidate grade: ${currAssetResult.candidateGrade}`, 2, true) + '\n';
+				report += this.l.suc(`Score: ${currAssetResult.score}`, 2, true) + '\n';
+
 				// currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 2) + '\n';
 				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
-				// currAssetReport += this.l.i(`${asset} candlestick score: ${candleStickScore.toFixed(3)}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
@@ -344,7 +415,7 @@ class Analysis {
 				});
 				fs.writeFile(reportFilePath, report, function(err) { if (err) this.l.err(err, 0, true); } );
 			}
-			report += this.l.i(`EVALUATING ASSET: ${asset} - END`, 1);
+			report += this.l.i(`EVALUATING ASSET: ${asset} - END`, 1) + '\n';
 		}
 		report += this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - END`) + '\n';
 
@@ -352,6 +423,7 @@ class Analysis {
 			fs.writeFile(reportFilePath, '', function(err) { if (err) this.l.err(err, 0, true); } );
 		}
 
+		this.report = report;
 		return assetResults;
 	}
 
