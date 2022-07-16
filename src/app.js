@@ -463,10 +463,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, ANALYSIS_CURRENCY, l, SIMULATION);
 			recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
-			// If first time sending recommended assets, or assets different than previous
-			// and macd previous < 0 and macd current > 0, then send recommended assets
-			if ((isEmpty(prevRecommendedAssets) || (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(','))) &&
-				!isEmpty(recommendedAssets.filter(asset => asset.macdPrevious < 0 && asset.macdCurrent > 0))) {
+			// If first time sending recommended assets, or assets different than previous, then send recommended assets
+			if (isEmpty(prevRecommendedAssets) || (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(','))) {
 				viberBot.sendRecommendedAssets(reportFilePath);
 				prevRecommendedAssets = recommendedAssets.map(asset => asset);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
