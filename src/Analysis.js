@@ -57,7 +57,7 @@ class Analysis {
 	async recommend(getOHLC, reportFilePath) {
 		let report = this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
 		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
-		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.02;
+		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.005;
 		let bitcoinAnalysisReportPart = '';
 		if (isBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`) + '\n'; }
 		else if (bitcoinAnalysis.result == 'success') { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
@@ -270,8 +270,6 @@ class Analysis {
 			let currAssetReport = '';
 			let currAssetResult = {};
 
-			// if BTC is bullish or asset price difference to 8-days EMA <= -2% AND
-
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
 			// MACD went positive
@@ -295,73 +293,75 @@ class Analysis {
 			// price not the lowest of the month AND
 			// MACD went positive
 
-			if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) {
+			if (
+				(
+					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+					(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
 
-				if (
-					(
-						(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-						(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-						(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
-
-					) &&
-					(priceOverLowestMonth >= 0.02) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
-				) {
-					isCandidate = true;
-					candidateGrade = 7;
+				) &&
+				(priceOverLowestMonth >= 0.02) &&
+				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
+			) {
+				isCandidate = true;
+				candidateGrade = 10;
 
 
-				}else if (
-					(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
-					(
-						(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-						(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-						(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+			}else if (
+				(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
+				(
+					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+					(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
 
-					) &&
-					(priceOverLowestMonth >= 0.02) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdPrevious <= macdCurrent && macdCurrent > 0)
-				) {
-					isCandidate = true;
-					candidateGrade = 5;
-
-
-				}else if (
-					(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
-					(
-						(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-						(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-						(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
-
-					) &&
-					(priceOverLowestMonth >= 0.02) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0)
-				) {
-					isCandidate = true;
-					candidateGrade = 3;
+				) &&
+				(priceOverLowestMonth >= 0.02) &&
+				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdPrevious <= macdCurrent && macdCurrent > 0)
+			) {
+				isCandidate = true;
+				candidateGrade = 7;
 
 
-				}else if (
-					(priceOverLowestMonth >= 0.02) &&
-					(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
-				) {
-					isCandidate = true;
-					candidateGrade = 1;
-				}
+			}else if (
+				(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
+				(
+					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
+					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
+					(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+
+				) &&
+				(priceOverLowestMonth >= 0.02) &&
+				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0)
+			) {
+				isCandidate = true;
+				candidateGrade = 4;
 
 
-				if (existsGreenHammer3h) {
-					candidateGrade += 0.5;
-				}
-
-
-				if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
-					candidateGrade += 0.5;
-				}else if (derivative3h < 0 && derivative6h < derivative3h) {
-					candidateGrade += 0.25;
-				}
-
+			}else if (
+				(priceOverLowestMonth >= 0.02) &&
+				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
+			) {
+				isCandidate = true;
+				candidateGrade = 1;
 			}
+
+
+			if (existsGreenHammer3h) {
+				candidateGrade += 0.5;
+			}
+
+
+			if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
+				candidateGrade += 0.5;
+			}else if (derivative3h < 0 && derivative6h < derivative3h) {
+				candidateGrade += 0.25;
+			}
+
+			// if BTC is bullish or asset price difference to 8-days EMA <= -2%
+			if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) {
+				candidateGrade += 1;
+			}
+
 
 			if 	(isCandidate) {
 				currAssetResult = {
