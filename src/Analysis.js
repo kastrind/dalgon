@@ -413,7 +413,7 @@ class Analysis {
 
 				assetResults.sort(function (a, b) {
 					//return a.score - b.score;
-					return a.grade - b.grade;
+					return a.candidateGrade - b.candidateGrade;
 				});
 				report = assetResults.length ? bitcoinAnalysisReportPart : '';
 				assetResults.forEach(element => {
