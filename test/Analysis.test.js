@@ -77,9 +77,6 @@ let recommendedAssets = [];
 
 			assert.equal(analysis.report.indexOf('changeMonth: 0.2727272727272727')>=0, true);
 
-			console.log(analysis.report);
-			//assert.equal(analysis.report.indexOf('macdCurrent: 0')>=0, true);
-
 			assert.equal(analysis.report.indexOf('isGreenHammer: true')>=0, true);
 
 			assert.equal(analysis.report.indexOf('lowestCloseWeek: 9')>=0, true);

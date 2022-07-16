@@ -270,6 +270,9 @@ class Analysis {
 			let currAssetReport = '';
 			let currAssetResult = {};
 
+			// Recommendation Conditions
+			// Grading system 1 - 10 + 2 bonus points
+
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
 			// MACD went positive
@@ -345,18 +348,19 @@ class Analysis {
 				candidateGrade = 1;
 			}
 
-
+			// bonus
 			if (existsGreenHammer3h) {
 				candidateGrade += 0.5;
 			}
 
-
+			// bonus
 			if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
 				candidateGrade += 0.5;
 			}else if (derivative3h < 0 && derivative6h < derivative3h) {
 				candidateGrade += 0.25;
 			}
 
+			// bonus
 			// if BTC is bullish or asset price difference to 8-days EMA <= -2%
 			if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) {
 				candidateGrade += 1;
@@ -367,7 +371,7 @@ class Analysis {
 				currAssetResult = {
 					name: asset,
 					latestClosingPrice: latestClosingPrice,
-					score: (candidateGrade*((macdCurrent - macdPrevious) / ohlcPastHour.getAverage())).toFixed(3),
+					//score: (candidateGrade*((macdCurrent - macdPrevious) / ohlcPastHour.getAverage())).toFixed(3),
 					// candleStickScore: candleStickScore,
 					candidateGrade: candidateGrade,
 					existsGreenHammer3h: existsGreenHammer3h,
@@ -392,14 +396,14 @@ class Analysis {
 
 				report += this.l.suc(`It's a candidate!`, 2, true) + '\n';
 				report += this.l.suc(`Candidate grade: ${currAssetResult.candidateGrade}`, 2, true) + '\n';
-				report += this.l.suc(`Score: ${currAssetResult.score}`, 2, true) + '\n';
+				//report += this.l.suc(`Score: ${currAssetResult.score}`, 2, true) + '\n';
 
 				// currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 2) + '\n';
 				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
+				//currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n\n';
 
@@ -408,7 +412,8 @@ class Analysis {
 				assetResults.push(currAssetResult);
 
 				assetResults.sort(function (a, b) {
-					return a.score - b.score;
+					//return a.score - b.score;
+					return a.grade - b.grade;
 				});
 				report = assetResults.length ? bitcoinAnalysisReportPart : '';
 				assetResults.forEach(element => {
