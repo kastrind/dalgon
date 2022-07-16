@@ -5,7 +5,7 @@ class OHLCRange {
 		this.dateSince = new Date(dateYMDString);
 		this.dateSinceSeconds = this.dateSince/1000;
 		this.dateNow = new Date();
-		this.diff = (this.dateNow - this.dateSince)/(1000*60*60*24);
+		this.diff = Math.floor((this.dateNow - this.dateSince)/(1000*60*60*24));
 		this.intervals = [1, 5, 15, 30, 60, 240, 1440, 10080, 21600];
 		var that = this;
 		this.interval = this.intervals.find((el, i, ar) => that.diff <= (maxNumResults/60/24)*el);

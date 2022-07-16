@@ -24,20 +24,21 @@ function getDateTime() {
 }
 
 Array.prototype.getEMA = function(numPeriods, smoothing, offset=0, property='close') {
-	let wSum = 1;
 	if (isEmpty(smoothing)) smoothing = 2 / (numPeriods + 1);
-	return this.slice(this.length - numPeriods - offset, this.length - offset).reduce((prev, curr, i) => {
-		wSum += Math.pow(1 - smoothing, i);
+	let wSum = Math.pow(1 - smoothing, numPeriods);
+	let reducedValue = this.slice(this.length - numPeriods - offset, this.length - offset).reduce((prev, curr, i) => {
 		if (!isEmpty(property)) {
-			if (i===1) prev = parseFloat(prev[property]);
+			if (i===1) prev = parseFloat(prev[property]) * wSum;
 			curr = parseFloat(curr[property]);
+		}else {
+			if (i===1) prev = parseFloat(prev) * wSum;
+			curr = parseFloat(curr);
 		}
-		//for debugging
-		// else {
-		// 	console.log("i: "+i+" prev: "+ prev + " curr: " + curr);
-		// } 
-		return prev + Math.pow(1 - smoothing, i)*curr; }) / wSum;
-		//return prev + curr});
+		wSum += Math.pow(1 - smoothing, numPeriods - i);
+		let result = prev + Math.pow(1 - smoothing, numPeriods - i)*curr;
+		return result;
+	});
+	return reducedValue / wSum;
 };
 
 export { isEmpty, isOK, sleep, prcnt, getDateTime };

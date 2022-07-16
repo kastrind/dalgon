@@ -173,6 +173,7 @@ class Analysis {
 			let macd_c = this.simulationMode ? 1 : 9;
 			let macdCurrent;
 			let macdPrevious;
+			
 			// if there is enough ohlc data to calculate MACD
 			if (Math.max(macd_a, macd_b) + macd_c + 1 <= ohlcMonth.getTicks().length) {
 				macdCurrent = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));

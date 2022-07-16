@@ -76,15 +76,16 @@ class OHLC {
 		let macdSeries = [];
 		for (let i=0; i<c; i++) {
 			macdSeries.push(this.getEMA(a, smoothing, i + offset, property) - this.getEMA(b, smoothing, i + offset, property));
-			// for debugging
 			// this.l.d(`EMA a=${a} i=${i} = ${this.getEMA(a, smoothing, i + offset, property)}`);
 			// this.l.d(`EMA b=${b} i=${i} = ${this.getEMA(b, smoothing, i + offset, property)}`);
 		}
+		macdSeries = macdSeries.reverse();
 		this.l.d(`MACD series: ${macdSeries}`, 2);
+		this.l.d(`MACD series last: ${macdSeries[macdSeries.length-1].toFixed(10)}`, 2);
 		let signal = macdSeries.getEMA(c, smoothing, 0, null);
-		this.l.d(`MACD signal: ${signal}`, 2);
-		this.l.d(`MACD result: ${macdSeries[0] - signal}`, 2);
-		return macdSeries[0] - signal;
+		this.l.d(`MACD signal: ${signal.toFixed(10)}`, 2);
+		this.l.d(`MACD result: ${(macdSeries[macdSeries.length-1] - signal).toFixed(10)}`, 2);
+		return macdSeries[macdSeries.length-1] - signal;
 	}
 
 	static async request(OHLCRequest, paramAsset, paramSince, maxNumResults, loggerObj, simulationMode=false, simObj={}) {
