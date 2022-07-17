@@ -214,6 +214,29 @@ class Analysis {
 
 			await sleep(this.sleepMillis);
 
+			// get OHLC for month in 4h intervals, to calculate MACD further back in the past
+			let ohlcMonth4hIntervals = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults/4, this.l, this.simulationMode, this.simObjOHLCMonth));
+			if (!ohlcMonth4hIntervals) {
+				await sleep(this.sleepMillis);
+				report += this.l.err(`Failed to get ohlcMonth4hIntervals!`, 2, true) + '\n';
+				continue;
+			}
+			let macdCurrentLong;
+			let macdPreviousLong;
+			// if there is enough ohlc data to calculate MACD
+			if (Math.max(macd_a, macd_b) + macd_c + 1 <= ohlcMonth4hIntervals.getTicks().length) {
+				macdCurrentLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
+				macdPreviousLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+			}else {
+				macdCurrentLong = 'N/A';
+				macdPreviousLong = 'N/A';
+			}
+			report += this.l.i(`Long MACD current  ${macdCurrentLong}`, 2) + '\n';
+			report += this.l.i(`Long MACD previous ${macdPreviousLong}`, 2) + '\n';
+
+			// let ohlc_2 = await (OHLC.request(getOHLC, "MANAEUR", d.toISOString(), maxNumResults/8, l, SIMULATION));
+			// console.log("!!!!!!!!!!!!!!!!!"+ohlc_2.ticks.length);
+
 			// let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCQuarter));
 			// if (!ohlcQuarter) {
 			// 	await sleep(this.sleepMillis);
@@ -348,24 +371,27 @@ class Analysis {
 				candidateGrade = 1;
 			}
 
-			// bonus
+			// bonus: long MACD positive reversal
+			if (macdCurrentLong !== 'N/A' && macdPreviousLong !== 'N/A' && macdCurrentLong > 0 && macdPreviousLong < 0) {
+				candidateGrade += 1.5;
+			}
+
+			// bonus: green hammer
 			if (existsGreenHammer3h) {
 				candidateGrade += 0.5;
 			}
 
-			// bonus
+			// bonus: negative derivative increasing
 			if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
 				candidateGrade += 0.5;
 			}else if (derivative3h < 0 && derivative6h < derivative3h) {
 				candidateGrade += 0.25;
 			}
 
-			// bonus
-			// if BTC is bullish or asset price difference to 8-days EMA <= -2%
+			// bonus: if BTC is bullish or asset price difference to 8-days EMA <= -2%
 			if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) {
-				candidateGrade += 1;
+				candidateGrade += 0.25;
 			}
-
 
 			if 	(isCandidate) {
 				currAssetResult = {
@@ -377,6 +403,8 @@ class Analysis {
 					existsGreenHammer3h: existsGreenHammer3h,
 					macdCurrent: macdCurrent.toFixed(3),
 					macdPrevious: macdPrevious.toFixed(3),
+					macdCurrentLong: macdCurrentLong.toFixed(3),
+					macdPreviousLong: macdPreviousLong.toFixed(3),
 					eightDaysEMA: eightDaysEMA,
 					report: "",
 					changePastHour: changePastHour,
@@ -405,7 +433,8 @@ class Analysis {
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
 				//currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n\n';
+				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} MACD-now-long:  ${currAssetResult.macdCurrentLong},\nMACD-prev-long: ${currAssetResult.macdPreviousLong}`, 2) + '\n\n';
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = '';
