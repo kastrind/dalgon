@@ -252,7 +252,7 @@ class Order {
 					let dateFull = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).toLocaleString("en-US", options);
 					let date = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).getTime();
 					let daysDiff = (dateNow - date)/(1000*60*60*24);
-					report += l.i(`Order ${txid}: ${description}`, 1) + '\n';
+					report += l.i(`\nOrder ${txid}: ${description}`, 1) + '\n';
 					report += l.i(`Took place on ${dateFull}, ${daysDiff.toFixed(2)} days ago.`, 2) + '\n';
 
 					let pair = currOpenOrder.descr.pair;
