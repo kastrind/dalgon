@@ -214,15 +214,15 @@ class Analysis {
 
 			await sleep(this.sleepMillis);
 
+			let macdCurrentLong;
+			let macdPreviousLong;
 			// get OHLC for month in 4h intervals, to calculate MACD further back in the past
-			let ohlcMonth4hIntervals = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults/4, this.l, this.simulationMode, this.simObjOHLCMonth));
+			let ohlcMonth4hIntervals = await (OHLC.request(getOHLC, assetPair, month.toISOString(), Math.ceil(this.maxNumOHLCResults/4), this.l, this.simulationMode, this.simObjOHLCMonth));
 			if (!ohlcMonth4hIntervals) {
 				await sleep(this.sleepMillis);
 				report += this.l.err(`Failed to get ohlcMonth4hIntervals!`, 2, true) + '\n';
 				continue;
 			}
-			let macdCurrentLong;
-			let macdPreviousLong;
 			// if there is enough ohlc data to calculate MACD
 			if (Math.max(macd_a, macd_b) + macd_c + 1 <= ohlcMonth4hIntervals.getTicks().length) {
 				macdCurrentLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
