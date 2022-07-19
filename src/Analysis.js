@@ -345,7 +345,7 @@ class Analysis {
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdPrevious <= macdCurrent && macdCurrent > 0)
 			) {
 				isCandidate = true;
-				candidateGrade = 7;
+				candidateGrade = 4;
 
 
 			}else if (
@@ -360,7 +360,7 @@ class Analysis {
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0)
 			) {
 				isCandidate = true;
-				candidateGrade = 4;
+				candidateGrade = 1;
 
 
 			}else if (
@@ -368,7 +368,7 @@ class Analysis {
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
-				candidateGrade = 1;
+				candidateGrade = 7;
 			}
 
 			// bonus: long MACD positive reversal
