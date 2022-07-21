@@ -151,7 +151,13 @@ class Order {
 		profitPrice = profitPrice.toFixed(this.tradeableAssetPairDecimals);
 		this.autoTradeReport += l.i(`Conditional close to take ${profitPercent}% profit: ${profitPrice} ${buyWith} price per unit.`, 1) + '\n';
 
-		let orderResponse = await addOrder(this.prepareOrderParamsObj(this.tradeAbleAssetPairId, { price: buyPriceUnit, volume: buyVolume, 'close[ordertype]': 'take-profit', 'close[price]': profitPrice } ), this.orderSimObj);
+		let optionalParamsObj = { price: buyPriceUnit, volume: buyVolume, 'close[ordertype]': 'take-profit', 'close[price]': profitPrice };
+		// market orders get the market price
+		if (this.orderType == 'market') {
+			delete optionalParamsObj.price;
+		}
+
+		let orderResponse = await addOrder(this.prepareOrderParamsObj(this.tradeAbleAssetPairId, optionalParamsObj), this.orderSimObj);
 		await sleep(1000);
 		let orderResponseBody = JSON.parse(orderResponse.body);
 
