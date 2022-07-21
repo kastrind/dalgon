@@ -133,6 +133,7 @@ class Analysis {
 				continue;
 			}
 			let changeDay24h = ohlcDay24h.getChange();
+			let derivative24h = ohlcDay24h.getDerivative();
 
 			// for testing
 			report += this.simulationMode ? this.l.d(`changeDay24h: ${changeDay24h}`, 2) + '\n' : '';
@@ -158,6 +159,7 @@ class Analysis {
 			let ohlcWeekHalf = new OHLC(assetPair, this.l, this.simulationMode);
 			ohlcWeekHalf.setTicks(ohlcWeek.getTicks().slice(Math.ceil(ohlcWeek.getTicks().length/2), ohlcWeek.getTicks().length));
 			let changeWeekHalf = ohlcWeekHalf.getChange();
+			let derivativeWeekHalf = ohlcWeekHalf.getDerivative();
 
 			await sleep(this.sleepMillis);
 
@@ -373,19 +375,26 @@ class Analysis {
 
 			// bonus: long MACD positive reversal
 			if (macdCurrentLong !== 'N/A' && macdPreviousLong !== 'N/A' && macdCurrentLong > 0 && macdPreviousLong < 0) {
-				candidateGrade += 1.5;
+				candidateGrade += 1.0;
+			}
+
+			// bonus: negative derivatives increasing (longer in the past)
+			if (derivative24h < 0 && derivativeWeekHalf < derivative24h) {
+				candidateGrade += 0.75;
+			}else if (derivative12h < 0 && derivative24h < derivative12h) {
+				candidateGrade += 0.4;
+			}
+
+			// bonus: negative derivative increasing (shorter in the past)
+			if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
+				candidateGrade += 0.5;
+			}else if (derivative3h < 0 && derivative6h < derivative3h) {
+				candidateGrade += 0.3;
 			}
 
 			// bonus: green hammer
 			if (existsGreenHammer3h) {
 				candidateGrade += 0.5;
-			}
-
-			// bonus: negative derivative increasing
-			if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
-				candidateGrade += 0.5;
-			}else if (derivative3h < 0 && derivative6h < derivative3h) {
-				candidateGrade += 0.25;
 			}
 
 			// bonus: if BTC is bullish or asset price difference to 8-days EMA <= -2%
