@@ -295,7 +295,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.sendTextMessage(`Please wait.`);
 			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1].toUpperCase();
 			if (assetToInvestIn) {
-				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
+				let order = new Order(1, 'market', 'buy', viberBot, l, SIMULATION, true);
 				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
 					await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
 				}
@@ -465,7 +465,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			// If there are recommended assets and different than previous, then send recommended assets
 			if (!isEmpty(recommendedAssets) && (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(',')) &&
-				!isEmpty(recommendedAssets.filter(elem => elem.candidateGrade >= 7))) {
+				!isEmpty(recommendedAssets.filter(elem => elem.candidateGrade >= autoTradeGradeThreshold))) {
 				viberBot.sendRecommendedAssets(reportFilePath);
 				prevRecommendedAssets = recommendedAssets.map(asset => asset);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
@@ -552,7 +552,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					}
 
 					// Create a new Order
-					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);
+					let order = new Order(1, 'market', 'buy', viberBot, l, SIMULATION);
 					// If prerequisites to auto-trade are met, submit the limit Order with conditional take-profit
 					if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
 						let autoTradeResult = await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
