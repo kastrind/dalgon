@@ -135,7 +135,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let matches = message.text.match(/^chart\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i);
 			let assetPair = matches[1].toUpperCase();
 			let baseCurrency = matches[3] ? matches[3].toUpperCase() : BASE_CURRENCY;
-			viberBot.send.sendTextMessage(`https://cryptowat.ch/charts/KRAKEN:${assetPair}-${baseCurrency}`);
+			viberBot.sendTextMessage(`https://cryptowat.ch/charts/KRAKEN:${assetPair}-${baseCurrency}`);
 			viberBot.recordHistory(message);
 		});
 
