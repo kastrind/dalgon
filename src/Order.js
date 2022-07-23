@@ -142,7 +142,7 @@ class Order {
 
 		// Determine price per unit and volume to buy from total buying price
 		let buyPriceUnit = parseFloat(ticker.lastTradeClosedPrice);
-		let buyVolume = buyPriceTotal / buyPriceUnit;
+		let buyVolume = (buyPriceTotal / buyPriceUnit).toFixed(this.tradeableAssetPairDecimals);
 		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
 		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
 
