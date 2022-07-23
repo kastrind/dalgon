@@ -42,7 +42,8 @@ class DalgonViberBot {
 			response.send(new TextMessage(`"recommend assets": return potential profitable assets\n
 			"pause|resume analysis": pause or resume analysis on potential profitable assets to recommend\n
 			"start|stop trading": permission to purchase potential profitable assets\n
-			"ticker ASSET_SYMBOL [base ASSET_SYMBOL]": return ticker info on given asset symbol, e.g. BTC. Optionally set different base currency, e.g. XBT for Bitcoin\n
+			"ticker ASSET_SYMBOL [base ASSET_SYMBOL]": return ticker info on given asset symbol, e.g. XBT. Optionally set different base currency, e.g. GBP\n\
+			"chart ASSET_SYMBOL [base ASSET_SYMBOL]": return link to chart for given asset symbol, e.g. BTC. Optionally set different base currency, e.g. GBP\n
 			"balance": current balance in Kraken exchange\n
 			"purchases": view purchased asset amounts and costs\n
 			"portfolio value": view current value for each asset balance, in base currency\n

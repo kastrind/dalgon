@@ -119,7 +119,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 		// Kraken features:
 
-		// Ticker
+		// Ticker for the given ASSET_SYMBOL (and optionally the base market symbol)
 		viberBot.getBot().onTextMessage(/^ticker\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i, async (message, response) => {
 			let matches = message.text.match(/^ticker\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i);
 			let asset = matches[1].toUpperCase();
@@ -127,6 +127,15 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let ticker = await (Ticker.request(getTicker, { searchParams: { pair: asset + baseCurrency } }, l, SIMULATION));
 			if (ticker) viberBot.sendTextMessage(ticker.toString());
 			else viberBot.sendTextMessage("Failed to get ticker information.");
+			viberBot.recordHistory(message);
+		});
+
+		// Link to cryptowat.ch chart for the given ASSET_SYMBOL (and optionally the base market symbol)
+		viberBot.getBot().onTextMessage(/^chart\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i, async (message, response) => {
+			let matches = message.text.match(/^chart\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i);
+			let assetPair = matches[1].toUpperCase();
+			let baseCurrency = matches[3] ? matches[3].toUpperCase() : BASE_CURRENCY;
+			viberBot.send.sendTextMessage(`https://cryptowat.ch/charts/KRAKEN:${assetPair}-${baseCurrency}`);
 			viberBot.recordHistory(message);
 		});
 
