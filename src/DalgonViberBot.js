@@ -38,10 +38,18 @@ class DalgonViberBot {
 			this.recordHistory(message);
 		});
 
+		this.bot.onTextMessage(/^status/i, async (message, response) => {
+			let canStartTradingMsg = this.canStartTrading ? "I am permitted to auto-trade." : "I am not permitted to auto-trade.";
+			let pauseAnalysisMsg = this.pauseAnalysis ? "I have paused analysis." : "I am running analysis.";
+			response.send(new TextMessage(`${canStartTradingMsg} ${pauseAnalysisMsg}`));
+			this.recordHistory(message);
+		});
+
 		this.bot.onTextMessage(/^help/i, async (message, response) => {
 			response.send(new TextMessage(`"recommend assets": return potential profitable assets\n
 			"pause|resume analysis": pause or resume analysis on potential profitable assets to recommend\n
 			"start|stop trading": permission to purchase potential profitable assets\n
+			"status": report auto-trading and analysis status\n
 			"ticker ASSET_SYMBOL [base ASSET_SYMBOL]": return ticker info on given asset symbol, e.g. XBT. Optionally set different base currency, e.g. GBP\n\
 			"chart ASSET_SYMBOL [base ASSET_SYMBOL]": return link to chart for given asset symbol, e.g. BTC. Optionally set different base currency, e.g. GBP\n
 			"balance": current balance in Kraken exchange\n
