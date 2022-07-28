@@ -292,6 +292,7 @@ class Analysis {
 
 			let isCandidate = false;
 			let candidateGrade = -1;
+			let hasWeekHighPenalty = false;
 			let currAssetReport = '';
 			let currAssetResult = {};
 
@@ -402,6 +403,12 @@ class Analysis {
 				candidateGrade += 0.25;
 			}
 
+			// penalty: if price is less than 20% lower than the week's highest
+			if (priceOverHighestWeek < 0.2) {
+				hasWeekHighPenalty = true;
+				candidateGrade -= 1;
+			}
+
 			if 	(isCandidate) {
 				currAssetResult = {
 					name: asset,
@@ -410,6 +417,7 @@ class Analysis {
 					// candleStickScore: candleStickScore,
 					candidateGrade: candidateGrade,
 					existsGreenHammer3h: existsGreenHammer3h,
+					hasWeekHighPenalty: hasWeekHighPenalty,
 					macdCurrent: macdCurrent.toFixed(10),
 					macdPrevious: macdPrevious.toFixed(10),
 					macdCurrentLong: macdCurrentLong.toFixed(10),
@@ -440,10 +448,12 @@ class Analysis {
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} week high penalty: ${currAssetResult.hasWeekHighPenalty}`, 2) + '\n';
 				//currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} MACD-now-long:  ${currAssetResult.macdCurrentLong},\nMACD-prev-long: ${currAssetResult.macdPreviousLong}`, 2) + '\n\n';
+				currAssetReport += this.l.i(`${asset} MACD-now-long:  ${currAssetResult.macdCurrentLong},\nMACD-prev-long: ${currAssetResult.macdPreviousLong}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} chart:  https://cryptowat.ch/charts/KRAKEN:${asset}-${this.baseCurrency}`, 2) + '\n\n';
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = '';

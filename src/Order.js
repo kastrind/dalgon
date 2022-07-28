@@ -283,7 +283,7 @@ class Order {
 							if (txid =="1OOV7GI-OVXI2-KKPO2V") { differencePercent = 48.5; }
 							if (txid =="1O7TBWY-TZ2FA-2JS27W") { differencePercent = 48.5; }
 						}
-						report += l.d(`differencePercent ${differencePercent} profitPercent ${profitPercent}`, 0) + '\n';
+						report += l.d(`differencePercent ${differencePercent} profitPercent ${profitPercent}`, 0);
 
 						report += l.i(`Curr price is ${currPrice}, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 
@@ -291,38 +291,38 @@ class Order {
 						if (differencePercent <= profitPercent -1) {
 							if (!isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length >= 1) {
 								let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
-								report += l.d("selling is profitable and series exists and has >=1 length") + '\n';
+								report += l.d("selling is profitable and series exists and has >=1 length");
 								
 								//if only one past price to market in the series,
 								if (priceToMarketSeries[txid].length == 1) {
-									report += l.d("series has one") + '\n';
-									report += l.d(`lastOne ${lastOne}`) + '\n';
+									report += l.d("series has one");
+									report += l.d(`lastOne ${lastOne}`);
 									// if current price to market > last one + 0.3 (price lost considerable ground)
 									if (differencePercent > lastOne + 0.3 && lastOne < profitPercent) {
-										report += l.d(`canSellForProfit 1A`) + '\n';
+										report += l.d(`canSellForProfit 1A`);
 										canSellForProfit = true;
 									}
 								//if more than one past price to market in the series,
 								}else if (priceToMarketSeries[txid].length > 1) {
 									let beforeLastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -2];
-									report += l.d("series has more than one") + '\n';
-									report += l.d(`lastOne ${lastOne} beforeLastOne ${beforeLastOne}`) + '\n';
+									report += l.d("series has more than one");
+									report += l.d(`lastOne ${lastOne} beforeLastOne ${beforeLastOne}`);
 									// if current price to market > last one + 0.3 OR (price lost considerable ground)
 									//    current price to market > last one and second-to-last one OR (price lost ground two consecutive times)
 									//    current price to market < last one and last one > second-to-last one (price gained less ground it lost)
 									if (differencePercent > lastOne + 0.3 && lastOne < profitPercent) {
-										report += l.d(`canSellForProfit 2A`) + '\n';
+										report += l.d(`canSellForProfit 2A`);
 										canSellForProfit = true;
 									}
 									if (differencePercent > lastOne && lastOne > beforeLastOne && lastOne < profitPercent) {
-										report += l.d(`canSellForProfit 2B`) + '\n';
+										report += l.d(`canSellForProfit 2B`);
 										canSellForProfit = true;
 									}
 									if (Math.abs(differencePercent - lastOne) < (lastOne - beforeLastOne) &&
 										(differencePercent - lastOne) < 0 &&
 										(lastOne - beforeLastOne) > 0 &&
 										lastOne < profitPercent) {
-										report += l.d(`canSellForProfit 2C`) + '\n';
+										report += l.d(`canSellForProfit 2C`);
 										canSellForProfit = true;
 									}
 								}
@@ -333,7 +333,7 @@ class Order {
 								  !isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length > 1) {
 									let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
 									if (lastOne <= differencePercent -1) {
-										report += l.d(`canSellForProfit 3A`) + '\n';
+										report += l.d(`canSellForProfit 3A`);
 										canSellForProfit = true;
 									}
 						}
