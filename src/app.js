@@ -474,7 +474,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			// If there are recommended assets and different than previous, then send recommended assets
 			if (!isEmpty(recommendedAssets) && (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(',')) &&
-				!isEmpty(recommendedAssets.filter(elem => elem.candidateGrade >= autoTradeGradeThreshold))) {
+				!isEmpty(recommendedAssets.filter(elem => elem.candidateGrade > 0))) {
 				viberBot.sendRecommendedAssets(reportFilePath);
 				prevRecommendedAssets = recommendedAssets.map(asset => asset);
 				timestampSecondsI = Math.floor(Date.now() / 1000);

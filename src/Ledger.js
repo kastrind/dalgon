@@ -1,4 +1,4 @@
-import { isEmpty } from './utils.js';
+import { sleep, isEmpty } from './utils.js';
 
 class Ledger {
 
@@ -28,6 +28,8 @@ class Ledger {
 		let isFirstRequest = true;
 		while ((responseBody = await requestNext())) {
 			if (simulationMode) { mergedResponse = responseBody; break; }
+			
+			await sleep(3000);
 
 			if (isFirstRequest) { isFirstRequest = false; mergedResponse = responseBody; continue; }
 

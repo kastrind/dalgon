@@ -328,8 +328,8 @@ class Order {
 								}
 								//else keep waiting, in attempt to maximize profit
 							}
-						//else if current price to market lost ground such that selling is less than 1% profitable
-						}else if (differencePercent > profitPercent -1 && differencePercent < profitPercent &&
+						//else if current price to market lost ground such that selling is less than 1% profitable (but still profitable)
+						}else if (differencePercent > profitPercent -1 && differencePercent < profitPercent - 0.3 &&
 								  !isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length > 1) {
 									let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
 									if (lastOne <= differencePercent -1) {

@@ -236,22 +236,6 @@ class Analysis {
 			report += this.l.i(`Long MACD current  ${macdCurrentLong}`, 2) + '\n';
 			report += this.l.i(`Long MACD previous ${macdPreviousLong}`, 2) + '\n';
 
-			// let ohlc_2 = await (OHLC.request(getOHLC, "MANAEUR", d.toISOString(), maxNumResults/8, l, SIMULATION));
-			// console.log("!!!!!!!!!!!!!!!!!"+ohlc_2.ticks.length);
-
-			// let ohlcQuarter = await (OHLC.request(getOHLC, assetPair, quarter.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCQuarter));
-			// if (!ohlcQuarter) {
-			// 	await sleep(this.sleepMillis);
-			// 	report += this.l.err(`Failed to get ohlcQuarter!`, 2, true) + '\n';
-			// 	continue;
-			// }
-			// let changeQuarter = ohlcQuarter.getChange();
-
-			// let ohlcQuarterHalf = new OHLC(assetPair, this.l, this.simulationMode);
-			// ohlcQuarterHalf.setTicks(ohlcQuarter.getTicks().slice(Math.ceil(ohlcQuarter.getTicks().length/2), ohlcQuarter.getTicks().length));
-			// let changeQuarterHalf = ohlcQuarterHalf.getChange();
-
-			// await sleep(this.sleepMillis);
 
 			let lowestCloseWeek = ohlcWeek.getLowestClose().close;
 
@@ -297,32 +281,26 @@ class Analysis {
 			let currAssetResult = {};
 
 			// Recommendation Conditions
-			// Grading system 1 - 10 + 2 bonus points
+			// Grading system 1 to 7 +3 bonus points -0.5 penalty
 
+			// change 3h <= -2% or 6h <= -3% or 12h <= -4% AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
 			// MACD went positive
 
 			// OR
 
-			// change 3h <= -2% or 6h <= -3% or 12h <= -4% AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
-			// MACD positive and >= previous
+			// MACD went positive
 
 			// OR
-
-			// change 3h <= -2% or 6h <= -3% or 12h <= -4% AND
-			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
-			// price not the lowest of the month AND
-			// MACD positive
-
-			// OR 
 
 			// price not the lowest of the month AND
 			// MACD went positive
 
 			if (
+				(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
 				(
 					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
 					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
@@ -333,11 +311,10 @@ class Analysis {
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
-				candidateGrade = 10;
+				candidateGrade = 7;
 
 
 			}else if (
-				(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
 				(
 					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
 					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
@@ -345,33 +322,18 @@ class Analysis {
 
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
-				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdPrevious <= macdCurrent && macdCurrent > 0)
+				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
 				candidateGrade = 4;
 
 
 			}else if (
-				(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
-				(
-					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-					(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
-
-				) &&
-				(priceOverLowestMonth >= 0.02) &&
-				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0)
-			) {
-				isCandidate = true;
-				candidateGrade = 1;
-
-
-			}else if (
 				(priceOverLowestMonth >= 0.02) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
-				candidateGrade = 7;
+				candidateGrade = 1;
 			}
 
 			// bonus: long MACD positive reversal
@@ -393,20 +355,20 @@ class Analysis {
 				candidateGrade += 0.3;
 			}
 
-			// bonus: green hammer
-			if (existsGreenHammer3h) {
+			// bonus: if BTC is bullish or asset price difference to 8-days EMA <= -3%
+			if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.03) {
 				candidateGrade += 0.5;
 			}
 
-			// bonus: if BTC is bullish or asset price difference to 8-days EMA <= -2%
-			if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.02) {
+			// bonus: green hammer
+			if (existsGreenHammer3h) {
 				candidateGrade += 0.25;
 			}
 
 			// penalty: if price is less than 20% lower than the week's highest
 			if (priceOverHighestWeek < 0.2) {
 				hasWeekHighPenalty = true;
-				candidateGrade -= 1;
+				candidateGrade -= 0.5;
 			}
 
 			if 	(isCandidate) {
