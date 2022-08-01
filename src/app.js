@@ -150,6 +150,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		// Purchases
 		viberBot.getBot().onTextMessage(/^(my )?(purchases)$/i, async (message, response) => {
 			let timeTolerance = properties.get("ledger.TIME_TOLERANCE");
+			viberBot.sendTextMessage('Please wait.');
 			let ledger = await (Ledger.request(getLedgerInfo, {ofs: 0}, timeTolerance, BASE_CURRENCY, l, SIMULATION));
 			ledger.groupLedgerEntries();
 			ledger.getAssetPurchaseInfo();
