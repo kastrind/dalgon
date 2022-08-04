@@ -276,27 +276,29 @@ class Analysis {
 
 			let isCandidate = false;
 			let candidateGrade = -1;
-			let hasWeekHighPenalty = false;
 			let currAssetReport = '';
 			let currAssetResult = {};
 
 			// Recommendation Conditions
-			// Grading system 1 to 7 +3 bonus points -0.5 penalty
+			// Grading system 1 to 7 +3 bonus points
 
 			// change 3h <= -2% or 6h <= -3% or 12h <= -4% AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
+			// price not the highest of the week AND
 			// MACD went positive
 
 			// OR
 
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
+			// price not the highest of the week AND
 			// MACD went positive
 
 			// OR
 
 			// price not the lowest of the month AND
+			// price not the highest of the week AND
 			// MACD went positive
 
 			if (
@@ -308,6 +310,7 @@ class Analysis {
 
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
+				(priceOverHighestWeek >= 0.02) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
@@ -322,6 +325,7 @@ class Analysis {
 
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
+				(priceOverHighestWeek >= 0.02) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
@@ -330,6 +334,7 @@ class Analysis {
 
 			}else if (
 				(priceOverLowestMonth >= 0.02) &&
+				(priceOverHighestWeek >= 0.02) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
@@ -365,12 +370,6 @@ class Analysis {
 				candidateGrade += 0.25;
 			}
 
-			// penalty: if price is less than 20% lower than the week's highest
-			if (priceOverHighestWeek < 0.2) {
-				hasWeekHighPenalty = true;
-				candidateGrade -= 0.5;
-			}
-
 			if 	(isCandidate) {
 				currAssetResult = {
 					name: asset,
@@ -379,7 +378,6 @@ class Analysis {
 					// candleStickScore: candleStickScore,
 					candidateGrade: candidateGrade,
 					existsGreenHammer3h: existsGreenHammer3h,
-					hasWeekHighPenalty: hasWeekHighPenalty,
 					macdCurrent: macdCurrent.toFixed(10),
 					macdPrevious: macdPrevious.toFixed(10),
 					macdCurrentLong: macdCurrentLong.toFixed(10),
@@ -410,7 +408,6 @@ class Analysis {
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} week high penalty: ${currAssetResult.hasWeekHighPenalty}`, 2) + '\n';
 				//currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n';
