@@ -282,7 +282,6 @@ class Analysis {
 			// Recommendation Conditions
 			// Grading system 1 to 7 +3 bonus points
 
-			// change 3h <= -2% or 6h <= -3% or 12h <= -4% AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
 			// price not the lowest of the month AND
 			// price not the highest of the week AND
@@ -290,7 +289,7 @@ class Analysis {
 
 			// OR
 
-			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
+			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.5 AND
 			// price not the lowest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
@@ -302,7 +301,6 @@ class Analysis {
 			// MACD went positive
 
 			if (
-				(change3h <= -0.02 || change6h <= -0.03 || change12h <= -0.04) &&
 				(
 					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
 					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
@@ -319,9 +317,9 @@ class Analysis {
 
 			}else if (
 				(
-					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-					(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/1.5) ||
+					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/1.5) ||
+					(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/1.5)
 
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
