@@ -369,44 +369,39 @@ class Analysis {
 			}
 
 			if 	(isCandidate) {
-				currAssetResult = {
-					name: asset,
-					latestClosingPrice: latestClosingPrice,
-					//score: (candidateGrade*((macdCurrent - macdPrevious) / ohlcPastHour.getAverage())).toFixed(3),
-					// candleStickScore: candleStickScore,
-					candidateGrade: candidateGrade,
-					existsGreenHammer3h: existsGreenHammer3h,
-					macdCurrent: macdCurrent.toFixed(10),
-					macdPrevious: macdPrevious.toFixed(10),
-					macdCurrentLong: macdCurrentLong.toFixed(10),
-					macdPreviousLong: macdPreviousLong.toFixed(10),
-					eightDaysEMA: eightDaysEMA,
-					report: "",
-					changePastHour: changePastHour,
-					change3h: change3h,
-					change6h: change6h,
-					change12h: change12h,
-					changeDay24h: changeDay24h,
-					changeWeekHalf: changeWeekHalf,
-					changeWeek: changeWeek,
-					changeMonthHalf: changeMonthHalf,
-					changeMonth: changeMonth,
-					// changeQuarterHalf: changeQuarterHalf,
-					// changeQuarter: changeQuarter,
-					priceOverHighestWeek: priceOverHighestWeek,
-					priceOverHighestMonth: priceOverHighestMonth
-				};
+				currAssetResult = new Candidate(
+					asset,
+					latestClosingPrice,
+					eightDaysEMA,
+					candidateGrade,
+					existsGreenHammer3h,
+					macdCurrent,
+					macdPrevious,
+					macdCurrentLong,
+					macdPreviousLong,
+					changePastHour,
+					change3h,
+					change6h,
+					change12h,
+					changeDay24h,
+					changeWeekHalf,
+					changeWeek,
+					changeMonthHalf,
+					changeMonth,
+					priceOverLowestWeek,
+					priceOverHighestWeek,
+					priceOverLowestMonth,
+					priceOverHighestMonth,
+					""
+				);
 
 				report += this.l.suc(`It's a candidate!`, 2, true) + '\n';
 				report += this.l.suc(`Candidate grade: ${currAssetResult.candidateGrade}`, 2, true) + '\n';
-				//report += this.l.suc(`Score: ${currAssetResult.score}`, 2, true) + '\n';
 
-				// currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M ${prcnt(changeQuarterHalf)}%Qh ${prcnt(changeQuarter)}%Q`, 2) + '\n';
-				currAssetReport = this.l.i(`${asset}: ${prcnt(changePastHour)}%1h ${prcnt(change3h)}%3h ${prcnt(change6h)}%6h ${prcnt(change12h)}%12h ${prcnt(changeDay24h)}%24h ${prcnt(changeWeekHalf)}%Wh ${prcnt(changeWeek)}%W ${prcnt(changeMonthHalf)}%Mh ${prcnt(changeMonth)}%M`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(priceOverLowestWeek)}% > week lowest,\n${prcnt(priceOverHighestWeek)}% < week highest,\n${prcnt(priceOverLowestMonth)}% > month lowest,\n${prcnt(priceOverHighestMonth)}% < month highest.`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
+				currAssetReport = this.l.i(`${asset}: ${prcnt(currAssetResult.changePastHour)}%1h ${prcnt(currAssetResult.change3h)}%3h ${prcnt(currAssetResult.change6h)}%6h ${prcnt(currAssetResult.change12h)}%12h ${prcnt(currAssetResult.changeDay24h)}%24h ${prcnt(currAssetResult.changeWeekHalf)}%Wh ${prcnt(currAssetResult.changeWeek)}%W ${prcnt(currAssetResult.changeMonthHalf)}%Mh ${prcnt(currAssetResult.changeMonth)}%M`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(currAssetResult.priceOverLowestWeek)}% > week lowest,\n${prcnt(currAssetResult.priceOverHighestWeek)}% < week highest,\n${prcnt(currAssetResult.priceOverLowestMonth)}% > month lowest,\n${prcnt(currAssetResult.priceOverHighestMonth)}% < month highest.`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${currAssetResult.eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
-				//currAssetReport += this.l.i(`${asset} score: ${currAssetResult.score}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now-long:  ${currAssetResult.macdCurrentLong},\nMACD-prev-long: ${currAssetResult.macdPreviousLong}`, 2) + '\n';
@@ -417,7 +412,6 @@ class Analysis {
 				assetResults.push(currAssetResult);
 
 				assetResults.sort(function (a, b) {
-					//return a.score - b.score;
 					return a.candidateGrade - b.candidateGrade;
 				});
 				report = assetResults.length ? bitcoinAnalysisReportPart : '';
