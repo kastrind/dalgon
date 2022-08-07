@@ -282,8 +282,10 @@ class Order {
 							if (txid =="1OW27RX-YWQBE-2ZZYP7") { differencePercent = 48.5; }
 							if (txid =="1OOV7GI-OVXI2-KKPO2V") { differencePercent = 48.5; }
 							if (txid =="1O7TBWY-TZ2FA-2JS27W") { differencePercent = 48.5; }
+							if (txid =="11O7TBWY-TZ2FA-2JS27W") { differencePercent = 41; }
+							if (txid =="21O7TBWY-TZ2FA-2JS27W") { differencePercent = 49.2; }
 						}
-						report += l.d(`differencePercent ${differencePercent} profitPercent ${profitPercent}`, 0);
+						report += l.d(`differencePercent ${differencePercent} profitPercent ${profitPercent} `, 0);
 
 						report += l.i(`Curr price is ${currPrice}, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 
@@ -292,9 +294,14 @@ class Order {
 							if (!isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length >= 1) {
 								let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
 								report += l.d("selling is profitable and series exists and has >=1 length");
+
+								//gained considerable ground
+								if (differencePercent < lastOne - 5) {
+									report += l.d(`canSellForProfit 3A`);
+									canSellForProfit = true;
 								
 								//if only one past price to market in the series,
-								if (priceToMarketSeries[txid].length == 1) {
+								}else if (priceToMarketSeries[txid].length == 1) {
 									report += l.d("series has one");
 									report += l.d(`lastOne ${lastOne}`);
 									// if current price to market > last one + 0.3 (price lost considerable ground)
@@ -332,8 +339,8 @@ class Order {
 						}else if (differencePercent > profitPercent -1 && differencePercent < profitPercent - 0.3 &&
 								  !isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length > 1) {
 									let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
-									if (lastOne <= differencePercent -1) {
-										report += l.d(`canSellForProfit 3A`);
+									if (lastOne <= profitPercent -1) {
+										report += l.d(`canSellForProfit 3B`);
 										canSellForProfit = true;
 									}
 						}

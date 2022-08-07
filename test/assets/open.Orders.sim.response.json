@@ -136,6 +136,60 @@
 		  "limitprice": "0.000000000",
 		  "misc": "",
 		  "oflags": "fcib"
+		},
+		"11O7TBWY-TZ2FA-2JS27W": {
+			"refid": "1OL2R7C-ZOIKH-FD2XCX",
+			"userref": 1,
+			"status": "open",
+			"opentm": 1652452017.8013167,
+			"starttm": 0,
+			"expiretm": 0,
+			"descr": {
+			  "pair": "ALGOXBT",
+			  "type": "sell",
+			  "ordertype": "take-profit",
+			  "price": "0.00001672",
+			  "price2": "0",
+			  "leverage": "none",
+			  "order": "sell 36.60768761 ALGOXBT @ take profit 0.00001672",
+			  "close": ""
+			},
+			"vol": "36.60768761",
+			"vol_exec": "0.00000000",
+			"cost": "0.000000000",
+			"fee": "0.000000000",
+			"price": "0.000000000",
+			"stopprice": "0.000000000",
+			"limitprice": "0.000000000",
+			"misc": "",
+			"oflags": "fcib"
+		},
+		"21O7TBWY-TZ2FA-2JS27W": {
+			"refid": "1OL2R7C-ZOIKH-FD2XCX",
+			"userref": 1,
+			"status": "open",
+			"opentm": 1652452017.8013167,
+			"starttm": 0,
+			"expiretm": 0,
+			"descr": {
+			  "pair": "ALGOXBT",
+			  "type": "sell",
+			  "ordertype": "take-profit",
+			  "price": "0.00001672",
+			  "price2": "0",
+			  "leverage": "none",
+			  "order": "sell 36.60768761 ALGOXBT @ take profit 0.00001672",
+			  "close": ""
+			},
+			"vol": "36.60768761",
+			"vol_exec": "0.00000000",
+			"cost": "0.000000000",
+			"fee": "0.000000000",
+			"price": "0.000000000",
+			"stopprice": "0.000000000",
+			"limitprice": "0.000000000",
+			"misc": "",
+			"oflags": "fcib"
 		}
 	  }
 	}
