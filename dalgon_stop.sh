@@ -6,6 +6,6 @@ kill $pid
 
 #un-schedule log archiver
 crontab -l > temp_cron
-sed -iE '/dalgon_log_archiver/d' temp_cron
+sed -i -E '/dalgon_log_archiver/d' temp_cron
 crontab temp_cron
 rm temp_cron

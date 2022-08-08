@@ -22,5 +22,5 @@ echo "0 0 * * * $script_path/dalgon_log_archiver.sh" >> temp_cron
 crontab temp_cron
 rm temp_cron
 
-sed -iE "s%EXPOSE_URL=.*$%EXPOSE_URL=$exposeUrl%g" env/default.properties
+sed -i -E "s%EXPOSE_URL=.*$%EXPOSE_URL=$exposeUrl%g" env/default.properties
 nohup node dist/app.js -p $PRIVATE_KRAKEN_API_KEY_HERE -b $VIBERBOT_AUTH_TOKEN_HERE >> dalgon.log 2>&1 &
