@@ -33,3 +33,5 @@ class Candidate {
 	}
 
 }
+
+export default Candidate;
