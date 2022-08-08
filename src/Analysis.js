@@ -1,5 +1,6 @@
 import fs, { exists } from 'fs';
 import OHLC from './OHLC.js';
+import Candidate from './Candidate.js';
 import { sleep, prcnt, isEmpty } from './utils.js';
 
 class Analysis {
