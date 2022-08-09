@@ -1,6 +1,6 @@
 class Candidate {
 
-	constructor(name, latestClosingPrice, eightDaysEMA, candidateGrade, existsGreenHammer3h,
+	constructor(name, baseCurrency, latestClosingPrice, eightDaysEMA, candidateGrade, existsGreenHammer3h,
 		macdCurrent, macdPrevious, macdCurrentLong, macdPreviousLong,
 		changePastHour, change3h, change6h, change12h, changeDay24h,
 		changeWeekHalf, changeWeek, changeMonthHalf, changeMonth,
@@ -8,6 +8,7 @@ class Candidate {
 		report) {
 
 		this.name = name;
+		this.baseCurrency = baseCurrency;
 		this.latestClosingPrice = latestClosingPrice;
 		this.eightDaysEMA = eightDaysEMA;
 		this.candidateGrade = candidateGrade;

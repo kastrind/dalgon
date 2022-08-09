@@ -178,6 +178,20 @@ class DalgonViberBot {
 		});
 	}
 
+	sendHighGradeRecommendedAssets(recommendedAssets, gradeThreshold) {
+		if (recommendedAssets.length) {
+			let highGradeRecommendedAssets = recommendedAssets.filter(candidate => candidate.candidateGrade >= gradeThreshold);
+			if (highGradeRecommendedAssets.length) {
+				highGradeRecommendedAssets.forEach(async (candidate) => {
+					this.sendTextMessage(`${candidate.name} grade: ${candidate.candidateGrade}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}`);
+					await sleep(1000);
+				});
+			}
+		}else {
+			this.sendTextMessage(`No high grade results yet.`);
+		}
+	}
+
 }
 
 export default DalgonViberBot;

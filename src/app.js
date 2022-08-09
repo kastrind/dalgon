@@ -100,6 +100,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	l.i(`Auto-trade exceptions: ${buyExceptions}`);
 	l.i(`Auto-trade whitelist: ${buyWhiteList}`);
 
+	let recommendedAssets = [];
+
 	let viberBot;
 	// prepare viber bot
 	if (cmdOpts.botAuthToken) {
@@ -313,6 +315,14 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.recordHistory(message);
 		});
 
+		// Get recommended assets with grade >= GRADE
+		viberBot.getBot().onTextMessage(/^grade (\d+) assets$/i, async (message, response) => {
+			viberBot.sendTextMessage(`Please wait.`);
+			let grade = parseInt(message.text.match(/^grade (\d+) assets$/i)[1]);
+			viberBot.sendHighGradeRecommendedAssets(recommendedAssets, grade);
+			viberBot.recordHistory(message);
+		});
+
 		// Set Minimum Balance Amount ASSET_SYMBOL AMOUNT
 		viberBot.getBot().onTextMessage(/^(set )?min balance (\S+)( |=)(\S+)$/i, async (message, response) => {
 			let matches = message.text.match(/^(set )?min balance (\S+)( |=)(\S+)$/i);
@@ -438,7 +448,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let tradeableAssets = await TradeableAssetPair.findTradeableAssets(assets, getTradeableAssetPairs, autoTradeCurrencies, l, SIMULATION);
 	l.i(`Auto-tradeable assets: ${tradeableAssets}`);
 	l.i(`#Auto-tradeable assets: ${tradeableAssets.length}`);
-	let recommendedAssets = [];
 	let prevRecommendedAssets = [];
 	let oldOrdersReminderSent = false;
 
@@ -479,6 +488,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				viberBot.sendRecommendedAssets(reportFilePath);
 				prevRecommendedAssets = recommendedAssets.map(asset => asset);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
+				sendHighGradeRecommendedAssets(recommendedAssets, 4);
 			}
 
 			// Get the Open Orders
