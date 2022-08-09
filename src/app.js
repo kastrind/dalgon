@@ -319,7 +319,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		viberBot.getBot().onTextMessage(/^grade (\d+) assets$/i, async (message, response) => {
 			viberBot.sendTextMessage(`Please wait.`);
 			let grade = parseInt(message.text.match(/^grade (\d+) assets$/i)[1]);
-			viberBot.sendHighGradeRecommendedAssets(recommendedAssets, grade);
+			await viberBot.sendHighGradeRecommendedAssets(recommendedAssets, grade);
 			viberBot.recordHistory(message);
 		});
 
