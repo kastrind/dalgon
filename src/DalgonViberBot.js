@@ -180,10 +180,11 @@ class DalgonViberBot {
 					await this.sendTextMessage(`${candidate.name} grade: ${candidate.candidateGrade}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}`);
 					await sleep(1000);
 				}
+				return;
 			}
-		}else {
-			await this.sendTextMessage(`No high grade results yet.`);
 		}
+		await this.sendTextMessage(`No high grade results yet.`);
+		return;
 	}
 
 }
