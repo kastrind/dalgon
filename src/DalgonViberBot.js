@@ -79,7 +79,7 @@ class DalgonViberBot {
 				if (!data.length) {
 					response.send(new TextMessage(`No results yet.`)).catch(err => { that.l.err(JSON.stringify(err, null, 2)); });
 				}else {
-					this.sendBigTextMessage(data);
+					that.sendBigTextMessage(data);
 				}
 			});
 			this.recordHistory(message);
