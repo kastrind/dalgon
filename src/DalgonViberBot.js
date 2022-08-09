@@ -126,10 +126,11 @@ class DalgonViberBot {
 
 	async sendTextMessage(message) {
 		if (!isEmpty(this.userProfiles)) {
-			this.userProfiles.forEach(async (userProfile) => {
+			for (let i=0; i<this.userProfiles.length; i++) {
+				let userProfile = this.userProfiles[i];
 				await this.bot.sendMessage(userProfile, new TextMessage(message));
 				await sleep(1000);
-			});
+			}
 		}
 	}
 
@@ -174,10 +175,11 @@ class DalgonViberBot {
 		if (recommendedAssets.length) {
 			let highGradeRecommendedAssets = recommendedAssets.filter(candidate => candidate.candidateGrade >= gradeThreshold);
 			if (highGradeRecommendedAssets.length) {
-				highGradeRecommendedAssets.forEach(async (candidate) => {
+				for (let i=0; i<highGradeRecommendedAssets.length; i++) {
+					let candidate = highGradeRecommendedAssets[i];
 					await this.sendTextMessage(`${candidate.name} grade: ${candidate.candidateGrade}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}`);
 					await sleep(1000);
-				});
+				}
 			}
 		}else {
 			await this.sendTextMessage(`No high grade results yet.`);
