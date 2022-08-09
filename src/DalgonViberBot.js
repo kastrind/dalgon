@@ -26,12 +26,12 @@ class DalgonViberBot {
 		this.canStartTrading = false;
 
 		this.userProfiles = recipientProfiles;
-		if (!isEmpty(this.userProfiles)) {
-			this.userProfiles.forEach(async (userProfile) => {
-				await this.bot.sendMessage(userProfile, new TextMessage("I rise again."));
-				await sleep(1000);
-			});
-		}
+
+		this.sendTextMessage(`I rise again.`);
+
+		this.bot.on(BotEvents.SUBSCRIBED, response => {
+			response.send(new TextMessage(`You are ${response.userProfile.name}. I am ${this.bot.name}. You may ask me about crypto. Type help.`));
+		});
 
 		this.bot.onTextMessage(/^(hi|hello)(\s|$)/i, async (message, response) => {
 			response.send(new TextMessage(`Greetings, ${response.userProfile.name}. I am ${this.bot.name}, an autonomous cryptocurrency trading agent. Type help to learn more.`));
@@ -46,7 +46,7 @@ class DalgonViberBot {
 		});
 
 		this.bot.onTextMessage(/^help/i, async (message, response) => {
-			response.send(new TextMessage(`"recommend assets": return potential profitable assets\n
+			this.sendBigTextMessage(`"recommend assets": return potential profitable assets\n
 			"pause|resume analysis": pause or resume analysis on potential profitable assets to recommend\n
 			"start|stop trading": permission to purchase potential profitable assets\n
 			"status": report auto-trading and analysis status\n
@@ -69,12 +69,8 @@ class DalgonViberBot {
 			"portfolio|holdings": holdings on CoinGecko\n
 			"trending": return trending coins from CoinGecko\n
 			"updates|status updates|news": return news from CoinGecko\n`
-			));
+			);
 			this.recordHistory(message);
-		});
-
-		this.bot.on(BotEvents.SUBSCRIBED, response => {
-			response.send(new TextMessage(`You are ${response.userProfile.name}. I am ${this.bot.name}. You may ask me about crypto. Type help.`));
 		});
 
 		this.bot.onTextMessage(/^recommend(ed)? assets$/i, async (message, response) => {
@@ -83,12 +79,7 @@ class DalgonViberBot {
 				if (!data.length) {
 					response.send(new TextMessage(`No results yet.`)).catch(err => { that.l.err(JSON.stringify(err, null, 2)); });
 				}else {
-					let chunkSize=768;
-					let i = 0;
-					for (i=0; i < data.length; i+=chunkSize) {
-						await response.send(new TextMessage(`${data.slice(i, i+chunkSize)}`)).catch(err => { that.l.err(JSON.stringify(err, null, 2)); });
-						await sleep(3000);
-					}
+					this.sendBigTextMessage(data);
 				}
 			});
 			this.recordHistory(message);
@@ -133,10 +124,10 @@ class DalgonViberBot {
 		return this.bot;
 	}
 
-	sendTextMessage(message) {
+	async sendTextMessage(message) {
 		if (!isEmpty(this.userProfiles)) {
 			this.userProfiles.forEach(async (userProfile) => {
-				this.bot.sendMessage(userProfile, new TextMessage(message));
+				await this.bot.sendMessage(userProfile, new TextMessage(message));
 				await sleep(1000);
 			});
 		}
@@ -145,7 +136,7 @@ class DalgonViberBot {
 	async sendBigTextMessage(message) {
 		let chunkSize = 768;
 		for (let i = 0; i < message.length; i += chunkSize) {
-			this.sendTextMessage(`${message.slice(i, i+chunkSize)}`);
+			await this.sendTextMessage(`${message.slice(i, i+chunkSize)}`);
 			await sleep(3000);
 		}
 	}
@@ -159,37 +150,37 @@ class DalgonViberBot {
 
 	async sendHistory() {
 		if (isEmpty(this.history)) {
-			this.sendTextMessage(`No history.`);
+			await this.sendTextMessage(`No history.`);
 		}else {
 			for (let i = this.history.length - 1; i >= 0; i--) {
-				this.sendTextMessage(`${this.history[i]}`);
+				await this.sendTextMessage(`${this.history[i]}`);
 				await sleep(1000);
 			}
 		}
 	}
 
-	sendRecommendedAssets(reportFilePath) {
+	async sendRecommendedAssets(reportFilePath) {
 		let that = this;
-		fs.readFile(reportFilePath, async function(err, data) {
+		await fs.readFile(reportFilePath, async function(err, data) {
 			if (!data.length) {
-				that.sendTextMessage(`No results yet.`);
+				await that.sendTextMessage(`No results yet.`);
 			}else {
-				that.sendBigTextMessage(data);
+				await that.sendBigTextMessage(data);
 			}
 		});
 	}
 
-	sendHighGradeRecommendedAssets(recommendedAssets, gradeThreshold) {
+	async sendHighGradeRecommendedAssets(recommendedAssets, gradeThreshold) {
 		if (recommendedAssets.length) {
 			let highGradeRecommendedAssets = recommendedAssets.filter(candidate => candidate.candidateGrade >= gradeThreshold);
 			if (highGradeRecommendedAssets.length) {
 				highGradeRecommendedAssets.forEach(async (candidate) => {
-					this.sendTextMessage(`${candidate.name} grade: ${candidate.candidateGrade}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}`);
+					await this.sendTextMessage(`${candidate.name} grade: ${candidate.candidateGrade}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}`);
 					await sleep(1000);
 				});
 			}
 		}else {
-			this.sendTextMessage(`No high grade results yet.`);
+			await this.sendTextMessage(`No high grade results yet.`);
 		}
 	}
 

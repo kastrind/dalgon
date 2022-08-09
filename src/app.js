@@ -475,7 +475,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			timestampSecondsF = Math.floor(Date.now() / 1000);
 			if (viberBot && timestampSecondsF - timestampSecondsI >= 3 * 60 * 60) {
 				let canStartTradingMsg = viberBot.canStartTrading ? " I am permitted to auto-trade." : " I am not permitted to auto-trade.";
-				viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
+				await viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
 			// Analyse assets to recommend for trading
@@ -485,10 +485,10 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			// If there are recommended assets and different than previous, then send recommended assets
 			if (!isEmpty(recommendedAssets) && (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(',')) &&
 				!isEmpty(recommendedAssets.filter(elem => elem.candidateGrade > 0))) {
-				viberBot.sendRecommendedAssets(reportFilePath);
+				await viberBot.sendRecommendedAssets(reportFilePath);
 				prevRecommendedAssets = recommendedAssets.map(asset => asset);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
-				sendHighGradeRecommendedAssets(recommendedAssets, 4);
+				await viberBot.sendHighGradeRecommendedAssets(recommendedAssets, 4);
 			}
 
 			// Get the Open Orders
