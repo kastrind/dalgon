@@ -407,7 +407,7 @@ class Analysis {
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD-now-long:  ${currAssetResult.macdCurrentLong},\nMACD-prev-long: ${currAssetResult.macdPreviousLong}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} chart:  https://cryptowat.ch/charts/KRAKEN:${currAssetResult.asset}-${currAssetResult.baseCurrency}`, 2) + '\n\n';
+				//currAssetReport += this.l.i(`${asset} chart:  https://cryptowat.ch/charts/KRAKEN:${currAssetResult.name}-${currAssetResult.baseCurrency}`, 2) + '\n\n';
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = '';
