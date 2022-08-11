@@ -12,11 +12,11 @@ import DalgonViberBot from './DalgonViberBot.js';
 import Analysis from './Analysis.js';
 import TradeableAssetPair from './TradeableAssetPair.js';
 import Order from './Order.js';
-
 import { isEmpty, sleep } from './utils.js';
-
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
+const { Worker } = require("worker_threads");
+
 
 // command line params
 var cmdOpts = options;
@@ -80,7 +80,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 (async function () {
 
-	l.suc(`Dalgon started. Initiating analysis and auto-trading cycle...`, 0, true);
+	l.suc(`Dalgon started. Initiating selling worker, analysis and auto-trading cycle...`, 0, true);
 
 	let priceToMarketSeriesFilePath = properties.get('main.PRICE_TO_MARKET_SERIES_FILE');
 	let priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFilePath, l);
@@ -103,6 +103,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let recommendedAssets = [];
 
 	let viberBot;
+
 	// prepare viber bot
 	if (cmdOpts.botAuthToken) {
 		let viberBotExposeUrl = properties.get("viberBot.EXPOSE_URL");
@@ -451,19 +452,50 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let prevRecommendedAssets = [];
 	let oldOrdersReminderSent = false;
 
+
+	// Create a worker to sell stale and profitable Orders
+	const sellingWorker = new Worker("./src/selling-worker.js", {
+		workerData: {
+			ENV: ENV,
+			VERBOSE: VERBOSE,
+			DEBUG: DEBUG,
+			APIKEY: APIKEY,
+			PRIVATEAPIKEY: PRIVATEAPIKEY,
+			SIMULATION: SIMULATION,
+			TIMEZONE: TIMEZONE,
+			privateHeaderObj: privateHeaderObj,
+			profitPercent: profitPercent,
+			staleOrderExceptions: staleOrderExceptions,
+			staleOrderDays: staleOrderDays,
+			staleOrderPriceDifferencePercent: staleOrderPriceDifferencePercent,
+			recommendedAssetsLength: recommendedAssets.length,
+			priceToMarketSeriesFilePath: priceToMarketSeriesFilePath,
+		}
+	});
+
+	// Listen for a message from worker
+	sellingWorker.once("message", result => {
+		//l.i(`${result}`);
+		if (viberBot) {
+			viberBot.sendBigTextMessage(`${result}`);
+		}
+	});
+	sellingWorker.on("error", (error) => {
+		l.err(`Selling worker error: ${error}`, 0, true);
+	});
+	sellingWorker.on("exit", (exitCode) => {
+		l.err(`Selling worker exitCode: ${exitCode}`, 0, true);
+	});
+
+	l.i(`Initiated Dalgon selling worker.`);
+
 	while(true) {
 
 		l.i(`Entered Dalgon main loop.`);
 
 		try {
 
-			if (viberBot) {
-				// Cancel and sell any take-profit orders that went stale
-				let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssets.length, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l);
-				priceToMarketSeries = staleResult.priceToMarketSeries;
-				Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
-				if (staleResult.result) viberBot.sendBigTextMessage(staleResult.report);
-			}
+			sellingWorker.postMessage(`{ "profitPercent": "${profitPercent}", "recommendedAssetsLength": "${recommendedAssets.length}" }`);
 
 			if (viberBot && viberBot.pauseAnalysis) {
 				l.i("Analysis paused...");
