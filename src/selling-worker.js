@@ -19,7 +19,6 @@ var staleOrderExceptions = workerData.staleOrderExceptions;
 var staleOrderDays = workerData.staleOrderDays;
 var staleOrderPriceDifferencePercent = workerData.staleOrderPriceDifferencePercent;
 
-
 // initialize variables from parent
 let profitPercent = workerData.profitPercent;
 let recommendedAssetsLength = workerData.recommendedAssetsLength;
