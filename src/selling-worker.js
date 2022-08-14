@@ -57,8 +57,8 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 															getTicker,
 															cancelOrder,
 															addOrder,
-															l,
-															priceToMarketSeriesFilePath);
+															l);
+
 		priceToMarketSeries = staleResult.priceToMarketSeries;
 		Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
 
