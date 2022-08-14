@@ -239,10 +239,12 @@ class Order {
 		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
 		
 		let openOrdersResponseBody = await Order.request(getOpenOrders, {}, simOpenOrdersObj);
+		let openOrderTxids = [];
 
 		if (!isEmpty(openOrdersResponseBody.result.open)) {
 			let dateNow = new Date().getTime();
 			for(let txid in openOrdersResponseBody.result.open) {
+				openOrderTxids.push(txid);
 
 				if (staleOrderExceptions.includes(txid)) {
 					report += l.i(`Skipping order ${txid} because it is excepted.`, 1) + '\n';
@@ -356,7 +358,7 @@ class Order {
 					// if order eligible for cancellation, that is:
 					// if order too old and either the desired market price diverged too much or there are other recommended assets currently, or
 					// order is profitabe enough
-					if ((daysDiff >= staleOrderDays && (differencePercent > staleOrderPriceDifferencePercent || recommendedAssetsLength > 2)) ||
+					if ((daysDiff >= staleOrderDays && differencePercent > staleOrderPriceDifferencePercent) ||
 						canSellForProfit) {
 						result = true;
 						if (!canSellForProfit) {
@@ -374,20 +376,20 @@ class Order {
 						// Cancel order succeeded
 						if (cancelOrderResponseBody && !cancelOrderResponseBody.result.pending) {
 							report += l.suc(`Order ${txid} cancelled.`, 2, true) + '\n';
-							report += l.i(`Placing market order...`, 2) + '\n';
+							report += l.i(`Placing limit sell order...`, 2) + '\n';
 							let vol = currOpenOrder.vol;
-							let order = new Order(2, 'market', 'sell', null, null, simAddOrderObj==true, false);
-							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, { volume: vol } ), simAddOrderObj);
+							let order = new Order(2, 'limit', 'sell', null, null, simAddOrderObj==true, false);
+							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, { price: currPrice, volume: vol } ), simAddOrderObj);
 							await sleep(1000);
 							let orderResponseBody = JSON.parse(orderResponse.body);
 							// Market order failed
 							if (!isEmpty(orderResponseBody.error)) {
-								report += l.err(`Market order failed with error: ${orderResponseBody.error}`, 2, true) + '\n';
+								report += l.err(`Limit sell order failed with error: ${orderResponseBody.error}`, 2, true) + '\n';
 								report += l.err(`Proceed manually.`, 2, true) + '\n';
 							}
 							// Market order succeeded
 							else {
-								report += l.suc(`Market order placed.`, 2, true) + '\n'; 
+								report += l.suc(`Limit sell order placed.`, 2, true) + '\n'; 
 								report += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 2, true) + '\n';
 								if (canSellForProfit) {
 									delete priceToMarketSeries[txid];
@@ -405,6 +407,13 @@ class Order {
 				}
 			}
 		}
+
+		Object.keys(priceToMarketSeries).forEach(txid => {
+			if (!openOrderTxids.includes(txid)) {
+				delete priceToMarketSeries[txid];
+			}
+		});
+
 		report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
 		return {result: result, report: report, priceToMarketSeries: priceToMarketSeries};
 	}
