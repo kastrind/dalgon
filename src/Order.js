@@ -274,7 +274,7 @@ class Order {
 
 					if (ticker) {
 						let price = parseFloat(currOpenOrder.descr.price);
-						currPrice = parseFloat(ticker.lastTradeClosedPrice);
+						currPrice = parseFloat(ticker.askPrice);
 						differencePercent = (price - currPrice)*100/currPrice;
 
 						// only for testing
@@ -338,7 +338,7 @@ class Order {
 								//else keep waiting, in attempt to maximize profit
 							}
 						//else if current price to market lost ground such that selling is less than 1% profitable (but still profitable)
-						}else if (differencePercent > profitPercent -1 && differencePercent < profitPercent - 0.3 &&
+						}else if (differencePercent > profitPercent -1 && differencePercent < profitPercent - 0.6 &&
 								  !isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length > 1) {
 									let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
 									if (lastOne <= profitPercent -1) {

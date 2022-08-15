@@ -574,13 +574,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					assetToInvestIn = assetResultsReversed[i].name;
 					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
 
-					// Asset should hit bottom and about to trend upwards
-					// if (assetResultsReversed[i].candleStickScore < 0.000) {
-					// 	l.w(`Will not proceed to order ${assetToInvestIn}: candlestick score < 0.000.`, 1, true);
-					// 	continue;
-					// }
-
-					//Asset should have high enough grade
+					// Asset should have high enough grade
 					if (assetResultsReversed[i].candidateGrade < autoTradeGradeThreshold) {
 						l.w(`Will not proceed to order ${assetToInvestIn}: candidate grade must not be < ${autoTradeGradeThreshold}, is ${assetResultsReversed[i].candidateGrade}.`, 1, true);
 						continue;
