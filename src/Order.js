@@ -376,20 +376,20 @@ class Order {
 						// Cancel order succeeded
 						if (cancelOrderResponseBody && !cancelOrderResponseBody.result.pending) {
 							report += l.suc(`Order ${txid} cancelled.`, 2, true) + '\n';
-							report += l.i(`Placing limit sell order...`, 2) + '\n';
+							report += l.i(`Placing market sell order...`, 2) + '\n';
 							let vol = currOpenOrder.vol;
-							let order = new Order(2, 'limit', 'sell', null, null, simAddOrderObj==true, false);
-							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, { price: currPrice, volume: vol } ), simAddOrderObj);
+							let order = new Order(2, 'market', 'sell', null, null, simAddOrderObj==true, false);
+							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, { volume: vol } ), simAddOrderObj);
 							await sleep(1000);
 							let orderResponseBody = JSON.parse(orderResponse.body);
 							// Market order failed
 							if (!isEmpty(orderResponseBody.error)) {
-								report += l.err(`Limit sell order failed with error: ${orderResponseBody.error}`, 2, true) + '\n';
+								report += l.err(`Market sell order failed with error: ${orderResponseBody.error}`, 2, true) + '\n';
 								report += l.err(`Proceed manually.`, 2, true) + '\n';
 							}
 							// Market order succeeded
 							else {
-								report += l.suc(`Limit sell order placed.`, 2, true) + '\n'; 
+								report += l.suc(`Market sell order placed.`, 2, true) + '\n'; 
 								report += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 2, true) + '\n';
 								if (canSellForProfit) {
 									delete priceToMarketSeries[txid];
