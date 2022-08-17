@@ -500,7 +500,11 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			if (viberBot && viberBot.pauseAnalysis) {
 				l.i("Analysis paused...");
-				await sleep(5 * 60000);
+				await sleep(5 * 60 * 1000);
+				// Close selling worker and sleep
+				sellingWorker.postMessage(`{ "close": true }`);
+				await sleep(5 * 60 * 1000);
+				sellingWorker.removeAllListeners();
 				continue;
 			}
 			
@@ -554,8 +558,11 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			}
 
 			if (isEmpty(recommendedAssets)) {
+				// Close selling worker and sleep
+				sellingWorker.postMessage(`{ "close": true }`);
 				l.i("No recommended assets. Sleeping...");
-				await sleep(5 * 60000);
+				await sleep(5 * 60 * 1000);
+				sellingWorker.removeAllListeners();
 				continue;
 			}
 			
@@ -617,6 +624,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			sellingWorker.postMessage(`{ "close": true }`);
 			l.i("Sleeping...");
 			await sleep(5 * 60 * 1000); // Sleep for 5 minutes
+			sellingWorker.removeAllListeners();
 
 		}catch(e) {
 			let exceptionMsg = l.err(`Exception caught: ${e}`, 0, true);
