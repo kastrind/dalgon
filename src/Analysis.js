@@ -176,12 +176,14 @@ class Analysis {
 			let macd_c = this.simulationMode ? 1 : 9;
 			let macdCurrent;
 			let macdPrevious;
+			let macd2ndLatest;
 			let macdLatest;
 			
 			// if there is enough ohlc data to calculate MACD
 			if (Math.max(macd_a, macd_b) + macd_c + 3 <= ohlcMonth.getTicks().length) {
 				macdCurrent = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
 				macdPrevious = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 3, 'close'));
+				macd2ndLatest = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
 				macdLatest = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
 			}else {
 				macdCurrent = 'N/A';
@@ -313,7 +315,7 @@ class Analysis {
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
-				(macdLatest > 0) &&
+				(macdLatest > 0 && macd2ndLatest > 0) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
@@ -329,7 +331,7 @@ class Analysis {
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
-				(macdLatest > 0) &&
+				(macdLatest > 0 && macd2ndLatest > 0) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
@@ -339,7 +341,7 @@ class Analysis {
 			}else if (
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
-				(macdLatest > 0) &&
+				(macdLatest > 0 && macd2ndLatest > 0) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
