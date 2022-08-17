@@ -6,7 +6,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { parentPort, workerData } = require("worker_threads");
 
-// initialize constants from parent
+// Initialize static info from parent
 var VERBOSE = workerData.VERBOSE;
 var DEBUG = workerData.DEBUG;
 var APIKEY = workerData.APIKEY;
@@ -19,15 +19,18 @@ var staleOrderExceptions = workerData.staleOrderExceptions;
 var staleOrderDays = workerData.staleOrderDays;
 var staleOrderPriceDifferencePercent = workerData.staleOrderPriceDifferencePercent;
 
-// initialize variables from parent
+// Initialize variable info from parent
 let profitPercent = workerData.profitPercent;
 let recommendedAssetsLength = workerData.recommendedAssetsLength;
 
-// update variables from parent
+let closeWorker = false;
+
+// Update variables from parent
 parentPort.once("message", result => {
 	let jsonResult = JSON.parse(result);
-	profitPercent = parseFloat(jsonResult.profitPercent);
-	recommendedAssetsLength = parseInt(jsonResult.recommendedAssetsLength);
+	// profitPercent = parseFloat(jsonResult.profitPercent);
+	// recommendedAssetsLength = parseInt(jsonResult.recommendedAssetsLength);
+	closeWorker = result.close;
 });
 
 var l = new Logger(VERBOSE, DEBUG);
@@ -64,7 +67,9 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 
 		if (staleResult.result) parentPort.postMessage(staleResult.report);
 
-		await sleep(5 * 60 * 1000); // sleep for 5 minutes
+		if (closeWorker) self.close();
+
+		await sleep(60 * 1000); // Sleep for 1 minute
 
 	}
 

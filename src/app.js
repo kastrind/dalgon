@@ -451,41 +451,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	l.i(`#Auto-tradeable assets: ${tradeableAssets.length}`);
 	let prevRecommendedAssets = [];
 	let oldOrdersReminderSent = false;
+	let sellingWorker;
 
-
-	// Create a worker to sell stale and profitable Orders
-	const sellingWorker = new Worker("./src/selling-worker.js", {
-		workerData: {
-			ENV: ENV,
-			VERBOSE: VERBOSE,
-			DEBUG: DEBUG,
-			APIKEY: APIKEY,
-			PRIVATEAPIKEY: PRIVATEAPIKEY,
-			SIMULATION: SIMULATION,
-			TIMEZONE: TIMEZONE,
-			privateHeaderObj: privateHeaderObj,
-			profitPercent: profitPercent,
-			staleOrderExceptions: staleOrderExceptions,
-			staleOrderDays: staleOrderDays,
-			staleOrderPriceDifferencePercent: staleOrderPriceDifferencePercent,
-			recommendedAssetsLength: recommendedAssets.length,
-			priceToMarketSeriesFilePath: priceToMarketSeriesFilePath,
-		}
-	});
-
-	// Listen for a message from worker
-	sellingWorker.once("message", result => {
-		//l.i(`${result}`);
-		if (viberBot) {
-			viberBot.sendBigTextMessage(`${result}`);
-		}
-	});
-	sellingWorker.on("error", (error) => {
-		l.err(`Selling worker error: ${error}`, 0, true);
-	});
-	sellingWorker.on("exit", (exitCode) => {
-		l.err(`Selling worker exitCode: ${exitCode}`, 0, true);
-	});
 
 	l.i(`Initiated Dalgon selling worker.`);
 
@@ -495,7 +462,41 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 		try {
 
-			sellingWorker.postMessage(`{ "profitPercent": "${profitPercent}", "recommendedAssetsLength": "${recommendedAssets.length}" }`);
+
+			// Create a worker to sell stale and profitable Orders
+			sellingWorker = new Worker("./src/selling-worker.js", {
+				workerData: {
+					ENV: ENV,
+					VERBOSE: VERBOSE,
+					DEBUG: DEBUG,
+					APIKEY: APIKEY,
+					PRIVATEAPIKEY: PRIVATEAPIKEY,
+					SIMULATION: SIMULATION,
+					TIMEZONE: TIMEZONE,
+					privateHeaderObj: privateHeaderObj,
+					profitPercent: profitPercent,
+					staleOrderExceptions: staleOrderExceptions,
+					staleOrderDays: staleOrderDays,
+					staleOrderPriceDifferencePercent: staleOrderPriceDifferencePercent,
+					recommendedAssetsLength: recommendedAssets.length,
+					priceToMarketSeriesFilePath: priceToMarketSeriesFilePath,
+				}
+			});
+			// Listen for a message from worker
+			sellingWorker.once("message", result => {
+				//l.i(`${result}`);
+				if (viberBot) {
+					viberBot.sendBigTextMessage(`${result}`);
+				}
+			});
+			sellingWorker.on("error", (error) => {
+				l.err(`Selling worker error: ${error}`, 0, true);
+			});
+			sellingWorker.on("exit", (exitCode) => {
+				l.err(`Selling worker exitCode: ${exitCode}`, 0, true);
+			});
+			// Not needed since worker restarts in the main loop
+			//sellingWorker.postMessage(`{ "profitPercent": "${profitPercent}", "recommendedAssetsLength": "${recommendedAssets.length}" }`);
 
 			if (viberBot && viberBot.pauseAnalysis) {
 				l.i("Analysis paused...");
@@ -612,8 +613,10 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					l.i(`Completed auto-trading for asset ${assetToInvestIn}`, 0, true);
 				}
 			}
+			// Close selling worker and sleep
+			sellingWorker.postMessage(`{ "close": true }`);
 			l.i("Sleeping...");
-			await sleep(5 * 60000);
+			await sleep(5 * 60 * 1000); // Sleep for 5 minutes
 
 		}catch(e) {
 			let exceptionMsg = l.err(`Exception caught: ${e}`, 0, true);
