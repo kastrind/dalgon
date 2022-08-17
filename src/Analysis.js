@@ -188,10 +188,14 @@ class Analysis {
 			}else {
 				macdCurrent = 'N/A';
 				macdPrevious = 'N/A';
+				macd2ndLatest = 'N/A';
+				macdLatest = 'N/A';
 			}
 
 			report += this.l.i(`MACD current  ${macdCurrent}`, 2) + '\n';
 			report += this.l.i(`MACD previous ${macdPrevious}`, 2) + '\n';
+			report += this.l.i(`MACD 2nd latest ${macd2ndLatest}`, 2) + '\n';
+			report += this.l.i(`MACD latest ${macdLatest}`, 2) + '\n';
 
 			let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
 			let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
@@ -315,7 +319,7 @@ class Analysis {
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
-				(macdLatest > 0 && macd2ndLatest > 0) &&
+				(macdLatest !== 'N/A' && macd2ndLatest !== 'N/A' && macdLatest > 0 && macd2ndLatest > 0) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
@@ -331,7 +335,7 @@ class Analysis {
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
-				(macdLatest > 0 && macd2ndLatest > 0) &&
+				(macdLatest !== 'N/A' && macd2ndLatest !== 'N/A' && macdLatest > 0 && macd2ndLatest > 0) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
@@ -341,7 +345,7 @@ class Analysis {
 			}else if (
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
-				(macdLatest > 0 && macd2ndLatest > 0) &&
+				(macdLatest !== 'N/A' && macd2ndLatest !== 'N/A' && macdLatest > 0 && macd2ndLatest > 0) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
