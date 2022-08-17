@@ -493,7 +493,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				l.err(`Selling worker error: ${error}`, 0, true);
 			});
 			sellingWorker.on("exit", (exitCode) => {
-				l.err(`Selling worker exitCode: ${exitCode}`, 0, true);
+				l.i(`Selling worker exitCode: ${exitCode}`, 0, true);
 			});
 			// Not needed since worker restarts in the main loop
 			//sellingWorker.postMessage(`{ "profitPercent": "${profitPercent}", "recommendedAssetsLength": "${recommendedAssets.length}" }`);

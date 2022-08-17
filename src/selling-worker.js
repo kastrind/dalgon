@@ -30,7 +30,7 @@ parentPort.once("message", result => {
 	let jsonResult = JSON.parse(result);
 	// profitPercent = parseFloat(jsonResult.profitPercent);
 	// recommendedAssetsLength = parseInt(jsonResult.recommendedAssetsLength);
-	closeWorker = result.close;
+	closeWorker = jsonResult.close;
 });
 
 var l = new Logger(VERBOSE, DEBUG);
@@ -67,7 +67,7 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 
 		if (staleResult.result) parentPort.postMessage(staleResult.report);
 
-		if (closeWorker) self.close();
+		if (closeWorker) { break; }
 
 		await sleep(60 * 1000); // Sleep for 1 minute
 
