@@ -63,6 +63,19 @@ class OHLC {
 		return this.ticks.reduce((prev, curr, i) => { if(i===1) prev=prev.close; return prev + curr.close; }) / this.ticks.length;
 	}
 
+	getAverageVol() {
+		return this.ticks.reduce((prev, curr, i) => { if(i===1) prev=prev.vol; return prev + curr.vol; }) / this.ticks.length;
+	}
+
+	getOnBalanceVol() {
+		let balance = 0;
+		for (let i=0; i < this.ticks.length; i++) {
+			if (i==0) { balance = this.ticks[i].vol; continue; }
+			balance = this.ticks[i].close > this.ticks[i-1].close ? balance + this.ticks[i].vol : balance - this.ticks[i].vol;
+		}
+		return balance;
+	}
+
 	getDerivative() {
 		return ( this.ticks[this.ticks.length - 1].close - this.ticks[0].close ) / ( this.ticks[this.ticks.length - 1].time - this.ticks[0].time );
 	}
