@@ -124,6 +124,9 @@ class Analysis {
 			ohlc3h.setTicks(ohlc6h.getTicks().slice(Math.ceil(ohlc6h.getTicks().length/2), ohlc6h.getTicks().length));
 			let change3h = ohlc3h.getChange();
 			let derivative3h = ohlc3h.getDerivative();
+			let onBalanceVol3h = ohlc3h.getOnBalanceVol();
+
+			report += this.l.i(`On-Balance Volume 3h: ${onBalanceVol3h}`, 2) + '\n';
 
 			await sleep(this.sleepMillis);
 
@@ -154,6 +157,37 @@ class Analysis {
 			}
 			let changeWeek = ohlcWeek.getChange();
 
+			let macd_a = this.simulationMode ? 2 : 12;
+			let macd_b = this.simulationMode ? 3 : 26;
+			let macd_c = this.simulationMode ? 1 : 9;
+
+			let macdCurrentShort;
+			let macdPreviousShort;
+			let macd2ndLatestShort;
+			let macdLatestShort;
+			let existsMACDReversalShort = false;
+			let keptMACDPositiveShort = false;
+
+			// if there is enough ohlc data to calculate MACD
+			if (!this.simulationMode && Math.max(macd_a, macd_b) + macd_c + 1 <= ohlcWeek.getTicks().length) {
+				macdCurrentShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
+				macdPreviousShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 3, 'close'));
+				macd2ndLatestShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+				macdLatestShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
+				existsMACDReversalShort = macdCurrentShort > 0 && macdPreviousShort < 0;
+				keptMACDPositiveShort = existsMACDReversalShort && macd2ndLatestShort > 0 && macdLatestShort > 0;
+			}else {
+				macdCurrentShort = 'N/A';
+				macdPreviousShort = 'N/A';
+				macd2ndLatestShort = 'N/A';
+				macdLatestShort = 'N/A';
+			}
+			report += this.l.i(`Short MACD current  ${macdCurrentShort}`, 2) + '\n';
+			report += this.l.i(`Short MACD previous ${macdPreviousShort}`, 2) + '\n';
+			report += this.l.i(`Short MACD 2nd latest ${macd2ndLatestShort}`, 2) + '\n';
+			report += this.l.i(`Short MACD latest ${macdLatestShort}`, 2) + '\n';
+			report += this.l.i(`Short MACD reversal: ${existsMACDReversalShort}`, 2) + '\n';
+
 			// for testing
 			report += this.simulationMode ? this.l.d(`changeWeek: ${changeWeek}`, 2) + '\n' : '';
 
@@ -171,20 +205,21 @@ class Analysis {
 				continue;
 			}
 			let changeMonth = ohlcMonth.getChange();
-			let macd_a = this.simulationMode ? 2 : 12;
-			let macd_b = this.simulationMode ? 3 : 26;
-			let macd_c = this.simulationMode ? 1 : 9;
 			let macdCurrent;
 			let macdPrevious;
 			let macd2ndLatest;
 			let macdLatest;
+			let existsMACDReversal = false;
+			let keptMACDPositive = false;
 			
 			// if there is enough ohlc data to calculate MACD
-			if (Math.max(macd_a, macd_b) + macd_c + 3 <= ohlcMonth.getTicks().length) {
+			if (!this.simulationMode && Math.max(macd_a, macd_b) + macd_c + 3 <= ohlcMonth.getTicks().length) {
 				macdCurrent = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
 				macdPrevious = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 3, 'close'));
 				macd2ndLatest = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
 				macdLatest = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
+				existsMACDReversal = macdCurrent > 0 && macdPrevious < 0;
+				keptMACDPositive = existsMACDReversal && macd2ndLatest > 0 && macdLatest > 0;
 			}else {
 				macdCurrent = 'N/A';
 				macdPrevious = 'N/A';
@@ -196,6 +231,7 @@ class Analysis {
 			report += this.l.i(`MACD previous ${macdPrevious}`, 2) + '\n';
 			report += this.l.i(`MACD 2nd latest ${macd2ndLatest}`, 2) + '\n';
 			report += this.l.i(`MACD latest ${macdLatest}`, 2) + '\n';
+			report += this.l.i(`MACD reversal: ${existsMACDReversal}`, 2) + '\n';
 
 			let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
 			let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
@@ -228,6 +264,10 @@ class Analysis {
 
 			let macdCurrentLong;
 			let macdPreviousLong;
+			let macdLatestLong;
+			let existsMACDReversalLong = false;
+			let keptMACDPositiveLong = false;
+
 			// get OHLC for month in 4h intervals, to calculate MACD further back in the past
 			let ohlcMonth4hIntervals = await (OHLC.request(getOHLC, assetPair, month.toISOString(), Math.ceil(this.maxNumOHLCResults/4), this.l, this.simulationMode, this.simObjOHLCMonth));
 			if (!ohlcMonth4hIntervals) {
@@ -236,15 +276,21 @@ class Analysis {
 				continue;
 			}
 			// if there is enough ohlc data to calculate MACD
-			if (Math.max(macd_a, macd_b) + macd_c + 1 <= ohlcMonth4hIntervals.getTicks().length) {
-				macdCurrentLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
-				macdPreviousLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+			if (!this.simulationMode && Math.max(macd_a, macd_b) + macd_c + 2 <= ohlcMonth4hIntervals.getTicks().length) {
+				macdCurrentLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+				macdPreviousLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
+				macdLatestLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
+				existsMACDReversalLong = macdCurrentLong > 0 && macdPreviousLong < 0;
+				keptMACDPositiveLong = existsMACDReversalLong && macdLatestLong > 0;
 			}else {
 				macdCurrentLong = 'N/A';
 				macdPreviousLong = 'N/A';
+				macdLatestLong = 'N/A';
 			}
 			report += this.l.i(`Long MACD current  ${macdCurrentLong}`, 2) + '\n';
 			report += this.l.i(`Long MACD previous ${macdPreviousLong}`, 2) + '\n';
+			report += this.l.i(`Long MACD latest ${macdLatestLong}`, 2) + '\n';
+			report += this.l.i(`Long MACD reversal: ${existsMACDReversalLong}`, 2) + '\n';
 
 
 			let lowestCloseWeek = ohlcWeek.getLowestClose().close;
@@ -290,16 +336,16 @@ class Analysis {
 			let currAssetResult = {};
 
 			// Recommendation Conditions
-			// Grading system 1 to 7 +3 bonus points
+			// Grading system 1 to 7 +2.5 bonus points
 
-			// price dropping rate in 1h less than it dropped in 3h/6h/12h halved AND
+			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.7 AND
 			// price not the lowest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
 
 			// OR
 
-			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.5 AND
+			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.4 AND
 			// price not the lowest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
@@ -312,15 +358,14 @@ class Analysis {
 
 			if (
 				(
-					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/2) ||
-					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/2) ||
-					(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/2)
+					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.7) ||
+					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.7)
 
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
-				(macdLatest !== 'N/A' && macd2ndLatest !== 'N/A' && macdLatest > 0 && macd2ndLatest > 0) &&
-				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
+				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
+				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
 			) {
 				isCandidate = true;
 				candidateGrade = 7;
@@ -328,15 +373,14 @@ class Analysis {
 
 			}else if (
 				(
-					(derivative3h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative3h)/1.5) ||
-					(derivative6h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative6h)/1.5) ||
-					(derivative12h < 0 && Math.abs(derivativePastHour) < Math.abs(derivative12h)/1.5)
+					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.4) ||
+					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.4)
 
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
-				(macdLatest !== 'N/A' && macd2ndLatest !== 'N/A' && macdLatest > 0 && macd2ndLatest > 0) &&
-				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
+				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
+				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
 			) {
 				isCandidate = true;
 				candidateGrade = 4;
@@ -345,8 +389,8 @@ class Analysis {
 			}else if (
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
-				(macdLatest !== 'N/A' && macd2ndLatest !== 'N/A' && macdLatest > 0 && macd2ndLatest > 0) &&
-				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
+				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
+				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
 			) {
 				isCandidate = true;
 				candidateGrade = 1;
@@ -354,9 +398,9 @@ class Analysis {
 
 			if (isCandidate) {
 
-				// bonus: long MACD positive reversal
-				if (macdCurrentLong !== 'N/A' && macdPreviousLong !== 'N/A' && macdCurrentLong > 0 && macdPreviousLong < 0) {
-					candidateGrade += 1.0;
+				// bonus/penalty: on balance volume positive in the past 3h
+				if (onBalanceVol3h > 0) {
+					candidateGrade += 0.5;
 				}
 
 				// bonus: negative derivatives increasing (longer in the past)
@@ -373,8 +417,8 @@ class Analysis {
 					candidateGrade += 0.3;
 				}
 
-				// bonus: if BTC is bullish or asset price difference to 8-days EMA <= -3%
-				if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.03) {
+				// bonus: if asset price difference to 8-days EMA <= -3%
+				if 	(latestClosingPriceDiff8DaysEMAPercent <= -0.03) {
 					candidateGrade += 0.5;
 				}
 
@@ -388,12 +432,21 @@ class Analysis {
 					this.baseCurrency,
 					latestClosingPrice,
 					eightDaysEMA,
+					onBalanceVol3h,
 					candidateGrade,
 					existsGreenHammer3h,
 					macdCurrent,
 					macdPrevious,
 					macdCurrentLong,
 					macdPreviousLong,
+					macdCurrentShort,
+					macdPreviousShort,
+					existsMACDReversal,
+					existsMACDReversalLong,
+					existsMACDReversalShort,
+					keptMACDPositive,
+					keptMACDPositiveLong,
+					keptMACDPositiveShort,
 					changePastHour,
 					change3h,
 					change6h,
@@ -418,9 +471,9 @@ class Analysis {
 				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${currAssetResult.eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
-				// currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} MACD-now-long reversal:  ${currAssetResult.macdCurrentLong > 0 && currAssetResult.macdPreviousLong < 0}`, 2) + '\n';
-				//currAssetReport += this.l.i(`${asset} chart:  https://cryptowat.ch/charts/KRAKEN:${currAssetResult.name}-${currAssetResult.baseCurrency}`, 2) + '\n\n';
+				currAssetReport += this.l.i(`${asset} MACD short/regular/long reversal: ${currAssetResult.existsMACDReversalShort}/${currAssetResult.existsMACDReversal}/${currAssetResult.existsMACDReversalLong}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} MACD short/regular/long kept + : ${currAssetResult.keptMACDPositiveShort}/${currAssetResult.keptMACDPositive}/${currAssetResult.keptMACDPositiveLong}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} On-Balance Volume 3h: ${currAssetResult.onBalanceVol3h}`, 2) + '\n';
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = '';
