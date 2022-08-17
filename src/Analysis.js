@@ -176,20 +176,23 @@ class Analysis {
 			let macd_c = this.simulationMode ? 1 : 9;
 			let macdCurrent;
 			let macdPrevious;
+			let macdLatest;
 			
 			// if there is enough ohlc data to calculate MACD
-			if (Math.max(macd_a, macd_b) + macd_c + 1 <= ohlcMonth.getTicks().length) {
-				macdCurrent = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
-				macdPrevious = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+			if (Math.max(macd_a, macd_b) + macd_c + 3 <= ohlcMonth.getTicks().length) {
+				macdCurrent = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
+				macdPrevious = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 3, 'close'));
+				macdLatest = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
 			}else {
 				macdCurrent = 'N/A';
 				macdPrevious = 'N/A';
 			}
-			let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
-			let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 
 			report += this.l.i(`MACD current  ${macdCurrent}`, 2) + '\n';
 			report += this.l.i(`MACD previous ${macdPrevious}`, 2) + '\n';
+
+			let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
+			let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 
 			// for testing
 			report += this.simulationMode ? this.l.d(`changeMonth: ${changeMonth}`, 2) + '\n' : '';
@@ -310,6 +313,7 @@ class Analysis {
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
+				(macdLatest > 0) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
@@ -325,6 +329,7 @@ class Analysis {
 				) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
+				(macdLatest > 0) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
@@ -334,42 +339,44 @@ class Analysis {
 			}else if (
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
+				(macdLatest > 0) &&
 				(macdCurrent !== 'N/A' && macdPrevious !== 'N/A' && macdCurrent > 0 && macdPrevious < 0)
 			) {
 				isCandidate = true;
 				candidateGrade = 1;
 			}
 
-			// bonus: long MACD positive reversal
-			if (macdCurrentLong !== 'N/A' && macdPreviousLong !== 'N/A' && macdCurrentLong > 0 && macdPreviousLong < 0) {
-				candidateGrade += 1.0;
-			}
+			if (isCandidate) {
 
-			// bonus: negative derivatives increasing (longer in the past)
-			if (derivative24h < 0 && derivativeWeekHalf < derivative24h) {
-				candidateGrade += 0.75;
-			}else if (derivative12h < 0 && derivative24h < derivative12h) {
-				candidateGrade += 0.4;
-			}
+				// bonus: long MACD positive reversal
+				if (macdCurrentLong !== 'N/A' && macdPreviousLong !== 'N/A' && macdCurrentLong > 0 && macdPreviousLong < 0) {
+					candidateGrade += 1.0;
+				}
 
-			// bonus: negative derivative increasing (shorter in the past)
-			if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
-				candidateGrade += 0.5;
-			}else if (derivative3h < 0 && derivative6h < derivative3h) {
-				candidateGrade += 0.3;
-			}
+				// bonus: negative derivatives increasing (longer in the past)
+				if (derivative24h < 0 && derivativeWeekHalf < derivative24h) {
+					candidateGrade += 0.75;
+				}else if (derivative12h < 0 && derivative24h < derivative12h) {
+					candidateGrade += 0.4;
+				}
 
-			// bonus: if BTC is bullish or asset price difference to 8-days EMA <= -3%
-			if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.03) {
-				candidateGrade += 0.5;
-			}
+				// bonus: negative derivative increasing (shorter in the past)
+				if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
+					candidateGrade += 0.5;
+				}else if (derivative3h < 0 && derivative6h < derivative3h) {
+					candidateGrade += 0.3;
+				}
 
-			// bonus: green hammer
-			if (existsGreenHammer3h) {
-				candidateGrade += 0.25;
-			}
+				// bonus: if BTC is bullish or asset price difference to 8-days EMA <= -3%
+				if 	(isBullish || latestClosingPriceDiff8DaysEMAPercent <= -0.03) {
+					candidateGrade += 0.5;
+				}
 
-			if 	(isCandidate) {
+				// bonus: green hammer
+				if (existsGreenHammer3h) {
+					candidateGrade += 0.25;
+				}
+
 				currAssetResult = new Candidate(
 					asset,
 					this.baseCurrency,
@@ -405,8 +412,8 @@ class Analysis {
 				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${currAssetResult.eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} MACD-now-long:  ${currAssetResult.macdCurrentLong},\nMACD-prev-long: ${currAssetResult.macdPreviousLong}`, 2) + '\n';
+				// currAssetReport += this.l.i(`${asset} MACD-now:  ${currAssetResult.macdCurrent},\nMACD-prev: ${currAssetResult.macdPrevious}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} MACD-now-long reversal:  ${currAssetResult.macdCurrentLong > 0 && currAssetResult.macdPreviousLong < 0}`, 2) + '\n';
 				//currAssetReport += this.l.i(`${asset} chart:  https://cryptowat.ch/charts/KRAKEN:${currAssetResult.name}-${currAssetResult.baseCurrency}`, 2) + '\n\n';
 
 				currAssetResult.report = currAssetReport;
