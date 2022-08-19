@@ -58,7 +58,7 @@ class Analysis {
 	async recommend(getOHLC, reportFilePath) {
 		let report = this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
 		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
-		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.01;
+		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.02;
 		let bitcoinAnalysisReportPart = '';
 		if (isBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`) + '\n'; }
 		else if (bitcoinAnalysis.result == 'success') { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
@@ -336,8 +336,9 @@ class Analysis {
 			let currAssetResult = {};
 
 			// Recommendation Conditions
-			// Grading system 1 to 7 +2.5 bonus points
+			// Grading system 1 to 7 +2 bonus points
 
+			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.7 AND
 			// price not the lowest of the month AND
 			// price not the highest of the week AND
@@ -345,6 +346,7 @@ class Analysis {
 
 			// OR
 
+			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.4 AND
 			// price not the lowest of the month AND
 			// price not the highest of the week AND
@@ -352,6 +354,7 @@ class Analysis {
 
 			// OR
 
+			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price not the lowest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
@@ -400,11 +403,6 @@ class Analysis {
 			}
 
 			if (isCandidate) {
-
-				// bonus/penalty: on balance volume positive in the past 3h
-				if (onBalanceVol3h > 0) {
-					candidateGrade += 0.5;
-				}
 
 				// bonus: negative derivatives increasing (longer in the past)
 				if (derivative24h < 0 && derivativeWeekHalf < derivative24h) {
