@@ -58,7 +58,7 @@ class Analysis {
 	async recommend(getOHLC, reportFilePath) {
 		let report = this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
 		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
-		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.005;
+		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.01;
 		let bitcoinAnalysisReportPart = '';
 		if (isBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`) + '\n'; }
 		else if (bitcoinAnalysis.result == 'success') { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
@@ -357,6 +357,7 @@ class Analysis {
 			// MACD went positive
 
 			if (
+				(onBalanceVol3h > 0 || isBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.7) ||
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.7)
@@ -372,6 +373,7 @@ class Analysis {
 
 
 			}else if (
+				(onBalanceVol3h > 0 || isBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.4) ||
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.4)
@@ -387,6 +389,7 @@ class Analysis {
 
 
 			}else if (
+				(onBalanceVol3h > 0 || isBullish) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
 				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&

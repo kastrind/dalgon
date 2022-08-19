@@ -141,7 +141,7 @@ class Order {
 		let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
 
 		// Determine price per unit and volume to buy from total buying price
-		let buyPriceUnit = parseFloat(ticker.lastTradeClosedPrice);
+		let buyPriceUnit = parseFloat(ticker.askPrice);
 		let buyVolume = (buyPriceTotal / buyPriceUnit).toFixed(this.tradeableAssetPairDecimals);
 		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
 		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
@@ -274,7 +274,7 @@ class Order {
 
 					if (ticker) {
 						let price = parseFloat(currOpenOrder.descr.price);
-						currPrice = parseFloat(ticker.askPrice);
+						currPrice = parseFloat(ticker.bidPrice);
 						differencePercent = (price - currPrice)*100/currPrice;
 
 						// only for testing
