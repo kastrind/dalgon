@@ -172,14 +172,15 @@ class DalgonViberBot {
 	}
 
 	async sendHighGradeRecommendedAssets(recommendedAssets, gradeThreshold) {
+		let assetsReport = '';
 		if (recommendedAssets.length) {
 			let highGradeRecommendedAssets = recommendedAssets.filter(candidate => candidate.candidateGrade >= gradeThreshold);
 			if (highGradeRecommendedAssets.length) {
 				for (let i=0; i<highGradeRecommendedAssets.length; i++) {
 					let candidate = highGradeRecommendedAssets[i];
-					await this.sendTextMessage(`${candidate.name} grade: ${candidate.candidateGrade}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}`);
-					await sleep(1000);
+					assetsReport += `${candidate.name} grade: ${candidate.candidateGrade}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}\n`;
 				}
+				this.sendBigTextMessage(assetsReport);
 				return;
 			}
 		}
