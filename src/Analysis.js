@@ -58,7 +58,7 @@ class Analysis {
 	async recommend(getOHLC, reportFilePath) {
 		let report = this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
 		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
-		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.02;
+		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent > 0;
 		let bitcoinAnalysisReportPart = '';
 		if (isBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`) + '\n'; }
 		else if (bitcoinAnalysis.result == 'success') { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
