@@ -41,11 +41,11 @@ class Analysis {
 		let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
 		await sleep(this.sleepMillis);
 
-		let month = new Date();
-		month.setHours(month.getHours() - 24*30);
-		let ohlcMonth = await (OHLC.request(getOHLC, 'BTCEUR', month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
-		if (!ohlcMonth) return { result: "failure" };
-		let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
+		let sixMonths = new Date();
+		sixMonths.setHours(sixMonths.getHours() - 6*24*30);
+		let ohlc6Months = await (OHLC.request(getOHLC, 'BTCEUR', sixMonths.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
+		if (!ohlc6Months) return { result: "failure" };
+		let eightDaysEMA = ohlc6Months.getEMA(8, null, 0, 'close');
 		let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 		await sleep(this.sleepMillis);
 		return {result: 'success',
@@ -355,6 +355,7 @@ class Analysis {
 			// OR
 
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
+			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.2 AND
 			// price not the lowest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
@@ -393,6 +394,11 @@ class Analysis {
 
 			}else if (
 				(onBalanceVol3h > 0 || isBullish) &&
+				(
+					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.2) ||
+					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.2)
+
+				) &&
 				(priceOverLowestMonth >= 0.02) &&
 				(priceOverHighestWeek >= 0.02) &&
 				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
