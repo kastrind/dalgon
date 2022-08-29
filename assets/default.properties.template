@@ -5,13 +5,13 @@ ANALYSIS_CURRENCY=BTC
 TIMEZONE=Europe/Athens
 ASSET_EVAL_REPORT_FILE=assets/asset_report.txt
 PRICE_TO_MARKET_SERIES_FILE=assets/priceToMarketSeries.json
-AUTOTRADE_CURRENCIES={"XETH": {"name": "XETH", "queryAssetName": "ETH", "minBuyAmount": 0.01, "buyPercent": 0, "minBalance": 0}, "XXBT": {"name": "XXBT", "queryAssetName": "BTC", "minBuyAmount": 0.0007, "buyPercent": 25, "minBalance": 0.0005}}
+AUTOTRADE_CURRENCIES={"XETH": {"name": "XETH", "queryAssetName": "ETH", "minBuyAmount": 0.01, "buyPercent": 0, "minBalance": 0}, "XXBT": {"name": "XXBT", "queryAssetName": "BTC", "minBuyAmount": 0.0007, "buyPercent": 33, "minBalance": 0.0005}}
 AUTOTRADE_GRADE_THRESHOLD=7
 BUY_EXCEPTIONS=BTC ETH USDT USDC TBTC WBTC PAXG SBR DAI UST REPV2 ETH2 SUSHI T MV BIT LUNA2 MXC REQ COTI CHR TLM ACH FORTH GTC FARM UNFI FIS ADX INTR TEER REP
 BUY_WHITELIST=
 PROFIT_PERCENT=50
-STALE_ORDER_DAYS=4
-STALE_ORDER_PRICE_DIFFERENCE_PERCENT=54
+STALE_ORDER_DAYS=0.25
+STALE_ORDER_PRICE_DIFFERENCE_PERCENT=52
 STALE_ORDER_EXCEPTIONS=
 
 [ledger]
