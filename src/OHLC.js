@@ -104,6 +104,7 @@ class OHLC {
 	static async request(OHLCRequest, paramAsset, paramSince, maxNumResults, loggerObj, simulationMode=false, simObj={}) {
 		let responseBody = {};
 		let ohlcRange = OHLCRange.create(paramSince, maxNumResults);
+		if (!ohlcRange) return null;
 		let since = ohlcRange.dateSinceSeconds;
 		let interval = ohlcRange.interval;
 		let OHLCRequestParamsObj = { searchParams: { pair: paramAsset, since: since, interval: interval } };
