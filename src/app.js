@@ -575,10 +575,10 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				// Attempt to auto-trade each recommended asset, starting from the best recommendation
 				for (let i=0; i<assetResultsReversed.length; i++) {
 
-					if (assetResultsReversed.length < 2) {
-						l.w(`Will not proceed to auto-trade: there must be at least 2 recommendations.`, 1, true);
-						break;
-					}
+					// if (assetResultsReversed.length < 2) {
+					// 	l.w(`Will not proceed to auto-trade: there must be at least 2 recommendations.`, 1, true);
+					// 	break;
+					// }
 
 					assetToInvestIn = assetResultsReversed[i].name;
 					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
