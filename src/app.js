@@ -552,7 +552,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			
 			// Remind of old orders to monitor
 			if (viberBot && existOldOrders && (new Date()).getHours() == 12 && oldOrdersReminderSent == false) {
-				viberBot.sendTextMessage(l.i(`Reminder: there are open orders older than ${staleOrderDays - 1} days old remaining. Monitor for selling opportunities.`, 1));
+				viberBot.sendTextMessage(l.i(`Reminder: there are open orders older than ${Math.max(staleOrderDays - 1, 0)} days old remaining. Monitor for selling opportunities.`, 1));
 				oldOrdersReminderSent = true;
 			}else if ((new Date()).getHours() != 12) {
 				oldOrdersReminderSent = false;
@@ -574,11 +574,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				let assetToInvestIn;
 				// Attempt to auto-trade each recommended asset, starting from the best recommendation
 				for (let i=0; i<assetResultsReversed.length; i++) {
-
-					// if (assetResultsReversed.length < 2) {
-					// 	l.w(`Will not proceed to auto-trade: there must be at least 2 recommendations.`, 1, true);
-					// 	break;
-					// }
 
 					assetToInvestIn = assetResultsReversed[i].name;
 					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
