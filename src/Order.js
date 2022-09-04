@@ -356,9 +356,11 @@ class Order {
 					}
 
 					// if order eligible for cancellation, that is:
-					// if order too old and either the desired market price diverged too much or there are other recommended assets currently, or
+					// if order too old and either the desired market price diverged too much or
+					// order is twice the age of stale orders and the desired market price is between being borderline profitable and diverging
 					// order is profitabe enough
-					if ((daysDiff >= staleOrderDays && differencePercent > staleOrderPriceDifferencePercent) ||
+					if ((daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
+						(daysDiff >= staleOrderDays*2 && differencePercent >= profitPercent -1 && differencePercent <= staleOrderPriceDifferencePercent ) ||
 						canSellForProfit) {
 						result = true;
 						if (!canSellForProfit) {
