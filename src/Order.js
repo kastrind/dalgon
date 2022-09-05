@@ -298,7 +298,7 @@ class Order {
 								report += l.d("selling is profitable and series exists and has >=1 length");
 
 								//gained considerable ground
-								if (differencePercent < lastOne - 5) {
+								if (differencePercent < lastOne - 1.5) {
 									report += l.d(`canSellForProfit 3A`);
 									canSellForProfit = true;
 								
@@ -330,7 +330,7 @@ class Order {
 									if (Math.abs(differencePercent - lastOne) < (lastOne - beforeLastOne) &&
 										(differencePercent - lastOne) < 0 &&
 										(lastOne - beforeLastOne) > 0 &&
-										lastOne < profitPercent) {
+										lastOne < profitPercent - 0.6) {
 										report += l.d(`canSellForProfit 2C`);
 										canSellForProfit = true;
 									}
