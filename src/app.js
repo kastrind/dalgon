@@ -495,8 +495,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			sellingWorker.on("exit", (exitCode) => {
 				l.i(`Selling worker exitCode: ${exitCode}`, 0, true);
 			});
-			// Not needed since worker restarts in the main loop
-			//sellingWorker.postMessage(`{ "profitPercent": "${profitPercent}", "recommendedAssetsLength": "${recommendedAssets.length}" }`);
 
 			if (viberBot && viberBot.pauseAnalysis) {
 				l.i("Analysis paused...");

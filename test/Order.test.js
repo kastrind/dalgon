@@ -89,12 +89,12 @@ var recommendedAssetsLength = 1;
 			assert.equal(staleResult.report.indexOf('canSellForProfit 3A')>=0, true);
 		});
 
-		it('should sell profitable Order if selling is less than 1% profitable (but still profitable): 3B', async () => {
-			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
-			delete priceToMarketSeries['21O7TBWY-TZ2FA-2JS27W'];
-			delete simOpenOrdersObj.result.open['21O7TBWY-TZ2FA-2JS27W'];
-			assert.equal(staleResult.report.indexOf('canSellForProfit 3B')>=0, true);
-		});
+		// it('should sell profitable Order if selling is less than 1% profitable (but still profitable): 3B', async () => {
+		// 	let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, TIMEZONE, getTicker, cancelOrder, addOrder, l, { body: JSON.stringify(simOpenOrdersObj) });
+		// 	delete priceToMarketSeries['21O7TBWY-TZ2FA-2JS27W'];
+		// 	delete simOpenOrdersObj.result.open['21O7TBWY-TZ2FA-2JS27W'];
+		// 	assert.equal(staleResult.report.indexOf('canSellForProfit 3B')>=0, true);
+		// });
 
 	});
 

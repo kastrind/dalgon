@@ -292,7 +292,7 @@ class Order {
 						report += l.i(`Curr price is ${currPrice}, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 
 						// if selling is profitable
-						if (differencePercent <= profitPercent -1) {
+						if (differencePercent <= profitPercent -0.6) {
 							if (!isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length >= 1) {
 								let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
 								report += l.d("selling is profitable and series exists and has >=1 length");
@@ -307,7 +307,7 @@ class Order {
 									report += l.d("series has one");
 									report += l.d(`lastOne ${lastOne}`);
 									// if current price to market > last one + 0.3 (price lost considerable ground)
-									if (differencePercent > lastOne + 0.3 && lastOne < profitPercent) {
+									if (differencePercent > lastOne + 0.3) {
 										report += l.d(`canSellForProfit 1A`);
 										canSellForProfit = true;
 									}
@@ -319,18 +319,17 @@ class Order {
 									// if current price to market > last one + 0.3 OR (price lost considerable ground)
 									//    current price to market > last one and second-to-last one OR (price lost ground two consecutive times)
 									//    current price to market < last one and last one > second-to-last one (price gained less ground it lost)
-									if (differencePercent > lastOne + 0.3 && lastOne < profitPercent) {
+									if (differencePercent > lastOne + 0.3) {
 										report += l.d(`canSellForProfit 2A`);
 										canSellForProfit = true;
 									}
-									if (differencePercent > lastOne && lastOne > beforeLastOne && lastOne < profitPercent) {
+									if (differencePercent > lastOne && lastOne > beforeLastOne) {
 										report += l.d(`canSellForProfit 2B`);
 										canSellForProfit = true;
 									}
 									if (Math.abs(differencePercent - lastOne) < (lastOne - beforeLastOne) &&
 										(differencePercent - lastOne) < 0 &&
-										(lastOne - beforeLastOne) > 0 &&
-										lastOne < profitPercent - 0.6) {
+										(lastOne - beforeLastOne) > 0) {
 										report += l.d(`canSellForProfit 2C`);
 										canSellForProfit = true;
 									}
@@ -338,14 +337,15 @@ class Order {
 								//else keep waiting, in attempt to maximize profit
 							}
 						//else if current price to market lost ground such that selling is less than 1% profitable (but still profitable)
-						}else if (differencePercent > profitPercent -1 && differencePercent < profitPercent - 0.6 &&
-								  !isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length > 1) {
-									let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
-									if (lastOne <= profitPercent -1) {
-										report += l.d(`canSellForProfit 3B`);
-										canSellForProfit = true;
-									}
 						}
+						// else if (differencePercent > profitPercent -1 && differencePercent < profitPercent - 0.6 &&
+						// 		  !isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length > 1) {
+						// 			let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
+						// 			if (lastOne <= profitPercent -1) {
+						// 				report += l.d(`canSellForProfit 3B`);
+						// 				canSellForProfit = true;
+						// 			}
+						// }
 					}
 
 					// if not testing, update the price to market series
@@ -357,10 +357,10 @@ class Order {
 
 					// if order eligible for cancellation, that is:
 					// if order too old and either the desired market price diverged too much or
-					// order is twice the age of stale orders and the desired market price is between being borderline profitable and diverging
+					// order is twice the age of stale orders and the desired market price seems about to diverge
 					// order is profitabe enough
 					if ((daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
-						(daysDiff >= staleOrderDays*2 && differencePercent >= profitPercent -1 && differencePercent <= staleOrderPriceDifferencePercent ) ||
+						(daysDiff >= staleOrderDays*2 && differencePercent >= staleOrderPriceDifferencePercent -0.5) ||
 						canSellForProfit) {
 						result = true;
 						if (!canSellForProfit) {
