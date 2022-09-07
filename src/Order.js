@@ -359,8 +359,9 @@ class Order {
 					// if order too old and either the desired market price diverged too much or
 					// order is twice the age of stale orders and the desired market price seems about to diverge
 					// order is profitabe enough
-					if ((daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
-						(daysDiff >= staleOrderDays*2 && differencePercent >= staleOrderPriceDifferencePercent -0.5) ||
+					if ((daysDiff >= staleOrderDays) ||
+						(daysDiff >= staleOrderDays/2 && differencePercent >= staleOrderPriceDifferencePercent) ||
+						//(daysDiff >= staleOrderDays*2 && differencePercent >= staleOrderPriceDifferencePercent -0.5) ||
 						canSellForProfit) {
 						result = true;
 						if (!canSellForProfit) {

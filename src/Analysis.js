@@ -367,8 +367,8 @@ class Analysis {
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.7)
 
 				) &&
-				(priceOverLowestMonth >= 0.15) &&
-				(priceOverHighestWeek >= 0.15) &&
+				(priceOverLowestMonth >= 0.04) &&
+				(priceOverHighestWeek >= 0.04) &&
 				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
 				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
 			) {
@@ -383,8 +383,8 @@ class Analysis {
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.4)
 
 				) &&
-				(priceOverLowestMonth >= 0.15) &&
-				(priceOverHighestWeek >= 0.15) &&
+				(priceOverLowestMonth >= 0.04) &&
+				(priceOverHighestWeek >= 0.04) &&
 				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
 				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
 			) {
@@ -399,8 +399,8 @@ class Analysis {
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.2)
 
 				) &&
-				(priceOverLowestMonth >= 0.15) &&
-				(priceOverHighestWeek >= 0.15) &&
+				(priceOverLowestMonth >= 0.04) &&
+				(priceOverHighestWeek >= 0.04) &&
 				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
 				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
 			) {
