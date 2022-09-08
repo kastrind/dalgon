@@ -359,9 +359,7 @@ class Order {
 					// if order too old and either the desired market price diverged too much or
 					// order is twice the age of stale orders and the desired market price seems about to diverge
 					// order is profitabe enough
-					if ((daysDiff >= staleOrderDays) ||
-						(daysDiff >= staleOrderDays/2 && differencePercent >= staleOrderPriceDifferencePercent) ||
-						//(daysDiff >= staleOrderDays*2 && differencePercent >= staleOrderPriceDifferencePercent -0.5) ||
+					if ((daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
 						canSellForProfit) {
 						result = true;
 						if (!canSellForProfit) {
@@ -381,8 +379,19 @@ class Order {
 							report += l.suc(`Order ${txid} cancelled.`, 2, true) + '\n';
 							report += l.i(`Placing market sell order...`, 2) + '\n';
 							let vol = currOpenOrder.vol;
-							let order = new Order(2, 'market', 'sell', null, null, simAddOrderObj==true, false);
-							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, { volume: vol } ), simAddOrderObj);
+							let sellOrderType = 'market';
+							let sellOrderParamsObj = { volume: vol };
+							let sellOrderPrice;
+
+							// Order is not profitable, setup a limit sell Order to a profitable price
+							if (!canSellForProfit && ticker) {
+								sellOrderType = 'limit';
+								sellOrderPrice = ticker.bidPrice + (differencePercent + 1 - profitPercent) * 0.01 * ticker.bidPrice;
+								sellOrderParamsObj = { volume: vol, price: sellOrderPrice};
+							}
+
+							let order = new Order(2, sellOrderType, 'sell', null, null, simAddOrderObj==true, false);
+							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, sellOrderParamsObj ), simAddOrderObj);
 							await sleep(1000);
 							let orderResponseBody = JSON.parse(orderResponse.body);
 							// Market order failed
