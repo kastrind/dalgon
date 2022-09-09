@@ -38,9 +38,10 @@ var l = new Logger(VERBOSE, DEBUG);
 // dalgon instance
 var dalgon = new Dalgon(APIKEY, PRIVATEAPIKEY, l, SIMULATION);
 var getTicker = dalgon.createPublicFunction('/0/public/Ticker', 'Request for Get Ticker');
-var getOpenOrders     = dalgon.createPrivateFunction('/0/private/OpenOrders',     privateHeaderObj, 'Request for Open Orders');
-var addOrder          = dalgon.createPrivateFunction('/0/private/AddOrder',       privateHeaderObj, 'Request for Adding an Order');
-var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',    privateHeaderObj, 'Request for Cancel Order');
+var getOpenOrders          = dalgon.createPrivateFunction('/0/private/OpenOrders',     privateHeaderObj, 'Request for Open Orders');
+var addOrder               = dalgon.createPrivateFunction('/0/private/AddOrder',       privateHeaderObj, 'Request for Adding an Order');
+var cancelOrder            = dalgon.createPrivateFunction('/0/private/CancelOrder',    privateHeaderObj, 'Request for Cancel Order');
+var getTradeableAssetPairs = dalgon.createPublicFunction('/0/public/AssetPairs', 'Request for Get Tradeable Asset Pairs');
 
 var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFilePath, l);
 
@@ -59,6 +60,7 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 															TIMEZONE,
 															getTicker,
 															cancelOrder,
+															getTradeableAssetPairs,
 															addOrder,
 															l);
 

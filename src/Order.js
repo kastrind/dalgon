@@ -230,14 +230,14 @@ class Order {
 		return report;
 	}
 
-	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, timeZone, getTicker, cancelOrder, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, simAddOrderObj={}) {
+	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, timeZone, getTicker, cancelOrder, getTradeableAssetPairs, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, tradeableAssetPairSimObj={}, simAddOrderObj={}) {
 		let result = false;
 		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
 		report += l.i(`Desired profit percentage: ${profitPercent}%.`) + '\n';
 		report += l.i(`Orders considered stale are >= ${staleOrderDays} days old.`) + '\n';
 		report += l.i(`Orders considered stale are > ${staleOrderPriceDifferencePercent}% to market price.`) + '\n';
 		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-		
+
 		let openOrdersResponseBody = await Order.request(getOpenOrders, {}, simOpenOrdersObj);
 		let openOrderTxids = [];
 
@@ -336,16 +336,8 @@ class Order {
 								}
 								//else keep waiting, in attempt to maximize profit
 							}
-						//else if current price to market lost ground such that selling is less than 1% profitable (but still profitable)
+
 						}
-						// else if (differencePercent > profitPercent -1 && differencePercent < profitPercent - 0.6 &&
-						// 		  !isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length > 1) {
-						// 			let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
-						// 			if (lastOne <= profitPercent -1) {
-						// 				report += l.d(`canSellForProfit 3B`);
-						// 				canSellForProfit = true;
-						// 			}
-						// }
 					}
 
 					// if not testing, update the price to market series
@@ -357,7 +349,6 @@ class Order {
 
 					// if order eligible for cancellation, that is:
 					// if order too old and either the desired market price diverged too much or
-					// order is twice the age of stale orders and the desired market price seems about to diverge
 					// order is profitabe enough
 					if ((daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
 						canSellForProfit) {
@@ -377,7 +368,6 @@ class Order {
 						// Cancel order succeeded
 						if (cancelOrderResponseBody && !cancelOrderResponseBody.result.pending) {
 							report += l.suc(`Order ${txid} cancelled.`, 2, true) + '\n';
-							report += l.i(`Placing market sell order...`, 2) + '\n';
 							let vol = currOpenOrder.vol;
 							let sellOrderType = 'market';
 							let sellOrderParamsObj = { volume: vol };
@@ -385,9 +375,26 @@ class Order {
 
 							// Order is not profitable, setup a limit sell Order to a profitable price
 							if (!canSellForProfit && ticker) {
-								sellOrderType = 'limit';
-								sellOrderPrice = ticker.bidPrice + (differencePercent + 1 - profitPercent) * 0.01 * ticker.bidPrice;
-								sellOrderParamsObj = { volume: vol, price: sellOrderPrice};
+								report += l.i(`Placing limit sell order...`, 2) + '\n';
+
+								// get number of decimals for the asset pair of the Order and set the price
+								let tradeableAssetPairs = await TradeableAssetPair.request(getTradeableAssetPairs, { searchParams: { pair: pair } }, l, !isEmpty(tradeableAssetPairSimObj), tradeableAssetPairSimObj);
+								if (!isEmpty(tradeableAssetPairs)) {
+									let tradeableAssetPairId = tradeableAssetPairs[0].assetPair;
+									let tradeableAssetPairDecimals = parseInt(tradeableAssetPairs[0].pairDecimals);
+									report += l.i(`Asset pair id is ${tradeableAssetPairId} with ${tradeableAssetPairDecimals} decimals.`, 2) + '\n';
+
+									sellOrderType = 'limit';
+									sellOrderPrice = (ticker.bidPrice + (differencePercent + 1 - profitPercent) * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
+									sellOrderParamsObj = { volume: vol, price: sellOrderPrice};
+								}else {
+									report += l.err(`Failed to get the number of decimals for pair ${pair}.`, 2, true) + '\n';
+									report += l.err(`Proceed manually.`, 2, true) + '\n';
+									report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
+									return {result: false, report: report, priceToMarketSeries: priceToMarketSeries};
+								}
+							}else {
+								report += l.i(`Placing market sell order...`, 2) + '\n';
 							}
 
 							let order = new Order(2, sellOrderType, 'sell', null, null, simAddOrderObj==true, false);
@@ -396,12 +403,13 @@ class Order {
 							let orderResponseBody = JSON.parse(orderResponse.body);
 							// Market order failed
 							if (!isEmpty(orderResponseBody.error)) {
-								report += l.err(`Market sell order failed with error: ${orderResponseBody.error}`, 2, true) + '\n';
+								report += l.err(`Sell order failed with error: ${orderResponseBody.error}`, 2, true) + '\n';
 								report += l.err(`Proceed manually.`, 2, true) + '\n';
+								result = false;
 							}
 							// Market order succeeded
 							else {
-								report += l.suc(`Market sell order placed.`, 2, true) + '\n'; 
+								report += l.suc(`Sell order placed.`, 2, true) + '\n'; 
 								report += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 2, true) + '\n';
 								if (canSellForProfit) {
 									delete priceToMarketSeries[txid];
@@ -414,6 +422,7 @@ class Order {
 								report += l.err(`Response: ${JSON.stringify(cancelOrderResponseBody, null, 2)}`, 2, true) + '\n';
 							}
 							report += l.err(`Proceed manually.`, 2, true) + '\n';
+							result = false;
 						}
 					}
 				}
