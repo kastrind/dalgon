@@ -369,12 +369,11 @@ class Order {
 						if (cancelOrderResponseBody && !cancelOrderResponseBody.result.pending) {
 							report += l.suc(`Order ${txid} cancelled.`, 2, true) + '\n';
 							let vol = currOpenOrder.vol;
-							let sellOrderType = 'market';
-							let sellOrderParamsObj = { volume: vol };
+							let sellOrderType = 'limit';
+							let sellOrderParamsObj;
 							let sellOrderPrice;
 
-							// Order is not profitable, setup a limit sell Order to a profitable price
-							if (!canSellForProfit && ticker) {
+							if (ticker) {
 								report += l.i(`Placing limit sell order...`, 2) + '\n';
 
 								// get number of decimals for the asset pair of the Order and set the price
@@ -384,8 +383,12 @@ class Order {
 									let tradeableAssetPairDecimals = parseInt(tradeableAssetPairs[0].pairDecimals);
 									report += l.i(`Asset pair id is ${tradeableAssetPairId} with ${tradeableAssetPairDecimals} decimals.`, 2) + '\n';
 
-									sellOrderType = 'limit';
-									sellOrderPrice = (ticker.bidPrice + (differencePercent + 1 - profitPercent) * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
+									// Order is not profitable, setup limit sell Order to a profitable price
+									if (!canSellForProfit) {
+										sellOrderPrice = (ticker.bidPrice + (differencePercent + 0.3 - profitPercent) * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
+									}else {
+										sellOrderPrice = (ticker.bidPrice + 0.3 * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
+									}
 									sellOrderParamsObj = { volume: vol, price: sellOrderPrice};
 								}else {
 									report += l.err(`Failed to get the number of decimals for pair ${pair}.`, 2, true) + '\n';
@@ -393,21 +396,25 @@ class Order {
 									report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
 									return {result: false, report: report, priceToMarketSeries: priceToMarketSeries};
 								}
+
 							}else {
-								report += l.i(`Placing market sell order...`, 2) + '\n';
+								report += l.err(`Failed to get ticker for pair ${pair}.`, 2, true) + '\n';
+								report += l.err(`Proceed manually.`, 2, true) + '\n';
+								report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
+								return {result: false, report: report, priceToMarketSeries: priceToMarketSeries};
 							}
 
 							let order = new Order(2, sellOrderType, 'sell', null, null, simAddOrderObj==true, false);
 							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, sellOrderParamsObj ), simAddOrderObj);
 							await sleep(1000);
 							let orderResponseBody = JSON.parse(orderResponse.body);
-							// Market order failed
+							// Order failed
 							if (!isEmpty(orderResponseBody.error)) {
 								report += l.err(`Sell order failed with error: ${orderResponseBody.error}`, 2, true) + '\n';
 								report += l.err(`Proceed manually.`, 2, true) + '\n';
 								result = false;
 							}
-							// Market order succeeded
+							// Order succeeded
 							else {
 								report += l.suc(`Sell order placed.`, 2, true) + '\n'; 
 								report += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 2, true) + '\n';
