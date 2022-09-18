@@ -71,7 +71,7 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 
 		if (closeWorker) { break; }
 
-		await sleep(60 * 1000); // Sleep for 1 minute
+		await sleep(2* 60 * 1000); // Sleep for 2 minutes
 
 	}
 

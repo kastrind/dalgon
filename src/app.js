@@ -308,7 +308,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.sendTextMessage(`Please wait.`);
 			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1].toUpperCase();
 			if (assetToInvestIn) {
-				let order = new Order(1, 'market', 'buy', viberBot, l, SIMULATION, true);
+				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
 				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
 					await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
 				}
@@ -600,7 +600,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					}
 
 					// Create a new Order
-					let order = new Order(1, 'market', 'buy', viberBot, l, SIMULATION);
+					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);
 					// If prerequisites to auto-trade are met, submit the limit Order with conditional take-profit
 					if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
 						let autoTradeResult = await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);

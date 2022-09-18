@@ -141,7 +141,7 @@ class Order {
 		let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
 
 		// Determine price per unit and volume to buy from total buying price
-		let buyPriceUnit = parseFloat(ticker.askPrice);
+		let buyPriceUnit = parseFloat(ticker.askPrice - 0.3 * 0.01 * ticker.askPrice).toFixed(this.tradeableAssetPairDecimals);
 		let buyVolume = (buyPriceTotal / buyPriceUnit).toFixed(this.tradeableAssetPairDecimals);
 		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
 		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
@@ -151,10 +151,11 @@ class Order {
 		profitPrice = profitPrice.toFixed(this.tradeableAssetPairDecimals);
 		this.autoTradeReport += l.i(`Conditional close to take ${profitPercent}% profit: ${profitPrice} ${buyWith} price per unit.`, 1) + '\n';
 
-		let optionalParamsObj = { price: buyPriceUnit, volume: buyVolume, 'close[ordertype]': 'take-profit', 'close[price]': profitPrice };
-		// market orders get the market price
+		let optionalParamsObj = { price: buyPriceUnit, volume: buyVolume, expiretm: '+3600', 'close[ordertype]': 'take-profit', 'close[price]': profitPrice };
+		// market orders get the market price, and they execute immediately
 		if (this.orderType == 'market') {
 			delete optionalParamsObj.price;
+			delete optionalParamsObj.expiretm;
 		}
 
 		let orderResponse = await addOrder(this.prepareOrderParamsObj(this.tradeAbleAssetPairId, optionalParamsObj), this.orderSimObj);
@@ -306,8 +307,8 @@ class Order {
 								}else if (priceToMarketSeries[txid].length == 1) {
 									report += l.d("series has one");
 									report += l.d(`lastOne ${lastOne}`);
-									// if current price to market > last one + 0.3 (price lost considerable ground)
-									if (differencePercent > lastOne + 0.3) {
+									// if current price to market < last one - 1 (price gained ground)
+									if (differencePercent < lastOne - 1) {
 										report += l.d(`canSellForProfit 1A`);
 										canSellForProfit = true;
 									}
@@ -316,21 +317,14 @@ class Order {
 									let beforeLastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -2];
 									report += l.d("series has more than one");
 									report += l.d(`lastOne ${lastOne} beforeLastOne ${beforeLastOne}`);
-									// if current price to market > last one + 0.3 OR (price lost considerable ground)
-									//    current price to market > last one and second-to-last one OR (price lost ground two consecutive times)
-									//    current price to market < last one and last one > second-to-last one (price gained less ground it lost)
-									if (differencePercent > lastOne + 0.3) {
+									// if current price to market < last one - 1 (price gained ground)
+									//    current price to market < last one and second-to-last one OR (price gained ground two consecutive times)
+									if (differencePercent < lastOne - 1) {
 										report += l.d(`canSellForProfit 2A`);
 										canSellForProfit = true;
 									}
-									if (differencePercent > lastOne && lastOne > beforeLastOne) {
+									if (differencePercent < lastOne - 0.4 && lastOne < beforeLastOne - 0.4) {
 										report += l.d(`canSellForProfit 2B`);
-										canSellForProfit = true;
-									}
-									if (Math.abs(differencePercent - lastOne) < (lastOne - beforeLastOne) &&
-										(differencePercent - lastOne) < 0 &&
-										(lastOne - beforeLastOne) > 0) {
-										report += l.d(`canSellForProfit 2C`);
 										canSellForProfit = true;
 									}
 								}
