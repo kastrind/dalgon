@@ -147,7 +147,7 @@ class Order {
 		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
 
 		// Set the desired selling price for profit
-		let profitPrice = buyPriceUnit + profitPercent * buyPriceUnit / 100;
+		let profitPrice = parseFloat(buyPriceUnit) + profitPercent * buyPriceUnit / 100;
 		profitPrice = profitPrice.toFixed(this.tradeableAssetPairDecimals);
 		this.autoTradeReport += l.i(`Conditional close to take ${profitPercent}% profit: ${profitPrice} ${buyWith} price per unit.`, 1) + '\n';
 
