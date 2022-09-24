@@ -599,8 +599,16 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 						}
 					}
 
+					let userRef = 1;
+					let prevProfitPercent = profitPercent;
+					// For candidates with long MACD reversal, setup a conditional take-profit with fixed profit
+					if (assetResultsReversed[i].existsMACDReversalLong && assetResultsReversed[i].changeWeekHalf <= -0.03) {
+						userRef = 3;
+						profitPercent = Math.max(Math.abs(assetResultsReversed[i].changeWeekHalf)*60, 5);
+					}
+
 					// Create a new Order
-					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION);
+					let order = new Order(userRef, 'limit', 'buy', viberBot, l, SIMULATION);
 					// If prerequisites to auto-trade are met, submit the limit Order with conditional take-profit
 					if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
 						let autoTradeResult = await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
@@ -610,6 +618,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 							break;
 						}
 					}
+					profitPercent = prevProfitPercent;
 					await sleep(1000);
 					l.i(`Completed auto-trading for asset ${assetToInvestIn}`, 0, true);
 				}

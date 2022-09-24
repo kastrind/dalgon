@@ -318,7 +318,6 @@ class Order {
 									report += l.d("series has more than one");
 									report += l.d(`lastOne ${lastOne} beforeLastOne ${beforeLastOne}`);
 									// if current price to market < last one - 1 (price gained ground)
-									//    current price to market < last one and second-to-last one OR (price gained ground two consecutive times)
 									if (differencePercent < lastOne - 0.3) {
 										report += l.d(`canSellForProfit 2A`);
 										canSellForProfit = true;
