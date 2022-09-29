@@ -340,7 +340,7 @@ class Analysis {
 
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.7 AND
-			// price not the lowest of the month AND
+			// price not the lowest/highest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
 
@@ -348,7 +348,7 @@ class Analysis {
 
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.4 AND
-			// price not the lowest of the month AND
+			// price not the lowest/highest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
 
@@ -356,7 +356,7 @@ class Analysis {
 
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.2 AND
-			// price not the lowest of the month AND
+			// price not the lowest/highest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
 
@@ -367,6 +367,7 @@ class Analysis {
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.7)
 
 				) &&
+				(priceOverHighestMonth >= 0.04) &&
 				(priceOverLowestMonth >= 0.04) &&
 				(priceOverHighestWeek >= 0.04) &&
 				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
@@ -383,6 +384,7 @@ class Analysis {
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.4)
 
 				) &&
+				(priceOverHighestMonth >= 0.04) &&
 				(priceOverLowestMonth >= 0.04) &&
 				(priceOverHighestWeek >= 0.04) &&
 				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
@@ -399,6 +401,7 @@ class Analysis {
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.2)
 
 				) &&
+				(priceOverHighestMonth >= 0.04) &&
 				(priceOverLowestMonth >= 0.04) &&
 				(priceOverHighestWeek >= 0.04) &&
 				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
