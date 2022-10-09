@@ -462,7 +462,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 		try {
 
-
 			// Create a worker to sell stale and profitable Orders
 			sellingWorker = new Worker("./src/selling-worker.js", {
 				workerData: {
@@ -632,7 +631,9 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		}catch(e) {
 			let exceptionMsg = l.err(`Exception caught: ${e}`, 0, true);
 			if (viberBot) viberBot.sendTextMessage(`${exceptionMsg}`);
+			sellingWorker.postMessage(`{ "close": true }`);
 			await sleep(3000);
+			sellingWorker.removeAllListeners();
 		}
 
 	}
