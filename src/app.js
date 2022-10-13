@@ -83,7 +83,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	l.suc(`Dalgon started. Initiating selling worker, analysis and auto-trading cycle...`, 0, true);
 
 	let priceToMarketSeriesFilePath = properties.get('main.PRICE_TO_MARKET_SERIES_FILE');
-	let priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFilePath, l);
 	let staleOrderExceptions = properties.get('main.STALE_ORDER_EXCEPTIONS').split(' ');
 
 	// clean asset report file
@@ -117,6 +116,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		}
 
 		viberBot = await new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
+
+		viberBot.canStartTrading = properties.get("viberBot.START_TRADING");
 
 		l.i(`Dalgon Viber bot initiated.`);
 
