@@ -170,12 +170,12 @@ class Analysis {
 
 			// if there is enough ohlc data to calculate MACD
 			if (!this.simulationMode && Math.max(macd_a, macd_b) + macd_c + 1 <= ohlcWeek.getTicks().length) {
-				macdCurrentShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
-				macdPreviousShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 3, 'close'));
-				macd2ndLatestShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+				macdCurrentShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+				macdPreviousShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
 				macdLatestShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
+				//macd2ndLatestShort = parseFloat(ohlcWeek.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
 				existsMACDReversalShort = macdCurrentShort > 0 && macdPreviousShort < 0;
-				keptMACDPositiveShort = existsMACDReversalShort && macd2ndLatestShort > 0 && macdLatestShort > 0;
+				keptMACDPositiveShort = existsMACDReversalShort && macdLatestShort > 0; // && macd2ndLatestShort > 0 ;
 			}else {
 				macdCurrentShort = 'N/A';
 				macdPreviousShort = 'N/A';
@@ -214,12 +214,12 @@ class Analysis {
 			
 			// if there is enough ohlc data to calculate MACD
 			if (!this.simulationMode && Math.max(macd_a, macd_b) + macd_c + 3 <= ohlcMonth.getTicks().length) {
-				macdCurrent = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
-				macdPrevious = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 3, 'close'));
-				macd2ndLatest = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+				macdCurrent = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+				macdPrevious = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
 				macdLatest = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
+				//macd2ndLatest = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
 				existsMACDReversal = macdCurrent > 0 && macdPrevious < 0;
-				keptMACDPositive = existsMACDReversal && macd2ndLatest > 0 && macdLatest > 0;
+				keptMACDPositive = existsMACDReversal && macdLatest > 0; // && macd2ndLatest > 0;
 			}else {
 				macdCurrent = 'N/A';
 				macdPrevious = 'N/A';
