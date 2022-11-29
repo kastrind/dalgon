@@ -9,14 +9,14 @@ class Ledger {
 		this.simulationMode = simulationMode;
 		this.ledgerJsonResponse = response;
 		this.ledgerGroups = {};
-		this.assetPurchaseInfo = {};
+		this.assetInfo = {};
 	}
 
 	static async request(ledgerInfoRequest, ledgerInfoRequestParamsObj, timeTolerance, baseCurrency, loggerObj, simulationMode=false, simObj={}) {
 		let responseBody = {};
 		let requestNext = (function () {
 			return async function () {
-				await ledgerInfoRequest(ledgerInfoRequestParamsObj, simObj).then(s => responseBody = JSON.parse(s.body));				
+				await ledgerInfoRequest(ledgerInfoRequestParamsObj, simObj).then(s => {responseBody = JSON.parse(s.body); loggerObj.w(JSON.stringify(responseBody, null, 2), 0, true);});
 				if (!isEmpty(responseBody) && responseBody.result.ledger && Object.keys(responseBody.result.ledger).length > 0)  {
 					ledgerInfoRequestParamsObj.ofs += Object.keys(responseBody.result.ledger).length;
 					return responseBody;
@@ -98,7 +98,7 @@ class Ledger {
 			}
 		}
 
-		this.assetPurchaseInfo = assetPurchaseInfo;
+		this.assetInfo = assetPurchaseInfo;
 		this.l.d(`Asset purchase info results: ${JSON.stringify(assetPurchaseInfo, null, 2)}`);
 		this.l.i(`Collecting asset purchase info - end`);
 		return assetPurchaseInfo;
@@ -111,20 +111,68 @@ class Ledger {
 		let sumBaseDeposit;
 		let sumBaseFeesAllAssets = 0;
 		let sumBaseDepositAllAssets = 0;
-		for (let asset in this.assetPurchaseInfo) {
+		for (let asset in this.assetInfo) {
 			sumAmount = 0;
 			sumBaseFees = 0;
 			sumBaseDeposit = 0;
-			this.assetPurchaseInfo[asset].forEach(purchase => {
-				sumAmount += purchase.amount;
-				sumBaseFees += purchase.baseFees;
-				sumBaseDeposit += purchase.baseDeposit;
+			this.assetInfo[asset].forEach(entry => {
+				sumAmount += entry.amount;
+				sumBaseFees += entry.baseFees;
+				sumBaseDeposit += entry.baseDeposit;
 			});
-			report += `${asset}: purchased total ${sumAmount} for ${sumBaseDeposit}${this.baseCurrency} and ${sumBaseFees}${this.baseCurrency} in fees.\n`;
+			report += `${asset}: total ${sumAmount} from ${sumBaseDeposit}${this.baseCurrency} and ${sumBaseFees}${this.baseCurrency} fees.\n`;
 			sumBaseFeesAllAssets += sumBaseFees;
 			sumBaseDepositAllAssets += sumBaseDeposit;
 		}
 		report += `\nSpent total: ${sumBaseDepositAllAssets}${this.baseCurrency} and ${sumBaseFeesAllAssets}${this.baseCurrency} in fees.`;
+		return report;
+	}
+
+	getAssetDepositInfo() {
+		this.l.i(`Collecting asset deposit info - start`);
+		let assetDepositInfo = {};
+
+		for (let key in this.ledgerGroups) {
+			let ledgerGroup = this.ledgerGroups[key];
+			this.l.d(`Current ledger group: ${key}`, 1);
+			let sumFees = 0;
+			sumFees = ledgerGroup.filter(entry => parseFloat(entry.fee) > 0 && entry.asset === this.baseCurrency + ".HOLD").reduce((acc, curr) => parseFloat(acc) + parseFloat(curr.fee), 0);
+			let depositEntry = ledgerGroup.find(entry => entry.type === "deposit");
+			if (!isEmpty(depositEntry)) {
+				let asset =  depositEntry.asset;
+				let amount = parseFloat(depositEntry.amount);
+				let assetDepositInfoEntry = {"amount": amount, "baseFees": sumFees };
+				if (isEmpty(assetDepositInfo[asset])) assetDepositInfo[asset] = [assetDepositInfoEntry];
+				else assetDepositInfo[asset].push(assetDepositInfoEntry);
+				this.l.d(`Deposit info: ${JSON.stringify(assetDepositInfoEntry, null, 2)} mapped to asset ${asset}`, 2);
+			}else {
+				continue;
+			}
+		}
+
+		this.assetInfo = assetDepositInfo;
+		this.l.d(`Asset deposit info results: ${JSON.stringify(assetDepositInfo, null, 2)}`);
+		this.l.i(`Collecting asset deposit info - end`);
+		return assetDepositInfo;
+	}
+
+	reportDepositInfo() {
+		let report = '';
+		let sumAmount;
+		let sumBaseFees;
+		let sumBaseBalance;
+		let sumBaseFeesAllAssets = 0;
+		for (let asset in this.assetInfo) {
+			sumAmount = 0;
+			sumBaseFees = 0;
+			sumBaseBalance = 0;
+			this.assetInfo[asset].forEach(entry => {
+				sumAmount += entry.amount;
+				sumBaseFees += entry.baseFees;
+			});
+			report += `${asset}: total ${sumAmount} of which ${sumBaseFees}${this.baseCurrency} were fees.\n`;
+			sumBaseFeesAllAssets += sumBaseFees;
+		}
 		return report;
 	}
 

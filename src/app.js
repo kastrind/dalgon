@@ -151,15 +151,15 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.recordHistory(message);
 		});
 
-		// Purchases
-		viberBot.getBot().onTextMessage(/^(my )?(purchases)$/i, async (message, response) => {
+		// Deposits
+		viberBot.getBot().onTextMessage(/^(my )?(deposits)$/i, async (message, response) => {
 			let timeTolerance = properties.get("ledger.TIME_TOLERANCE");
 			viberBot.sendTextMessage('Please wait.');
-			let ledger = await (Ledger.request(getLedgerInfo, {ofs: 0}, timeTolerance, BASE_CURRENCY, l, SIMULATION));
+			let ledger = await (Ledger.request(getLedgerInfo, {ofs: 0, type: "deposit"}, timeTolerance, BASE_CURRENCY, l, SIMULATION));
 			ledger.groupLedgerEntries();
-			ledger.getAssetPurchaseInfo();
-			if (ledger) viberBot.sendTextMessage(ledger.reportPurchaseInfo());
-			else viberBot.sendTextMessage("Failed to get purchase history.");
+			ledger.getAssetDepositInfo();
+			if (ledger) viberBot.sendTextMessage(ledger.reportDepositInfo());
+			else viberBot.sendTextMessage("Failed to get deposit history.");
 			viberBot.recordHistory(message);
 		});
 

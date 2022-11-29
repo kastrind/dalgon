@@ -53,7 +53,7 @@ class DalgonViberBot {
 			"ticker ASSET_SYMBOL [base ASSET_SYMBOL]": return ticker info on given asset symbol, e.g. XBT. Optionally set different base currency, e.g. GBP\n\
 			"chart ASSET_SYMBOL [base ASSET_SYMBOL]": return link to chart for given asset symbol, e.g. BTC. Optionally set different base currency, e.g. GBP\n
 			"balance": current balance in Kraken exchange\n
-			"purchases": view purchased asset amounts and costs\n
+			"deposits": view total deposits and their fees\n
 			"portfolio value": view current value for each asset balance, in base currency\n
 			"open orders": view current open orders\n
 			"change order TXID unit price PRICE": cancel and submit new order with changed unit price\n
