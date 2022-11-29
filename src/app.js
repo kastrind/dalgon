@@ -61,7 +61,6 @@ l.i(`Declaring Kraken and CoinGecko API functions...`);
 // coingecko instance
 var coingecko = new CoinGecko(l, SIMULATION);
 var getTrendingCoinList = coingecko.createPublicFunction('/search/trending', 'Request for CoinGecko Trending Coins List');
-var getStatusUpdates = coingecko.createPublicFunction('/status_updates', 'Request for CoinGecko Status Updates');
 
 // dalgon instance
 var dalgon = new Dalgon(APIKEY, PRIVATEAPIKEY, l, SIMULATION);
@@ -427,19 +426,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.recordHistory(message);
 		});
 
-		// Status updates
-		viberBot.getBot().onTextMessage(/^((status\s+)?updates)|(news)$/i, async (message, response) => {
-			await getStatusUpdates({searchParams: {}, headers: {accept: 'application/json'}}).then(async cgResponse => {
-				if (cgResponse.statusCode>=200 && cgResponse.statusCode<300) {
-					let updates = coingecko.reportStatusUpdates(cgResponse);
-					for (let i=0; i < updates.length; i++) {
-						await viberBot.sendTextMessage(updates[i]);
-						await sleep(1000);
-					}
-				}else { viberBot.sendTextMessage(`Request failed.`); }
-			});
-			viberBot.recordHistory(message);
-		});
 	}
 
 	let timestampSecondsI=0, timestampSecondsF;

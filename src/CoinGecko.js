@@ -58,7 +58,8 @@ class CoinGecko {
 		const setCookie = promisify(cookieJar.setCookie.bind(cookieJar));
 		try {
 			await setCookie(`remember_user_token=${rememberUserToken}`, 'https://www.coingecko.com');
-			let response = await got(`https://www.coingecko.com/en/portfolios/${portfolioId}/overview?vs_currency=${baseCurrency}`, {cookieJar});
+			const gotInstance = got.extend({followRedirect: true});
+			let response = await gotInstance(`https://www.coingecko.com/en/portfolios/${portfolioId}/overview?vs_currency=${baseCurrency}`, {cookieJar});
 			return response;
 		}catch(error) {
 			this.l.err(`Request failed with status ${error.response.statusCode} and body ${error.response.body}`, 0, true);

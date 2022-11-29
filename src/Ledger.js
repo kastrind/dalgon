@@ -16,7 +16,7 @@ class Ledger {
 		let responseBody = {};
 		let requestNext = (function () {
 			return async function () {
-				await ledgerInfoRequest(ledgerInfoRequestParamsObj, simObj).then(s => {responseBody = JSON.parse(s.body); loggerObj.w(JSON.stringify(responseBody, null, 2), 0, true);});
+				await ledgerInfoRequest(ledgerInfoRequestParamsObj, simObj).then(s => responseBody = JSON.parse(s.body));
 				if (!isEmpty(responseBody) && responseBody.result.ledger && Object.keys(responseBody.result.ledger).length > 0)  {
 					ledgerInfoRequestParamsObj.ofs += Object.keys(responseBody.result.ledger).length;
 					return responseBody;

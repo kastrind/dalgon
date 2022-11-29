@@ -67,8 +67,7 @@ class DalgonViberBot {
 			"[get] [auto-]trading config[uration]": get auto trading configuration\n
 			"history": get recent messages history\n
 			"portfolio|holdings": holdings on CoinGecko\n
-			"trending": return trending coins from CoinGecko\n
-			"updates|status updates|news": return news from CoinGecko\n`
+			"trending": return trending coins from CoinGecko\n`
 			);
 			this.recordHistory(message);
 		});
