@@ -55,7 +55,6 @@ class Analysis {
 		let eightDaysEMA = ohlc6Months.getEMA(8, null, 0, 'close');
 		let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 
-		this.l.i(JSON.stringify(ohlc6Months.getTicks()[ohlc6Months.getTicks().length -2]));
 		await sleep(this.sleepMillis);
 		return {result: 'success',
 				eightDaysEMA: eightDaysEMA,
