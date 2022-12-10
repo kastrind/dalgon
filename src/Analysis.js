@@ -45,12 +45,22 @@ class Analysis {
 		sixMonths.setHours(sixMonths.getHours() - 6*24*30);
 		let ohlc6Months = await (OHLC.request(getOHLC, 'BTCEUR', sixMonths.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
 		if (!ohlc6Months) return { result: "failure" };
+		await sleep(this.sleepMillis);
+
+		let day24Hours = new Date();
+		day24Hours.setHours(day24Hours.getHours() - 24);
+		let ohlc24Hours = await (OHLC.request(getOHLC, 'BTCEUR', day24Hours.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
+		if (!ohlc24Hours) return { result: "failure" };
+
 		let eightDaysEMA = ohlc6Months.getEMA(8, null, 0, 'close');
 		let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
+
+		this.l.i(JSON.stringify(ohlc6Months.getTicks()[ohlc6Months.getTicks().length -2]));
 		await sleep(this.sleepMillis);
 		return {result: 'success',
 				eightDaysEMA: eightDaysEMA,
-				latestClosingPriceDiff8DaysEMAPercent: latestClosingPriceDiff8DaysEMAPercent
+				latestClosingPriceDiff8DaysEMAPercent: latestClosingPriceDiff8DaysEMAPercent,
+				latestClosingPriceDiffYesterdaysPercent: ohlc24Hours.getChange()
 				};
 
 	}
@@ -58,14 +68,17 @@ class Analysis {
 	async recommend(getOHLC, reportFilePath) {
 		let report = this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
 		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
-		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.9;
+		let isBullish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.9 && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 1;
+		let isBearish = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent <= -0.9 && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent <= -1;
 		let bitcoinAnalysisReportPart = '';
-		if (isBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`) + '\n'; }
-		else if (bitcoinAnalysis.result == 'success') { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
+		if (isBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`, 1) + '\n'; }
+		else if (isBearish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
 		if (bitcoinAnalysis.result == 'success') {
-			bitcoinAnalysisReportPart += this.l.i(`BTCEUR 8-days EMA is: ${bitcoinAnalysis.eightDaysEMA} (${prcnt(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent)}%)`, 1) + '\n';
+			bitcoinAnalysisReportPart += this.l.i(`BTCEUR 8-days EMA is: ${bitcoinAnalysis.eightDaysEMA} (change ${prcnt(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent)}%)`, 1) + '\n';
+			bitcoinAnalysisReportPart += this.l.i(`BTCEUR yesterday's price change: ${prcnt(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent)}%)`, 1) + '\n';
 		}else {
-			bitcoinAnalysisReportPart += this.l.w(`Failed to analyse BTCEUR 8-days EMA! Considering it bearish.`, 1, true) + '\n';
+			bitcoinAnalysisReportPart += this.l.err(`Failed to analyse BTCEUR! Aborting analysis without recommendations.`, 1, true) + '\n';
+			if (!this.simulationMode) return [];
 		}
 		report += bitcoinAnalysisReportPart;
 		
@@ -338,6 +351,7 @@ class Analysis {
 			// Recommendation Conditions
 			// Grading system 1 to 7 +2 bonus points
 
+			// bitcoin is not bearish
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.7 AND
 			// price not the lowest/highest of the month AND
@@ -346,6 +360,7 @@ class Analysis {
 
 			// OR
 
+			// bitcoin is not bearish
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.4 AND
 			// price not the lowest/highest of the month AND
@@ -354,6 +369,7 @@ class Analysis {
 
 			// OR
 
+			// bitcoin is not bearish
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.2 AND
 			// price not the lowest/highest of the month AND
@@ -361,6 +377,7 @@ class Analysis {
 			// MACD went positive
 
 			if (
+				(!isBearish) &&
 				(onBalanceVol3h > 0 || isBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.7) ||
@@ -378,6 +395,7 @@ class Analysis {
 
 
 			}else if (
+				(!isBearish) &&
 				(onBalanceVol3h > 0 || isBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.4) ||
@@ -395,6 +413,7 @@ class Analysis {
 
 
 			}else if (
+				(!isBearish) &&
 				(onBalanceVol3h > 0 || isBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.2) ||
