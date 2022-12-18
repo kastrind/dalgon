@@ -521,11 +521,14 @@ class Analysis {
 					return a.candidateGrade - b.candidateGrade;
 				});
 
-				report = assetResults.length ? bitcoinAnalysisReportPart : '';
-				assetResults.forEach(element => {
-					report += element.report;
-				});
-				if (!onDemandAsset) { fs.writeFile(reportFilePath, report, function(err) { if (err) this.l.err(err, 0, true); } ); }
+				if (!onDemandAsset) {
+					let writtenReport = assetResults.length ? bitcoinAnalysisReportPart : '';
+					assetResults.forEach(element => {
+						writtenReport += element.report;
+					});
+
+					fs.writeFile(reportFilePath, writtenReport, function(err) { if (err) this.l.err(err, 0, true); } );
+				}
 			}
 			report += this.l.i(`EVALUATING ASSET: ${asset} - END`, 1) + '\n';
 			if (onDemandAsset) { break; }
