@@ -203,7 +203,7 @@ class Analysis {
 			}
 			report += this.l.i(`Short MACD current  ${macdCurrentShort}`, 2) + '\n';
 			report += this.l.i(`Short MACD previous ${macdPreviousShort}`, 2) + '\n';
-			report += this.l.i(`Short MACD 2nd latest ${macd2ndLatestShort}`, 2) + '\n';
+			//report += this.l.i(`Short MACD 2nd latest ${macd2ndLatestShort}`, 2) + '\n';
 			report += this.l.i(`Short MACD latest ${macdLatestShort}`, 2) + '\n';
 			report += this.l.i(`Short MACD reversal: ${existsMACDReversalShort}`, 2) + '\n';
 
@@ -248,7 +248,7 @@ class Analysis {
 
 			report += this.l.i(`MACD current  ${macdCurrent}`, 2) + '\n';
 			report += this.l.i(`MACD previous ${macdPrevious}`, 2) + '\n';
-			report += this.l.i(`MACD 2nd latest ${macd2ndLatest}`, 2) + '\n';
+			// report += this.l.i(`MACD 2nd latest ${macd2ndLatest}`, 2) + '\n';
 			report += this.l.i(`MACD latest ${macdLatest}`, 2) + '\n';
 			report += this.l.i(`MACD reversal: ${existsMACDReversal}`, 2) + '\n';
 
@@ -436,7 +436,7 @@ class Analysis {
 				candidateGrade = 1;
 			}
 
-			if (isCandidate) {
+			if (isCandidate || onDemandAsset) {
 
 				// bonus: negative derivatives increasing (longer in the past)
 				if (derivative24h < 0 && derivativeWeekHalf < derivative24h) {
@@ -498,7 +498,7 @@ class Analysis {
 					""
 				);
 
-				report += this.l.suc(`It's a candidate!`, 2, true) + '\n';
+				report += isCandidate ? this.l.suc(`It's a candidate!`, 2, true) + '\n' : '';
 				report += this.l.suc(`Candidate grade: ${currAssetResult.candidateGrade}`, 2, true) + '\n';
 
 				currAssetReport = this.l.i(`${asset}: ${prcnt(currAssetResult.changePastHour)}%1h ${prcnt(currAssetResult.change3h)}%3h ${prcnt(currAssetResult.change6h)}%6h ${prcnt(currAssetResult.change12h)}%12h ${prcnt(currAssetResult.changeDay24h)}%24h ${prcnt(currAssetResult.changeWeekHalf)}%Wh ${prcnt(currAssetResult.changeWeek)}%W ${prcnt(currAssetResult.changeMonthHalf)}%Mh ${prcnt(currAssetResult.changeMonth)}%M`, 2) + '\n';
@@ -512,11 +512,15 @@ class Analysis {
 
 				currAssetResult.report = currAssetReport;
 				currAssetReport = '';
-				assetResults.push(currAssetResult);
+
+				if (isCandidate) {
+					assetResults.push(currAssetResult);
+				}
 
 				assetResults.sort(function (a, b) {
 					return a.candidateGrade - b.candidateGrade;
 				});
+
 				report = assetResults.length ? bitcoinAnalysisReportPart : '';
 				assetResults.forEach(element => {
 					report += element.report;
