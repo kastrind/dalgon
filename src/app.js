@@ -136,6 +136,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let asset = matches[2].toUpperCase();
 			let analysisCurrency = matches[4] ? matches[4].toUpperCase() : ANALYSIS_CURRENCY;
 
+			viberBot.sendTextMessage('Please wait.');
+			
 			// Analyse assets to recommend for trading
 			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, analysisCurrency, l, SIMULATION);
 			await analysis.recommend(getOHLC, reportFilePath, asset);
