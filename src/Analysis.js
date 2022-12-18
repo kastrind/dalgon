@@ -64,8 +64,15 @@ class Analysis {
 
 	}
 
-	async recommend(getOHLC, reportFilePath) {
-		let report = this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
+	async recommend(getOHLC, reportFilePath, onDemandAsset=null) {
+
+		if (onDemandAsset && !this.assets.includes(onDemandAsset)) {
+			let report = this.l.err(`ASSET: ${onDemandAsset} NOT FOUND.`) + '\n';
+			this.report = report;
+			return [];
+		}
+
+		let report = onDemandAsset ? this.l.i(`ON-DEMAND ASSET RECOMMENDATION ANALYSIS - START`) + '\n' : this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
 		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
 		let isBullish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 0.01);
 		let isBearish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent <= -0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent <= -0.01);
@@ -97,7 +104,7 @@ class Analysis {
 		let assetResults = [];
 
 		for (let i=0; i < this.assets.length; i++) {
-			let asset = this.assets[i];
+			let asset = onDemandAsset ? onDemandAsset : this.assets[i];
 			let assetPair = `${asset}${this.baseCurrency}`;
 
 			report += this.l.i(`EVALUATING ASSET: ${asset} - START`, 1) + '\n';
@@ -514,13 +521,14 @@ class Analysis {
 				assetResults.forEach(element => {
 					report += element.report;
 				});
-				fs.writeFile(reportFilePath, report, function(err) { if (err) this.l.err(err, 0, true); } );
+				if (!onDemandAsset) { fs.writeFile(reportFilePath, report, function(err) { if (err) this.l.err(err, 0, true); } ); }
 			}
 			report += this.l.i(`EVALUATING ASSET: ${asset} - END`, 1) + '\n';
+			if (onDemandAsset) { break; }
 		}
-		report += this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - END`) + '\n';
+		report += onDemandAsset ? this.l.i(`ON-DEMAND ASSET RECOMMENDATION ANALYSIS - END`) + '\n' : this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - END`) + '\n';
 
-		if (isEmpty(assetResults)) {
+		if (isEmpty(assetResults) && !onDemandAsset) {
 			fs.writeFile(reportFilePath, '', function(err) { if (err) this.l.err(err, 0, true); } );
 		}
 

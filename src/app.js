@@ -98,6 +98,14 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	l.i(`Auto-trade exceptions: ${buyExceptions}`);
 	l.i(`Auto-trade whitelist: ${buyWhiteList}`);
 
+	let maxNumOHLCResults = properties.get("ohlc.MAX_NUM_RESULTS");
+	let assets = properties.get("ohlc.ASSETS").split(' ');
+	l.i(`Assets: ${assets}`);
+	l.i(`#Assets: ${assets.length}`);
+	let tradeableAssets = await TradeableAssetPair.findTradeableAssets(assets, getTradeableAssetPairs, autoTradeCurrencies, l, SIMULATION);
+	l.i(`Auto-tradeable assets: ${tradeableAssets}`);
+	l.i(`#Auto-tradeable assets: ${tradeableAssets.length}`);
+
 	let recommendedAssets = [];
 
 	let viberBot;
@@ -121,6 +129,20 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		l.i(`Dalgon Viber bot initiated.`);
 
 		// Kraken features:
+
+		// On-demand analysis for the given ASSET_SYMBOL (and optionally the base market symbol)
+		viberBot.getBot().onTextMessage(/^(analyse|analyze|assess)\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i, async (message, response) => {
+			let matches = message.text.match(/^(analyse|analyze|assess)\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i);
+			let asset = matches[2].toUpperCase();
+			let analysisCurrency = matches[4] ? matches[4].toUpperCase() : ANALYSIS_CURRENCY;
+
+			// Analyse assets to recommend for trading
+			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, analysisCurrency, l, SIMULATION);
+			await analysis.recommend(getOHLC, reportFilePath, asset);
+
+			viberBot.sendBigTextMessage(analysis.report);
+			viberBot.recordHistory(message);
+		});
 
 		// Ticker for the given ASSET_SYMBOL (and optionally the base market symbol)
 		viberBot.getBot().onTextMessage(/^ticker\s+([A-Za-z]+)( base )?([A-Za-z]+)?$/i, async (message, response) => {
@@ -429,13 +451,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	}
 
 	let timestampSecondsI=0, timestampSecondsF;
-	let maxNumOHLCResults = properties.get("ohlc.MAX_NUM_RESULTS");
-	let assets = properties.get("ohlc.ASSETS").split(' ');
-	l.i(`Assets: ${assets}`);
-	l.i(`#Assets: ${assets.length}`);
-	let tradeableAssets = await TradeableAssetPair.findTradeableAssets(assets, getTradeableAssetPairs, autoTradeCurrencies, l, SIMULATION);
-	l.i(`Auto-tradeable assets: ${tradeableAssets}`);
-	l.i(`#Auto-tradeable assets: ${tradeableAssets.length}`);
 	let prevRecommendedAssets = [];
 	let oldOrdersReminderSent = false;
 	let sellingWorker;
