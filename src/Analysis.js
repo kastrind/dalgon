@@ -511,6 +511,7 @@ class Analysis {
 				currAssetReport += this.l.i(`${asset} On-Balance Volume 3h: ${currAssetResult.onBalanceVol3h}`, 2) + '\n';
 
 				currAssetResult.report = currAssetReport;
+				report += currAssetReport;
 				currAssetReport = '';
 
 				if (isCandidate) {
