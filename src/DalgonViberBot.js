@@ -50,7 +50,8 @@ class DalgonViberBot {
 			"pause|resume analysis": pause or resume analysis on potential profitable assets to recommend\n
 			"start|stop trading": permission to purchase potential profitable assets\n
 			"status": report auto-trading and analysis status\n
-			"ticker ASSET_SYMBOL [base ASSET_SYMBOL]": return ticker info on given asset symbol, e.g. XBT. Optionally set different base currency, e.g. GBP\n\
+			"analyse|assess ASSET_SYMBOL [base ASSET_SYMBOL]": assess given ASSET_SYMBOL as a potential profitable asset, e.g. LTC. Optionally set different base currency, e.g. GBP\n
+			"ticker ASSET_SYMBOL [base ASSET_SYMBOL]": return ticker info on given asset symbol, e.g. XBT. Optionally set different base currency, e.g. GBP\n
 			"chart ASSET_SYMBOL [base ASSET_SYMBOL]": return link to chart for given asset symbol, e.g. BTC. Optionally set different base currency, e.g. GBP\n
 			"balance": current balance in Kraken exchange\n
 			"deposits": view total deposits and their fees\n
