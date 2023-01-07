@@ -3,7 +3,7 @@ class Candidate {
 	constructor(name, baseCurrency, latestClosingPrice, eightDaysEMA, onBalanceVol3h, candidateGrade, existsGreenHammer3h,
 		macdCurrent, macdPrevious, macdCurrentLong, macdPreviousLong, macdCurrentShort, macdPreviousShort,
 		existsMACDReversal, existsMACDReversalLong, existsMACDReversalShort,
-		keptMACDPositive, keptMACDPositiveLong, keptMACDPositiveShort,
+		keptMACDPositive, keptMACDPositiveLong, keptMACDPositiveShort, isOverbought,
 		changePastHour, change3h, change6h, change12h, changeDay24h,
 		changeWeekHalf, changeWeek, changeMonthHalf, changeMonth,
 		priceOverLowestWeek, priceOverHighestWeek, priceOverLowestMonth, priceOverHighestMonth,
@@ -28,6 +28,7 @@ class Candidate {
 		this.keptMACDPositive = keptMACDPositive;
 		this.keptMACDPositiveLong = keptMACDPositiveLong;
 		this.keptMACDPositiveShort = keptMACDPositiveShort;
+		this.isOverbought = isOverbought;
 		this.changePastHour = changePastHour;
 		this.change3h = change3h;
 		this.change6h = change6h;

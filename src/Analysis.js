@@ -284,6 +284,13 @@ class Analysis {
 			let macdCurrentLong;
 			let macdPreviousLong;
 			let macdLatestLong;
+			let macdLongOffset0;
+			let macdLongOffset1;
+			let macdLongOffset2;
+			let macdLongOffset3;
+			let macdLongOffset4;
+			let macdLongOffset5;
+			let isOverbought = false;
 			let existsMACDReversalLong = false;
 			let keptMACDPositiveLong = false;
 
@@ -301,6 +308,19 @@ class Analysis {
 				macdLatestLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
 				existsMACDReversalLong = macdCurrentLong > 0 && macdPreviousLong < 0;
 				keptMACDPositiveLong = existsMACDReversalLong && macdLatestLong > 0;
+
+				macdLongOffset0 = macdLatestLong;
+				macdLongOffset1 = macdCurrentLong;
+				macdLongOffset2 = macdPreviousLong;
+				macdLongOffset3 = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 3, 'close'));
+				macdLongOffset4 = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 4, 'close'));
+				macdLongOffset5 = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 5, 'close'));
+				isOverbought = (
+					(macdLongOffset0 < macdLongOffset1 && macdLongOffset1 > macdLongOffset2 && macdLongOffset2 > macdLongOffset3 && macdLongOffset3 > 0) ||
+					(macdLongOffset1 < macdLongOffset2 && macdLongOffset2 > macdLongOffset3 && macdLongOffset3 > macdLongOffset4 && macdLongOffset4 > 0) ||
+					(macdLongOffset2 < macdLongOffset3 && macdLongOffset3 > macdLongOffset4 && macdLongOffset4 > macdLongOffset5 && macdLongOffset5 > 0)
+					);
+
 			}else {
 				macdCurrentLong = 'N/A';
 				macdPreviousLong = 'N/A';
@@ -384,6 +404,7 @@ class Analysis {
 
 			if (
 				(!isBearish) &&
+				(!isOverbought) &&
 				(onBalanceVol3h > 0 || isBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.7) ||
@@ -402,6 +423,7 @@ class Analysis {
 
 			}else if (
 				(!isBearish) &&
+				(!isOverbought) &&
 				(onBalanceVol3h > 0 || isBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.4) ||
@@ -420,6 +442,7 @@ class Analysis {
 
 			}else if (
 				(!isBearish) &&
+				(!isOverbought) &&
 				(onBalanceVol3h > 0 || isBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.2) ||
@@ -482,6 +505,7 @@ class Analysis {
 					keptMACDPositive,
 					keptMACDPositiveLong,
 					keptMACDPositiveShort,
+					isOverbought,
 					changePastHour,
 					change3h,
 					change6h,
@@ -509,6 +533,7 @@ class Analysis {
 				currAssetReport += this.l.i(`${asset} MACD short/regular/long reversal: ${currAssetResult.existsMACDReversalShort}/${currAssetResult.existsMACDReversal}/${currAssetResult.existsMACDReversalLong}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD short/regular/long kept + : ${currAssetResult.keptMACDPositiveShort}/${currAssetResult.keptMACDPositive}/${currAssetResult.keptMACDPositiveLong}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} On-Balance Volume 3h: ${currAssetResult.onBalanceVol3h}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} is overbought: ${currAssetResult.isOverbought}`, 2) + '\n';
 
 				currAssetResult.report = currAssetReport;
 				report += currAssetReport;
