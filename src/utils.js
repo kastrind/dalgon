@@ -50,8 +50,8 @@ function persist(env, key, value, logger) {
 		if (contents.indexOf(key)==-1) {
 			finalContents = contents + '\n' + key + '=' + value + '\n';
 		}else {
-			let regexStr = key + '=.*$';
-			let re = new RegExp(regexStr, 'g');
+			let regexStr = '^' + key + '=.+$';
+			let re = new RegExp(regexStr, 'gm');
 			finalContents = contents.replace(re, key + '=' + value);
 		}
 		fs.writeFile(`env/${env}.persistence.properties`, finalContents, 'utf-8', function(err) { if (err) logger.err(err, 0, true); } );
