@@ -1,3 +1,5 @@
+import fs from 'fs';
+
 function isEmpty(arg)  {
 	if (Array.isArray(arg)) return arg.length === 0;
 	if (arg == null || arg == undefined) return true;
