@@ -20,6 +20,8 @@ class Analysis {
 		this.simObjOHLCQuarter = {};
 		this.simObjOHLCBitcoin = {};
 		this.sleepMillis = this.simulationMode ? 0 : 2000;
+		this.bitcoinAnalysis = {};
+		this.bitcoinAnalysisReport = '';
 	}
 
 	setSims(simObjOHLCPastHour, simObjOHLC6h, simObjOHLCDay24h, simObjOHLCWeek, simObjOHLCMonth, simObjOHLCQuarter, simObjOHLCBitcoin) {
@@ -139,6 +141,7 @@ class Analysis {
 
 		let report = onDemandAsset ? this.l.i(`ON-DEMAND ASSET RECOMMENDATION ANALYSIS - START`) + '\n' : this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
 		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
+		this.bitcoinAnalysis = bitcoinAnalysis;
 		let isBTCBullish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 0.01);
 		let isBTCBearish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent <= -0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent <= -0.01);
 		let isBTCOverSold = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.isOverSold;
@@ -158,6 +161,8 @@ class Analysis {
 			bitcoinAnalysisReportPart += this.l.err(`Failed to analyse BTCEUR! Aborting analysis without recommendations.`, 1, true) + '\n';
 			if (!this.simulationMode) return [];
 		}
+		this.bitcoinAnalysisReport = bitcoinAnalysisReportPart;
+
 		report += bitcoinAnalysisReportPart;
 		
 		let pastHour = new Date();
@@ -449,7 +454,7 @@ class Analysis {
 			// Recommendation Conditions
 			// Grading system 1 to 7 +2 bonus points
 
-			// bitcoin is not bearish, not oversold, no MACD reversal
+			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.7 AND
 			// price not the lowest/highest of the month AND
@@ -458,7 +463,7 @@ class Analysis {
 
 			// OR
 
-			// bitcoin is not bearish, not oversold, no MACD reversal
+			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.4 AND
 			// price not the lowest/highest of the month AND
@@ -467,7 +472,7 @@ class Analysis {
 
 			// OR
 
-			// bitcoin is not bearish, not oversold, no MACD reversal
+			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.2 AND
 			// price not the lowest/highest of the month AND
@@ -475,7 +480,7 @@ class Analysis {
 			// MACD went positive
 
 			if (
-				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive) &&
+				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
 				(!isOverbought) &&
 				(onBalanceVol3h > 0 || isBTCBullish) &&
 				(
@@ -486,7 +491,7 @@ class Analysis {
 				(priceOverHighestMonth >= 0.04) &&
 				(priceOverLowestMonth >= 0.04) &&
 				(priceOverHighestWeek >= 0.04) &&
-				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
+				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
 				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
 			) {
 				isCandidate = true;
@@ -494,7 +499,7 @@ class Analysis {
 
 
 			}else if (
-				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive) &&
+				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
 				(!isOverbought) &&
 				(onBalanceVol3h > 0 || isBTCBullish) &&
 				(

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { createRequire } from 'module';
-import { isEmpty, sleep } from './utils.js';
+import { isEmpty, sleep, persist } from './utils.js';
 const require = createRequire(import.meta.url);
 
 const ViberBot = require('viber-bot').Bot;
@@ -99,13 +99,14 @@ class DalgonViberBot {
 
 		this.bot.onTextMessage(/^start trading$/i, async (message, response) => {
 			response.send(new TextMessage(`I will start trading.`));
-			this.canStartTrading = true;
+			persist('START_TRADING', 'true', this.loggerObj);
 			this.recordHistory(message);
 		});
 
 		this.bot.onTextMessage(/^stop trading$/i, async (message, response) => {
 			response.send(new TextMessage(`I will stop trading.`));
 			this.canStartTrading = false;
+			persist('START_TRADING', 'false', this.loggerObj);
 			this.recordHistory(message);
 		});
 

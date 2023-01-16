@@ -29,7 +29,7 @@ dist/
 
 assets/asset_report.txt
 assets/priceToMarketSeries.json
-env/default.properties
+env/*.properties
 dalgon_start.sh
 dalgon.log
 ngrok.log

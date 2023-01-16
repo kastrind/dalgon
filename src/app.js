@@ -12,7 +12,7 @@ import DalgonViberBot from './DalgonViberBot.js';
 import Analysis from './Analysis.js';
 import TradeableAssetPair from './TradeableAssetPair.js';
 import Order from './Order.js';
-import { isEmpty, sleep } from './utils.js';
+import { isEmpty, sleep, persist } from './utils.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { Worker } = require("worker_threads");
@@ -41,6 +41,7 @@ else { ENV = cmdOpts.setenv; }
 
 // load config file
 var properties = new PropertiesReader(`env/${ENV}.properties`);
+
 // load config properties
 var APIKEY = properties.get("main.APIKEY");
 var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
@@ -57,6 +58,14 @@ var staleOrderPriceDifferencePercent = parseFloat(properties.get("main.STALE_ORD
 l.i(`Price difference percent for a sell take-profit order to go stale: ${staleOrderPriceDifferencePercent}`);
 
 l.i(`Declaring Kraken and CoinGecko API functions...`);
+
+// load persisted properties, if any
+var persistedProperties;
+if (fs.existsSync(`env/${ENV}.persistence.properties`)) {
+	persistedProperties = new PropertiesReader(`env/${ENV}.persistence.properties`);
+}else {
+	fs.writeFile(`env/${ENV}.persistence.properties`, '[persistence]\n', 'utf-8', function(err) { if (err) l.err(err, 0, true); } );
+}
 
 // coingecko instance
 var coingecko = new CoinGecko(l, SIMULATION);
@@ -124,7 +133,12 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 		viberBot = await new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
 
-		viberBot.canStartTrading = properties.get("viberBot.START_TRADING");
+		if (persistedProperties) {
+			viberBot.canStartTrading = persistedProperties.get("persistence.START_TRADING") || undefined;
+		}
+		if (viberBot.canStartTrading === undefined) {
+			viberBot.canStartTrading = properties.get("viberBot.START_TRADING");
+		}
 
 		l.i(`Dalgon Viber bot initiated.`);
 
@@ -520,6 +534,21 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, ANALYSIS_CURRENCY, l, SIMULATION);
 			recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
+			let bitcoinAnalysis = analysis.bitcoinAnalysis;
+			if (viberBot && bitcoinAnalysis.result == 'success' && (
+				analysis.bitcoinAnalysis.isOverSold ||
+				(analysis.bitcoinAnalysis.existsMACDReversal && analysis.bitcoinAnalysis.keptMACDPositive) ||
+				(analysis.bitcoinAnalysis.existsMACDReversalLong && analysis.bitcoinAnalysis.keptMACDPositiveLong) ||
+				analysis.bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 0.03
+			)
+			) {
+				viberBot.canStartTrading = false;
+				persist('START_TRADING', 'false', l);
+				viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
+				await sleep(1000);
+				viberBot.sendTextMessage(`I stopped auto-trading due to BTC status above.`);
+			}
+
 			// If there are recommended assets and different than previous, then send recommended assets
 			if (!isEmpty(recommendedAssets) && (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(',')) &&
 				!isEmpty(recommendedAssets.filter(elem => elem.candidateGrade > 0))) {
@@ -617,6 +646,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 						let autoTradeResult = await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
 						if (!autoTradeResult) {
 							viberBot.canStartTrading = false;
+							persist('START_TRADING', 'false', l);
 							viberBot.sendTextMessage(`I stopped auto-trading. Awaiting instructions.`);
 							break;
 						}

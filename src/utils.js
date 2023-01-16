@@ -41,4 +41,14 @@ Array.prototype.getEMA = function(numPeriods, smoothing, offset=0, property='clo
 	return reducedValue / wSum;
 };
 
-export { isEmpty, isOK, sleep, prcnt, getDateTime };
+function persist(env, key, value, logger) {
+	fs.readFile(`env/${env}.persistence.properties`, 'utf-8', function(err, contents) {
+		if (err) { logger.err(err, 0, true); return; }
+		let regexStr = key + '=.*$';
+		let re = new RegExp(regexStr, 'g');
+		let replaced = contents.replace(re, key + '=' + value);
+		fs.writeFile('persistence.properties', replaced + '\n', 'utf-8', function(err) { if (err) logger.err(err, 0, true); } );
+	});
+}
+
+export { isEmpty, isOK, sleep, prcnt, getDateTime, persist };
