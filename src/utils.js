@@ -47,7 +47,7 @@ function persist(env, key, value, logger) {
 	fs.readFile(`env/${env}.persistence.properties`, 'utf-8', function(err, contents) {
 		if (err) { logger.err(err, 0, true); return; }
 		let finalContents = '';
-		if (contents.indexOf(replaced)==-1) {
+		if (contents.indexOf(key)==-1) {
 			finalContents = contents + '\n' + key + '=' + value + '\n';
 		}else {
 			let regexStr = key + '=.*$';
