@@ -41,6 +41,66 @@ class Analysis {
 		let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
 		await sleep(this.sleepMillis);
 
+		let month = new Date();
+		month.setHours(month.getHours() - 24*30);
+		// get OHLC for month in 4h intervals, to calculate MACD further back in the past
+		let ohlcMonth4hIntervals = await (OHLC.request(getOHLC, 'BTCEUR', month.toISOString(), Math.ceil(this.maxNumOHLCResults/4), this.l, this.simulationMode, this.simObjOHLCMonth));
+		if (!ohlcMonth4hIntervals) return { result: 'failure' };
+
+		let macd_a = 12;
+		let macd_b = 26;
+		let macd_c = 9;
+		// if there is enough ohlc data to calculate MACD
+		let macdCurrentLong;
+		let macdPreviousLong;
+		let macdLatestLong;
+		let existsMACDReversalLong = false;
+		let keptMACDPositiveLong = false;
+		let macdLongOffset0;
+		let macdLongOffset1;
+		let macdLongOffset2;
+		let macdLongOffset3;
+		let macdLongOffset4;
+		let macdLongOffset5;
+		let isOverSold = false;
+		if (Math.max(macd_a, macd_b) + macd_c + 2 <= ohlcMonth4hIntervals.getTicks().length) {
+			macdCurrentLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+			macdPreviousLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
+			macdLatestLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
+			existsMACDReversalLong = macdCurrentLong > 0 && macdPreviousLong < 0;
+			keptMACDPositiveLong = existsMACDReversalLong && macdLatestLong > 0;
+
+			macdLongOffset0 = macdLatestLong;
+			macdLongOffset1 = macdCurrentLong;
+			macdLongOffset2 = macdPreviousLong;
+			macdLongOffset3 = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 3, 'close'));
+			macdLongOffset4 = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 4, 'close'));
+			macdLongOffset5 = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 5, 'close'));
+			isOverSold = (
+				(macdLongOffset0 > macdLongOffset1 && macdLongOffset1 < macdLongOffset2 && macdLongOffset2 < macdLongOffset3 && macdLongOffset3 < 0) ||
+				(macdLongOffset1 > macdLongOffset2 && macdLongOffset2 < macdLongOffset3 && macdLongOffset3 < macdLongOffset4 && macdLongOffset4 < 0) ||
+				(macdLongOffset2 > macdLongOffset3 && macdLongOffset3 < macdLongOffset4 && macdLongOffset4 < macdLongOffset5 && macdLongOffset5 < 0)
+				);
+		}
+
+		let ohlcMonth = await (OHLC.request(getOHLC, 'BTCEUR', month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCMonth));
+		if (!ohlcMonth) return { result: "failure" };
+		await sleep(this.sleepMillis);
+
+		let macdCurrent;
+		let macdPrevious;
+		let macdLatest;
+		let existsMACDReversal = false;
+		let keptMACDPositive = false;
+		// if there is enough ohlc data to calculate MACD
+		if (Math.max(macd_a, macd_b) + macd_c + 3 <= ohlcMonth.getTicks().length) {
+			macdCurrent = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
+			macdPrevious = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
+			macdLatest = parseFloat(ohlcMonth.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
+			existsMACDReversal = macdCurrent > 0 && macdPrevious < 0;
+			keptMACDPositive = existsMACDReversal && macdLatest > 0; // && macd2ndLatest > 0;
+		}
+
 		let sixMonths = new Date();
 		sixMonths.setHours(sixMonths.getHours() - 6*24*30);
 		let ohlc6Months = await (OHLC.request(getOHLC, 'BTCEUR', sixMonths.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
@@ -59,7 +119,12 @@ class Analysis {
 		return {result: 'success',
 				eightDaysEMA: eightDaysEMA,
 				latestClosingPriceDiff8DaysEMAPercent: latestClosingPriceDiff8DaysEMAPercent,
-				latestClosingPriceDiffYesterdaysPercent: ohlc24Hours.getChange()
+				latestClosingPriceDiffYesterdaysPercent: ohlc24Hours.getChange(),
+				isOverSold: isOverSold,
+				existsMACDReversal: existsMACDReversal,
+				keptMACDPositive: keptMACDPositive,
+				existsMACDReversalLong: existsMACDReversalLong,
+				keptMACDPositiveLong: keptMACDPositiveLong
 				};
 
 	}
@@ -74,14 +139,21 @@ class Analysis {
 
 		let report = onDemandAsset ? this.l.i(`ON-DEMAND ASSET RECOMMENDATION ANALYSIS - START`) + '\n' : this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
 		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
-		let isBullish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 0.01);
-		let isBearish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent <= -0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent <= -0.01);
+		let isBTCBullish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 0.01);
+		let isBTCBearish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent <= -0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent <= -0.01);
+		let isBTCOverSold = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.isOverSold;
+		let existsBTCMACDReversal = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.existsMACDReversal || bitcoinAnalysis.existsMACDReversalLong);
+		let keptBTCMACDPositive = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.keptMACDPositive || bitcoinAnalysis.keptMACDPositiveLong);
+
 		let bitcoinAnalysisReportPart = '';
-		if (isBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`, 1) + '\n'; }
-		else if (isBearish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
+		if (isBTCBullish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bullish.`, 1) + '\n'; }
+		else if (isBTCBearish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
 		if (bitcoinAnalysis.result == 'success') {
 			bitcoinAnalysisReportPart += this.l.i(`BTCEUR 8-days EMA is: ${bitcoinAnalysis.eightDaysEMA} (change ${prcnt(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent)}%)`, 1) + '\n';
 			bitcoinAnalysisReportPart += this.l.i(`BTCEUR yesterday's price change: ${prcnt(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent)}%)`, 1) + '\n';
+			bitcoinAnalysisReportPart += this.l.i(`BTCEUR oversold: ${isBTCOverSold}`, 1) + '\n';
+			bitcoinAnalysisReportPart += this.l.i(`BTCEUR MACD reversal: ${existsBTCMACDReversal}`, 1) + '\n';
+			bitcoinAnalysisReportPart += this.l.i(`BTCEUR MACD kept positive: ${keptBTCMACDPositive}`, 1) + '\n';
 		}else {
 			bitcoinAnalysisReportPart += this.l.err(`Failed to analyse BTCEUR! Aborting analysis without recommendations.`, 1, true) + '\n';
 			if (!this.simulationMode) return [];
@@ -377,7 +449,7 @@ class Analysis {
 			// Recommendation Conditions
 			// Grading system 1 to 7 +2 bonus points
 
-			// bitcoin is not bearish
+			// bitcoin is not bearish, not oversold, no MACD reversal
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.7 AND
 			// price not the lowest/highest of the month AND
@@ -386,7 +458,7 @@ class Analysis {
 
 			// OR
 
-			// bitcoin is not bearish
+			// bitcoin is not bearish, not oversold, no MACD reversal
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.4 AND
 			// price not the lowest/highest of the month AND
@@ -395,7 +467,7 @@ class Analysis {
 
 			// OR
 
-			// bitcoin is not bearish
+			// bitcoin is not bearish, not oversold, no MACD reversal
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.2 AND
 			// price not the lowest/highest of the month AND
@@ -403,9 +475,9 @@ class Analysis {
 			// MACD went positive
 
 			if (
-				(!isBearish) &&
+				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive) &&
 				(!isOverbought) &&
-				(onBalanceVol3h > 0 || isBullish) &&
+				(onBalanceVol3h > 0 || isBTCBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.7) ||
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.7)
@@ -422,9 +494,9 @@ class Analysis {
 
 
 			}else if (
-				(!isBearish) &&
+				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive) &&
 				(!isOverbought) &&
-				(onBalanceVol3h > 0 || isBullish) &&
+				(onBalanceVol3h > 0 || isBTCBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.4) ||
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.4)
@@ -441,9 +513,9 @@ class Analysis {
 
 
 			}else if (
-				(!isBearish) &&
+				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive) &&
 				(!isOverbought) &&
-				(onBalanceVol3h > 0 || isBullish) &&
+				(onBalanceVol3h > 0 || isBTCBullish) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.2) ||
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.2)
