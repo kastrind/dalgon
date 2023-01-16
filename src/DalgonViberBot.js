@@ -10,7 +10,8 @@ const express = require('express');
 
 class DalgonViberBot {
 
-	constructor(loggerObj, reportFilePath, exposeUrl, port, botName, avatarUrl, authToken, recipientProfiles) {
+	constructor(env, loggerObj, reportFilePath, exposeUrl, port, botName, avatarUrl, authToken, recipientProfiles) {
+		this.env = env;
 		this.l = loggerObj;
 		this.app = express();
 		this.history = [];
@@ -99,14 +100,16 @@ class DalgonViberBot {
 
 		this.bot.onTextMessage(/^start trading$/i, async (message, response) => {
 			response.send(new TextMessage(`I will start trading.`));
-			persist('START_TRADING', 'true', this.l);
+			this.canStartTrading = true;
+			persist(this.env, 'START_TRADING', 'true', this.l);
 			this.recordHistory(message);
 		});
 
 		this.bot.onTextMessage(/^stop trading$/i, async (message, response) => {
+			var that = this;
 			response.send(new TextMessage(`I will stop trading.`));
 			this.canStartTrading = false;
-			persist('START_TRADING', 'false', this.l);
+			persist(this.env, 'START_TRADING', 'false', this.l);
 			this.recordHistory(message);
 		});
 

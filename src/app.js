@@ -131,7 +131,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			recipientProfiles = JSON.parse(profs);
 		}
 
-		viberBot = await new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
+		viberBot = await new DalgonViberBot(ENV, l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
 
 		if (persistedProperties) {
 			viberBot.canStartTrading = persistedProperties.get("persistence.START_TRADING");
@@ -543,7 +543,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			)
 			) {
 				viberBot.canStartTrading = false;
-				persist('START_TRADING', 'false', l);
+				persist(ENV, 'START_TRADING', 'false', l);
 				viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
 				await sleep(1000);
 				viberBot.sendTextMessage(`I stopped auto-trading due to BTC status above.`);
@@ -646,7 +646,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 						let autoTradeResult = await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
 						if (!autoTradeResult) {
 							viberBot.canStartTrading = false;
-							persist('START_TRADING', 'false', l);
+							persist(ENV, 'START_TRADING', 'false', l);
 							viberBot.sendTextMessage(`I stopped auto-trading. Awaiting instructions.`);
 							break;
 						}
