@@ -134,9 +134,9 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		viberBot = await new DalgonViberBot(l, reportFilePath, viberBotExposeUrl, viberBotPort, viberBotName, viberBotAvatarUrl, viberBotAuthToken, recipientProfiles);
 
 		if (persistedProperties) {
-			viberBot.canStartTrading = persistedProperties.get("persistence.START_TRADING") || undefined;
+			viberBot.canStartTrading = persistedProperties.get("persistence.START_TRADING");
 		}
-		if (viberBot.canStartTrading === undefined) {
+		if (viberBot.canStartTrading === null) {
 			viberBot.canStartTrading = properties.get("viberBot.START_TRADING");
 		}
 
