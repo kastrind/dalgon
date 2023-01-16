@@ -46,10 +46,15 @@ Array.prototype.getEMA = function(numPeriods, smoothing, offset=0, property='clo
 function persist(env, key, value, logger) {
 	fs.readFile(`env/${env}.persistence.properties`, 'utf-8', function(err, contents) {
 		if (err) { logger.err(err, 0, true); return; }
-		let regexStr = key + '=.*$';
-		let re = new RegExp(regexStr, 'g');
-		let replaced = contents.replace(re, key + '=' + value);
-		fs.writeFile('persistence.properties', replaced + '\n', 'utf-8', function(err) { if (err) logger.err(err, 0, true); } );
+		let finalContents = '';
+		if (contents.indexOf(replaced)==-1) {
+			finalContents = contents + '\n' + key + '=' + value + '\n';
+		}else {
+			let regexStr = key + '=.*$';
+			let re = new RegExp(regexStr, 'g');
+			finalContents = contents.replace(re, key + '=' + value);
+		}
+		fs.writeFile(`env/${env}.persistence.properties`, finalContents, 'utf-8', function(err) { if (err) logger.err(err, 0, true); } );
 	});
 }
 
