@@ -99,14 +99,14 @@ class DalgonViberBot {
 
 		this.bot.onTextMessage(/^start trading$/i, async (message, response) => {
 			response.send(new TextMessage(`I will start trading.`));
-			persist('START_TRADING', 'true', this.loggerObj);
+			persist('START_TRADING', 'true', this.l);
 			this.recordHistory(message);
 		});
 
 		this.bot.onTextMessage(/^stop trading$/i, async (message, response) => {
 			response.send(new TextMessage(`I will stop trading.`));
 			this.canStartTrading = false;
-			persist('START_TRADING', 'false', this.loggerObj);
+			persist('START_TRADING', 'false', this.l);
 			this.recordHistory(message);
 		});
 
