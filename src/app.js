@@ -534,8 +534,9 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, ANALYSIS_CURRENCY, l, SIMULATION);
 			recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
 
+			// Stop auto-trading depending on bitcoin analysis
 			let bitcoinAnalysis = analysis.bitcoinAnalysis;
-			if (viberBot && bitcoinAnalysis.result == 'success' && (
+			if (viberBot && viberBot.canStartTrading==true && bitcoinAnalysis.result == 'success' && (
 				analysis.bitcoinAnalysis.isOverSold ||
 				(analysis.bitcoinAnalysis.existsMACDReversal && analysis.bitcoinAnalysis.keptMACDPositive) ||
 				(analysis.bitcoinAnalysis.existsMACDReversalLong && analysis.bitcoinAnalysis.keptMACDPositiveLong) ||
