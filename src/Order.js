@@ -376,11 +376,17 @@ class Order {
 									let tradeableAssetPairDecimals = parseInt(tradeableAssetPairs[0].pairDecimals);
 									report += l.i(`Asset pair id is ${tradeableAssetPairId} with ${tradeableAssetPairDecimals} decimals.`, 2) + '\n';
 
-									// Order is not profitable, setup limit sell Order to a profitable price
 									if (!canSellForProfit) {
-										sellOrderPrice = (ticker.bidPrice + (differencePercent + 0.3 - profitPercent) * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
+										// Order is not profitable, less than 2 days old: setup limit sell Order
+										if (daysDiff < 2) {
+											sellOrderPrice = (ticker.bidPrice + ((differencePercent - profitPercent) / 2) * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
+										// Order is not profitable, more than 2 days old: setup a market sell Order
+										}else {
+											sellOrderType = 'market';
+											sellOrderPrice = ticker.bidPrice.toFixed(tradeableAssetPairDecimals);
+										}
 									}else {
-										sellOrderPrice = (ticker.bidPrice + 0.3 * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
+										sellOrderPrice = (ticker.bidPrice + 0.15 * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
 									}
 									sellOrderParamsObj = { volume: vol, price: sellOrderPrice};
 								}else {
