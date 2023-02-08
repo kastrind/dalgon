@@ -621,7 +621,7 @@ class Analysis {
 				}
 
 				assetResults.sort(function (a, b) {
-					return a.candidateGrade - b.candidateGrade;
+					return b.candidateGrade - a.candidateGrade;
 				});
 
 				if (!onDemandAsset) {
