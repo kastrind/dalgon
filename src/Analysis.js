@@ -480,7 +480,7 @@ class Analysis {
 			// MACD went positive
 
 			if (
-				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
+				//(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
 				(!isOverbought) &&
 				(onBalanceVol3h > 0 || isBTCBullish) &&
 				(
@@ -499,7 +499,7 @@ class Analysis {
 
 
 			}else if (
-				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
+				//(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
 				(!isOverbought) &&
 				(onBalanceVol3h > 0 || isBTCBullish) &&
 				(
@@ -518,7 +518,7 @@ class Analysis {
 
 
 			}else if (
-				(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive) &&
+				//(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive) &&
 				(!isOverbought) &&
 				(onBalanceVol3h > 0 || isBTCBullish) &&
 				(
