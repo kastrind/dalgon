@@ -454,7 +454,7 @@ class Analysis {
 			// Recommendation Conditions
 			// Grading system 1 to 7 +2 bonus points
 
-			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday
+			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday (COMMENTED OUT)
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.7 AND
 			// price not the lowest/highest of the month AND
@@ -463,7 +463,7 @@ class Analysis {
 
 			// OR
 
-			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday
+			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday (COMMENTED OUT)
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.4 AND
 			// price not the lowest/highest of the month AND
@@ -472,7 +472,7 @@ class Analysis {
 
 			// OR
 
-			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday
+			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday (COMMENTED OUT)
 			// bitcoin is bullish OR On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.2 AND
 			// price not the lowest/highest of the month AND

@@ -603,17 +603,16 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			// If allowed to auto-trade
 			if (viberBot && viberBot.canStartTrading) {
 
-				let assetResultsReversed = recommendedAssets.reverse();
 				let assetToInvestIn;
 				// Attempt to auto-trade each recommended asset, starting from the best recommendation
-				for (let i=0; i<assetResultsReversed.length; i++) {
+				for (let i=0; i<recommendedAssets.length; i++) {
 
-					assetToInvestIn = assetResultsReversed[i].name;
+					assetToInvestIn = recommendedAssets[i].name;
 					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
 
 					// Asset should have high enough grade
-					if (assetResultsReversed[i].candidateGrade < autoTradeGradeThreshold) {
-						l.w(`Will not proceed to order ${assetToInvestIn}: candidate grade must not be < ${autoTradeGradeThreshold}, is ${assetResultsReversed[i].candidateGrade}.`, 1, true);
+					if (recommendedAssets[i].candidateGrade < autoTradeGradeThreshold) {
+						l.w(`Will not proceed to order ${assetToInvestIn}: candidate grade must not be < ${autoTradeGradeThreshold}, is ${recommendedAssets[i].candidateGrade}.`, 1, true);
 						continue;
 					}
 
@@ -637,9 +636,9 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					let userRef = 1;
 					let prevProfitPercent = profitPercent;
 					// For candidates with long MACD reversal, setup a conditional take-profit with fixed profit
-					if (assetResultsReversed[i].existsMACDReversalLong && assetResultsReversed[i].changeWeekHalf <= -0.03) {
+					if (recommendedAssets[i].existsMACDReversalLong && recommendedAssets[i].changeWeekHalf <= -0.03) {
 						userRef = 3;
-						profitPercent = Math.max(Math.abs(assetResultsReversed[i].changeWeekHalf)*60, 5);
+						profitPercent = Math.max(Math.abs(recommendedAssets[i].changeWeekHalf)*60, 5);
 					}
 
 					// Create a new Order
