@@ -454,8 +454,7 @@ class Analysis {
 			// Recommendation Conditions
 			// Grading system 1 to 7 +2 bonus points
 
-			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday (COMMENTED OUT)
-			// bitcoin is bullish OR On-Balance Vol > 0 AND
+			// On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.7 AND
 			// price not the lowest/highest of the month AND
 			// price not the highest of the week AND
@@ -463,8 +462,7 @@ class Analysis {
 
 			// OR
 
-			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday (COMMENTED OUT)
-			// bitcoin is bullish OR On-Balance Vol > 0 AND
+			// On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.4 AND
 			// price not the lowest/highest of the month AND
 			// price not the highest of the week AND
@@ -472,17 +470,15 @@ class Analysis {
 
 			// OR
 
-			// bitcoin is not bearish, not oversold, no MACD reversal, < 3.00% up from yesterday (COMMENTED OUT)
-			// bitcoin is bullish OR On-Balance Vol > 0 AND
+			// On-Balance Vol > 0 AND
 			// price dropping rate in 1h less than it dropped in 3h/6h/12h /1.2 AND
 			// price not the lowest/highest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
 
 			if (
-				//(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
 				(!isOverbought) &&
-				(onBalanceVol3h > 0 || isBTCBullish) &&
+				(onBalanceVol3h > 0) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.7) ||
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.7)
@@ -491,7 +487,7 @@ class Analysis {
 				(priceOverHighestMonth >= 0.04) &&
 				(priceOverLowestMonth >= 0.04) &&
 				(priceOverHighestWeek >= 0.04) &&
-				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
+				(existsMACDReversal || existsMACDReversalShort) &&
 				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
 			) {
 				isCandidate = true;
@@ -499,9 +495,8 @@ class Analysis {
 
 
 			}else if (
-				//(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive && bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent < 0.03) &&
 				(!isOverbought) &&
-				(onBalanceVol3h > 0 || isBTCBullish) &&
+				(onBalanceVol3h > 0) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.4) ||
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.4)
@@ -518,9 +513,8 @@ class Analysis {
 
 
 			}else if (
-				//(!isBTCBearish && !isBTCOverSold && !existsBTCMACDReversal && !keptBTCMACDPositive) &&
 				(!isOverbought) &&
-				(onBalanceVol3h > 0 || isBTCBullish) &&
+				(onBalanceVol3h > 0) &&
 				(
 					(derivative3h < 0 && derivative3h < Math.abs(derivative6h)/1.2) ||
 					(derivative6h < 0 && derivative6h < Math.abs(derivative12h)/1.2)
