@@ -555,7 +555,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				!isEmpty(recommendedAssets.filter(elem => elem.candidateGrade > 0))) {
 				await viberBot.sendTextMessage(`New recommended assets found. Highest: ${recommendedAssets[0].name} grade ${recommendedAssets[0].candidateGrade}. Type 'recommend assets' or 'grade GRADE assets' to inspect them.`);
 				await sleep(1000);
-				await viberBot.sendHighGradeRecommendedAssets(recommendedAssets, 7);
+				await viberBot.sendHighGradeRecommendedAssets(recommendedAssets, autoTradeGradeThreshold);
 				// await sleep(3000);
 				// await viberBot.sendRecommendedAssets(reportFilePath);
 				prevRecommendedAssets = recommendedAssets.map(asset => asset);

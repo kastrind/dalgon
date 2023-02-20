@@ -452,26 +452,9 @@ class Analysis {
 			let currAssetResult = {};
 
 			// Recommendation Conditions
-			// Grading system 1 to 7 +2 bonus points
 
 			// On-Balance Vol > 0 AND
-			// price dropping rate in 3h/6h more than it dropped in 6h/12h /1.7 AND
-			// price not the lowest/highest of the month AND
-			// price not the highest of the week AND
-			// MACD went positive
-
-			// OR
-
-			// On-Balance Vol > 0 AND
-			// price dropping rate in 3h/6h more than it dropped in 6h/12h /1.4 AND
-			// price not the lowest/highest of the month AND
-			// price not the highest of the week AND
-			// MACD went positive
-
-			// OR
-
-			// On-Balance Vol > 0 AND
-			// price dropping rate in 3h/6h more than it dropped in 6h/12h /1.2 AND
+			// price dropping rate in 3h/6h more than it dropped in 6h/12h AND
 			// price not the lowest/highest of the month AND
 			// price not the highest of the week AND
 			// MACD went positive
@@ -480,8 +463,8 @@ class Analysis {
 				(!isOverbought) &&
 				(onBalanceVol3h > 0) &&
 				(
-					(derivative3h < 0 && derivative6h < 0 && Math.abs(derivative3h) < Math.abs(derivative6h)/1.7) ||
-					(derivative6h < 0 && derivative12h < 0 && Math.abs(derivative6h) < Math.abs(derivative12h)/1.7)
+					(derivative3h < 0 && derivative6h < 0 && Math.abs(derivative3h) < Math.abs(derivative6h)) ||
+					(derivative6h < 0 && derivative12h < 0 && Math.abs(derivative6h) < Math.abs(derivative12h))
 
 				) &&
 				(priceOverHighestMonth >= 0.04) &&
@@ -491,46 +474,16 @@ class Analysis {
 				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
 			) {
 				isCandidate = true;
-				candidateGrade = 7;
-
-
-			}else if (
-				(!isOverbought) &&
-				(onBalanceVol3h > 0) &&
-				(
-					(derivative3h < 0 && derivative6h < 0 && Math.abs(derivative3h) < Math.abs(derivative6h)/1.4) ||
-					(derivative6h < 0 && derivative12h < 0 && Math.abs(derivative6h) < Math.abs(derivative12h)/1.4)
-
-				) &&
-				(priceOverHighestMonth >= 0.04) &&
-				(priceOverLowestMonth >= 0.04) &&
-				(priceOverHighestWeek >= 0.04) &&
-				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
-				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
-			) {
-				isCandidate = true;
-				candidateGrade = 4;
-
-
-			}else if (
-				(!isOverbought) &&
-				(onBalanceVol3h > 0) &&
-				(
-					(derivative3h < 0 && derivative6h < 0 && Math.abs(derivative3h) < Math.abs(derivative6h)/1.2) ||
-					(derivative6h < 0 && derivative12h < 0 && Math.abs(derivative6h) < Math.abs(derivative12h)/1.2)
-
-				) &&
-				(priceOverHighestMonth >= 0.04) &&
-				(priceOverLowestMonth >= 0.04) &&
-				(priceOverHighestWeek >= 0.04) &&
-				(existsMACDReversal || existsMACDReversalLong || existsMACDReversalShort) &&
-				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
-			) {
-				isCandidate = true;
 				candidateGrade = 1;
 			}
 
 			if (isCandidate || onDemandAsset) {
+
+				let derivativeRatio = (Math.abs(derivative3h) / Math.abs(derivative6h));
+				let derivativeRatio2 = Math.abs(derivative6h) / Math.abs(derivative12h);
+
+				candidateGrade += parseFloat(derivativeRatio.toFixed(3));
+				candidateGrade += parseFloat(derivativeRatio2.toFixed(3));
 
 				// bonus: negative derivatives increasing (longer in the past)
 				if (derivative24h < 0 && derivativeWeekHalf < derivative24h) {
