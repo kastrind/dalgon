@@ -479,11 +479,8 @@ class Analysis {
 
 			if (isCandidate || onDemandAsset) {
 
-				let derivativeRatio = (Math.abs(derivative3h) / Math.abs(derivative6h));
-				let derivativeRatio2 = Math.abs(derivative6h) / Math.abs(derivative12h);
-
-				candidateGrade += parseFloat(derivativeRatio.toFixed(3));
-				candidateGrade += parseFloat(derivativeRatio2.toFixed(3));
+				candidateGrade +=  parseFloat(Math.abs(derivative3h) / Math.abs(derivative6h));
+				candidateGrade +=  parseFloat(Math.abs(derivative6h) / Math.abs(derivative12h));
 
 				// bonus: negative derivatives increasing (longer in the past)
 				if (derivative24h < 0 && derivativeWeekHalf < derivative24h) {
@@ -547,13 +544,13 @@ class Analysis {
 				);
 
 				report += isCandidate ? this.l.suc(`It's a candidate!`, 2, true) + '\n' : '';
-				report += this.l.suc(`Candidate grade: ${currAssetResult.candidateGrade}`, 2, true) + '\n';
+				report += this.l.suc(`Candidate grade: ${currAssetResult.candidateGrade.toFixed(3)}`, 2, true) + '\n';
 
 				currAssetReport = this.l.i(`${asset}: ${prcnt(currAssetResult.changePastHour)}%1h ${prcnt(currAssetResult.change3h)}%3h ${prcnt(currAssetResult.change6h)}%6h ${prcnt(currAssetResult.change12h)}%12h ${prcnt(currAssetResult.changeDay24h)}%24h ${prcnt(currAssetResult.changeWeekHalf)}%Wh ${prcnt(currAssetResult.changeWeek)}%W ${prcnt(currAssetResult.changeMonthHalf)}%Mh ${prcnt(currAssetResult.changeMonth)}%M`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} price is: \n${prcnt(currAssetResult.priceOverLowestWeek)}% > week lowest,\n${prcnt(currAssetResult.priceOverHighestWeek)}% < week highest,\n${prcnt(currAssetResult.priceOverLowestMonth)}% > month lowest,\n${prcnt(currAssetResult.priceOverHighestMonth)}% < month highest.`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} close is: ${currAssetResult.latestClosingPrice}\n8-days EMA is: ${currAssetResult.eightDaysEMA} (${prcnt(latestClosingPriceDiff8DaysEMAPercent)}%)`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} green hammer: ${currAssetResult.existsGreenHammer3h}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade.toFixed(3)}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD short/regular/long reversal: ${currAssetResult.existsMACDReversalShort}/${currAssetResult.existsMACDReversal}/${currAssetResult.existsMACDReversalLong}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD short/regular/long kept + : ${currAssetResult.keptMACDPositiveShort}/${currAssetResult.keptMACDPositive}/${currAssetResult.keptMACDPositiveLong}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} On-Balance Volume 3h: ${currAssetResult.onBalanceVol3h}`, 2) + '\n';

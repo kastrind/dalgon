@@ -182,7 +182,7 @@ class DalgonViberBot {
 			if (highGradeRecommendedAssets.length) {
 				for (let i=0; i<highGradeRecommendedAssets.length; i++) {
 					let candidate = highGradeRecommendedAssets[i];
-					assetsReport += `${candidate.name} grade: ${candidate.candidateGrade}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}\n`;
+					assetsReport += `${candidate.name} grade: ${candidate.candidateGrade.toFixed(3)}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}\n`;
 				}
 				this.sendBigTextMessage(assetsReport);
 				return;
