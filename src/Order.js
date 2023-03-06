@@ -341,7 +341,7 @@ class Order {
 					}
 
 					// if order eligible for cancellation, that is:
-					// if order too old and either the desired market price diverged too much or
+					// if order too old and the desired market price diverged too much or
 					// order is profitabe enough
 					if ((daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
 						canSellForProfit) {
