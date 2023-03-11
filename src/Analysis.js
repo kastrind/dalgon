@@ -463,8 +463,8 @@ class Analysis {
 				(!isOverbought) &&
 				(onBalanceVol3h > 0) &&
 				(
-					(derivative3h < 0 && derivative6h < 0 && Math.abs(derivative3h) < Math.abs(derivative6h)) ||
-					(derivative6h < 0 && derivative12h < 0 && Math.abs(derivative6h) < Math.abs(derivative12h))
+					(derivative3h < 0 && derivative6h < 0) ||
+					(derivative6h < 0 && derivative12h < 0)
 
 				) &&
 				(priceOverHighestMonth >= 0.04) &&
@@ -479,26 +479,26 @@ class Analysis {
 
 			if (isCandidate || onDemandAsset) {
 
-				candidateGrade +=  parseFloat(Math.abs(derivative3h) / Math.abs(derivative6h));
-				candidateGrade +=  parseFloat(Math.abs(derivative6h) / Math.abs(derivative12h));
+				// candidateGrade +=  parseFloat(Math.abs(derivative3h) / Math.abs(derivative6h));
+				// candidateGrade +=  parseFloat(Math.abs(derivative6h) / Math.abs(derivative12h));
+
+				// bonus: negative derivative increasing (shorter in the past)
+				if (derivative6h < 0 && derivative12h < derivative6h) {
+					candidateGrade += 0.75;
+				}else if (derivative3h < 0 && derivative6h < derivative3h) {
+					candidateGrade += 0.5;
+				}
 
 				// bonus: negative derivatives increasing (longer in the past)
 				if (derivative24h < 0 && derivativeWeekHalf < derivative24h) {
-					candidateGrade += 0.75;
+					candidateGrade += 1.25;
 				}else if (derivative12h < 0 && derivative24h < derivative12h) {
-					candidateGrade += 0.4;
+					candidateGrade += 1;
 				}
-
-				// bonus: negative derivative increasing (shorter in the past)
-				// if (derivative3h < 0 && derivative6h < derivative3h && derivative12h < derivative6h) {
-				// 	candidateGrade += 0.5;
-				// }else if (derivative3h < 0 && derivative6h < derivative3h) {
-				// 	candidateGrade += 0.3;
-				// }
 
 				// bonus: if asset price difference to 8-days EMA <= -3%
 				if 	(latestClosingPriceDiff8DaysEMAPercent <= -0.03) {
-					candidateGrade += 0.5;
+					candidateGrade += 0.41;
 				}
 
 				// bonus: green hammer

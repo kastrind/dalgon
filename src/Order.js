@@ -378,13 +378,13 @@ class Order {
 
 									if (!canSellForProfit) {
 										// Order is not profitable, less than 2 days old: setup limit sell Order
-										if (daysDiff < 2) {
-											sellOrderPrice = (ticker.bidPrice + ((differencePercent - profitPercent) / 2) * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
+										//if (daysDiff < 2) {
+										//	sellOrderPrice = (ticker.bidPrice + ((differencePercent - profitPercent) / 2) * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
 										// Order is not profitable, more than 2 days old: setup a market sell Order
-										}else {
+										//}else {
 											sellOrderType = 'market';
 											sellOrderPrice = ticker.bidPrice.toFixed(tradeableAssetPairDecimals);
-										}
+										//}
 									}else {
 										sellOrderPrice = (ticker.bidPrice + 0.15 * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
 									}
