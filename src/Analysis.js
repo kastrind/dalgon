@@ -153,7 +153,7 @@ class Analysis {
 		else if (isBTCBearish) { bitcoinAnalysisReportPart += this.l.i(`BTC is bearish.`, 1) + '\n'; }
 		if (bitcoinAnalysis.result == 'success') {
 			bitcoinAnalysisReportPart += this.l.i(`BTCEUR 8-days EMA is: ${bitcoinAnalysis.eightDaysEMA} (change ${prcnt(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent)}%)`, 1) + '\n';
-			bitcoinAnalysisReportPart += this.l.i(`BTCEUR yesterday's price change: ${prcnt(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent)}%)`, 1) + '\n';
+			bitcoinAnalysisReportPart += this.l.i(`BTCEUR yesterday's price change: ${prcnt(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent)}%`, 1) + '\n';
 			bitcoinAnalysisReportPart += this.l.i(`BTCEUR oversold: ${isBTCOverSold}`, 1) + '\n';
 			bitcoinAnalysisReportPart += this.l.i(`BTCEUR MACD reversal: ${existsBTCMACDReversal}`, 1) + '\n';
 			bitcoinAnalysisReportPart += this.l.i(`BTCEUR MACD kept positive: ${keptBTCMACDPositive}`, 1) + '\n';
@@ -329,7 +329,15 @@ class Analysis {
 			report += this.l.i(`MACD latest ${macdLatest}`, 2) + '\n';
 			report += this.l.i(`MACD reversal: ${existsMACDReversal}`, 2) + '\n';
 
-			let eightDaysEMA = ohlcMonth.getEMA(24*8, null, 0, 'close');
+			let ohlcMonthPerDay = new OHLC(assetPair, this.l, this.simulationMode);
+			let ohlcMonthTicks = ohlcMonth.getTicks();
+			let ohlcMonthPerDayTicks = [];
+			for(let i=0; i<ohlcMonthTicks.length; i+=24) {
+				if (i<ohlcMonthTicks.length) ohlcMonthPerDayTicks.push(ohlcMonthTicks[i]);
+			}
+			ohlcMonthPerDay.setTicks(ohlcMonthPerDayTicks);
+
+			let eightDaysEMA = ohlcMonthPerDay.getEMA(8, null, 0, 'close');
 			let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 
 			// for testing
@@ -463,9 +471,8 @@ class Analysis {
 				(!isOverbought) &&
 				(onBalanceVol3h > 0) &&
 				(
-					(derivative3h < 0 && derivative6h < 0) ||
-					(derivative6h < 0 && derivative12h < 0)
-
+					(change3h < 0 && change6h < 0) ||
+					(change6h < 0 && change12h < 0)
 				) &&
 				(priceOverHighestMonth >= 0.04) &&
 				(priceOverLowestMonth >= 0.04) &&
@@ -479,21 +486,25 @@ class Analysis {
 
 			if (isCandidate || onDemandAsset) {
 
-				// candidateGrade +=  parseFloat(Math.abs(derivative3h) / Math.abs(derivative6h));
-				// candidateGrade +=  parseFloat(Math.abs(derivative6h) / Math.abs(derivative12h));
-
-				// bonus: negative derivative increasing (shorter in the past)
-				if (derivative6h < 0 && derivative12h < derivative6h) {
+				// bonus: negative change increasing (short-term)
+				if (change6h < 0 && change12h < change6h) {
 					candidateGrade += 0.75;
-				}else if (derivative3h < 0 && derivative6h < derivative3h) {
+				}else if (change3h < 0 && change6h < change3h) {
 					candidateGrade += 0.5;
 				}
 
-				// bonus: negative derivatives increasing (longer in the past)
-				if (derivative24h < 0 && derivativeWeekHalf < derivative24h) {
+				// bonus: negative change increasing (mid-term)
+				if (changeDay24h < 0 && changeWeekHalf < changeDay24h) {
 					candidateGrade += 1.25;
-				}else if (derivative12h < 0 && derivative24h < derivative12h) {
+				}else if (change12h < 0 && changeDay24h < change12h) {
 					candidateGrade += 1;
+				}
+
+				// bonus: negative change increasing (long-term)
+				if (changeWeek < 0 && changeMonthHalf < changeWeek) {
+					candidateGrade += 1.75;
+				}else if (changeWeekHalf < 0 && changeWeek < changeWeekHalf) {
+					candidateGrade += 1.25;
 				}
 
 				// bonus: if asset price difference to 8-days EMA <= -3%
