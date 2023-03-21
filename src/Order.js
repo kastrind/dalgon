@@ -377,17 +377,19 @@ class Order {
 									report += l.i(`Asset pair id is ${tradeableAssetPairId} with ${tradeableAssetPairDecimals} decimals.`, 2) + '\n';
 
 									if (!canSellForProfit) {
-										// Order is not profitable, less than 2 days old: setup limit sell Order
-										//if (daysDiff < 2) {
-										//	sellOrderPrice = (ticker.bidPrice + ((differencePercent - profitPercent) / 2) * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
-										// Order is not profitable, more than 2 days old: setup a market sell Order
-										//}else {
-											sellOrderType = 'market';
-											sellOrderPrice = ticker.bidPrice.toFixed(tradeableAssetPairDecimals);
-										//}
+										report += l.i(`Switching to market sell order due to non-profitability...`, 2) + '\n';
+										sellOrderType = 'market';
+										sellOrderPrice = ticker.bidPrice.toFixed(tradeableAssetPairDecimals);
 									}else {
 										sellOrderPrice = (ticker.bidPrice + 0.15 * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
 									}
+
+									// trace back the price of the buy order, to calculate profit
+									let buyOrderPrice = (100 * parseFloat(currOpenOrder.descr.price)) / (100 + profitPercent);
+									let fee = parseFloat(currOpenOrder.fee);
+									let profit = sellOrderPrice - buyOrderPrice - 2*fee;
+									report += l.i(`Profit: ${profit}`, 2) + '\n';
+
 									sellOrderParamsObj = { volume: vol, price: sellOrderPrice};
 								}else {
 									report += l.err(`Failed to get the number of decimals for pair ${pair}.`, 2, true) + '\n';
