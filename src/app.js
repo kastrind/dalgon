@@ -467,6 +467,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	}
 
 	let timestampSecondsI=0, timestampSecondsF;
+	let prevBitcoinAnalysis;
 	let prevRecommendedAssets = [];
 	let oldOrdersReminderSent = false;
 	let sellingWorker;
@@ -536,8 +537,10 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			// Stop auto-trading depending on bitcoin analysis
 			let bitcoinAnalysis = analysis.bitcoinAnalysis;
-			if (viberBot && viberBot.canStartTrading==true && bitcoinAnalysis.result == 'success' && (
-				analysis.bitcoinAnalysis.isOverSold ||
+			if (viberBot && bitcoinAnalysis.result == 'success' && !isEmpty(prevBitcoinAnalysis) && (
+				(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 0.03) ||
+				(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.03) ||
+				(analysis.bitcoinAnalysis.isOverSold && !prevBitcoinAnalysis.isOverSold) ||
 				(analysis.bitcoinAnalysis.existsMACDReversal && analysis.bitcoinAnalysis.keptMACDPositive) ||
 				(analysis.bitcoinAnalysis.existsMACDReversalLong && analysis.bitcoinAnalysis.keptMACDPositiveLong)
 			)
@@ -547,6 +550,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
 				await sleep(1000);
 			}
+			prevBitcoinAnalysis = JSON.parse(JSON.stringify(bitcoinAnalysis));
 
 			// If there are recommended assets and different than previous, then send recommended assets
 			if (!isEmpty(recommendedAssets) && (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(',')) &&
