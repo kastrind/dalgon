@@ -341,25 +341,10 @@ class Order {
 					}
 
 					// if order eligible for cancellation, that is:
-					// if order too old or
+					// if order too old and
 					// the desired market price diverged too much or
 					// order is profitabe enough
-					if (
-
-						(
-						isEmpty(simOpenOrdersObj) &&
-						(daysDiff >= staleOrderDays || differencePercent >= staleOrderPriceDifferencePercent || canSellForProfit)
-						)
-
-						||
-						
-						(
-						!isEmpty(simOpenOrdersObj) &&
-						(daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) || canSellForProfit
-						)
-
-						) {
-
+					if (daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent || canSellForProfit) {
 						result = true;
 						if (!canSellForProfit) {
 							report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
