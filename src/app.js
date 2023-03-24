@@ -538,11 +538,11 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			// Stop auto-trading depending on bitcoin analysis
 			let bitcoinAnalysis = analysis.bitcoinAnalysis;
 			if (viberBot && bitcoinAnalysis.result == 'success' && !isEmpty(prevBitcoinAnalysis) && (
-				(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 0.03) ||
-				(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.03) ||
+				(Math.abs(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent) >= 0.03) ||
+				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) >= 0.03) ||
 				(analysis.bitcoinAnalysis.isOverSold && !prevBitcoinAnalysis.isOverSold) ||
-				(analysis.bitcoinAnalysis.existsMACDReversal && analysis.bitcoinAnalysis.keptMACDPositive) ||
-				(analysis.bitcoinAnalysis.existsMACDReversalLong && analysis.bitcoinAnalysis.keptMACDPositiveLong)
+				(analysis.bitcoinAnalysis.existsMACDReversal && analysis.bitcoinAnalysis.keptMACDPositive && !prevBitcoinAnalysis.existsMACDReversal) ||
+				(analysis.bitcoinAnalysis.existsMACDReversalLong && analysis.bitcoinAnalysis.keptMACDPositiveLong  && !prevBitcoinAnalysis.existsMACDReversalLong)
 			)
 			) {
 				viberBot.sendTextMessage(`BTC status changed:`);
