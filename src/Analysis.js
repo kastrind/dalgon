@@ -474,11 +474,11 @@ class Analysis {
 					(change3h < 0 && change6h < 0) ||
 					(change6h < 0 && change12h < 0)
 				) &&
-				(priceOverHighestMonth >= 0.04) &&
-				(priceOverLowestMonth >= 0.04) &&
-				(priceOverHighestWeek >= 0.04) &&
+				// (priceOverHighestMonth >= 0.04) &&
+				// (priceOverLowestMonth >= 0.04) &&
+				// (priceOverHighestWeek >= 0.04) &&
 				(existsMACDReversal || existsMACDReversalShort) &&
-				(keptMACDPositive || keptMACDPositiveLong || keptMACDPositiveShort)
+				(keptMACDPositive || keptMACDPositiveShort)
 			) {
 				isCandidate = true;
 				candidateGrade = 1;
