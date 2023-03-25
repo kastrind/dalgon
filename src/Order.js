@@ -301,6 +301,7 @@ class Order {
 								//gained considerable ground
 								if (differencePercent < lastOne - 1.5) {
 									report += l.d(`canSellForProfit 3A`);
+									report += l.i(`Reason code for selling: 3A`, 2);
 									canSellForProfit = true;
 								
 								//if only one past price to market in the series,
@@ -310,6 +311,7 @@ class Order {
 									// if current price to market < last one - 1 (price gained ground)
 									if (differencePercent < lastOne - 0.3) {
 										report += l.d(`canSellForProfit 1A`);
+										report += l.i(`Reason code for selling: 1A`, 2);
 										canSellForProfit = true;
 									}
 								//if more than one past price to market in the series,
@@ -320,10 +322,12 @@ class Order {
 									// if current price to market < last one - 1 (price gained ground)
 									if (differencePercent < lastOne - 0.3) {
 										report += l.d(`canSellForProfit 2A`);
+										report += l.i(`Reason code for selling: 2A`, 2);
 										canSellForProfit = true;
 									}
 									if (differencePercent < lastOne - 0.1 && lastOne < beforeLastOne - 0.1) {
 										report += l.d(`canSellForProfit 2B`);
+										report += l.i(`Reason code for selling: 2B`, 2);
 										canSellForProfit = true;
 									}
 								}
@@ -341,10 +345,12 @@ class Order {
 					}
 
 					// if order eligible for cancellation, that is:
-					// if order too old and
-					// the desired market price diverged too much or
+					// if order too old and the desired market price diverged too much or
+					// price diverged depending on how much time passed or
 					// order is profitabe enough
-					if (daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent || canSellForProfit) {
+					if ((daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
+						(isEmpty(simOpenOrdersObj) && differencePercent >= staleOrderPriceDifferencePercent + (1 - (daysDiff / staleOrderDays)) * staleOrderPriceDifferencePercent) ||
+						canSellForProfit) {
 						result = true;
 						if (!canSellForProfit) {
 							report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
