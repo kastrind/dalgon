@@ -349,7 +349,7 @@ class Order {
 					// price diverged depending on how much time passed or
 					// order is profitabe enough
 					if ((daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
-						(isEmpty(simOpenOrdersObj) && differencePercent >= staleOrderPriceDifferencePercent + (1 - (daysDiff / staleOrderDays)) * staleOrderPriceDifferencePercent) ||
+						(isEmpty(simOpenOrdersObj) && differencePercent >= staleOrderPriceDifferencePercent + Math.max(0, (1 - (daysDiff / staleOrderDays))) * staleOrderPriceDifferencePercent) ||
 						canSellForProfit) {
 						result = true;
 						if (!canSellForProfit) {
