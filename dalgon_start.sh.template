@@ -4,7 +4,7 @@ NGROK_AUTH_TOKEN_HERE=
 PRIVATE_KRAKEN_API_KEY_HERE=
 VIBERBOT_AUTH_TOKEN_HERE=
 
-exposeUrl=$(curl -s http://localhost:4040/api/tunnels | grep -Eoh 'public_url\"\s?:\s?\"https://\S+ngrok.io\"' | sed -e 's/public_url\"://g' -e 's/"//g')
+exposeUrl=$(curl -s http://localhost:4040/api/tunnels | grep -Eoh 'public_url\"\s?:\s?\"https://\S+ngrok[^"]+?\"' | sed -e 's/public_url\"://g' -e 's/"//g')
 
 if [[ -z "$exposeUrl" ]]; then
   rm ngrok.log
