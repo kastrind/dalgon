@@ -487,30 +487,24 @@ class Analysis {
 			if (isCandidate || onDemandAsset) {
 
 				// bonus: negative change increasing (short-term)
-				if (change6h < 0 && change12h < change6h) {
-					candidateGrade += 1.5;
-					if (change12h <= -0.05) candidateGrade += 1.75;
-				}else if (change3h < 0 && change6h < change3h) {
-					candidateGrade += 1;
-					if (change6h <= -0.05) candidateGrade += 2;
+				if (change6h < 0 && change12h < change6h && change12h <= -0.05) {
+					candidateGrade += 3;
+				}else if (change3h < 0 && change6h < change3h && change6h <= -0.05) {
+					candidateGrade += 2.5;
 				}
 
 				// bonus: negative change increasing (mid-term)
-				if (changeDay24h < 0 && changeWeekHalf < changeDay24h) {
-					candidateGrade += 1.25;
-					if (changeWeekHalf <= -0.05) candidateGrade += 1;
-				}else if (change12h < 0 && changeDay24h < change12h) {
-					candidateGrade += 0.75;
-					if (changeDay24h <= -0.05) candidateGrade += 1.25;
+				if (changeDay24h < 0 && changeWeekHalf < changeDay24h && changeWeekHalf <= -0.05) {
+					candidateGrade += 2;
+				}else if (change12h < 0 && changeDay24h < change12h && changeDay24h <= -0.05) {
+					candidateGrade += 1.75;
 				}
 
 				// bonus: negative change increasing (long-term)
-				if (changeWeek < 0 && changeMonthHalf < changeWeek) {
-					candidateGrade += 1;
-					if (changeMonthHalf <= -0.05) candidateGrade += 0.5;
-				}else if (changeWeekHalf < 0 && changeWeek < changeWeekHalf) {
-					candidateGrade += 0.5;
-					if (changeWeek <= -0.05) candidateGrade += 0.75;
+				if (changeWeek < 0 && changeMonthHalf < changeWeek && changeMonthHalf <= -0.05) {
+					candidateGrade += 1.5;
+				}else if (changeWeekHalf < 0 && changeWeek < changeWeekHalf && changeWeek <= -0.05) {
+					candidateGrade += 1.25;
 				}
 
 				// bonus: if asset price difference to 8-days EMA <= -3%
