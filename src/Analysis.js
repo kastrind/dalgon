@@ -487,23 +487,23 @@ class Analysis {
 			if (isCandidate || onDemandAsset) {
 
 				// bonus: negative change increasing (short-term)
-				if (change6h < 0 && change12h < change6h && change12h <= -0.05) {
+				if (change6h < 0 && change12h < change6h && change12h <= -0.03) {
 					candidateGrade += 3;
-				}else if (change3h < 0 && change6h < change3h && change6h <= -0.05) {
+				}else if (change3h < 0 && change6h < change3h && change6h <= -0.03) {
 					candidateGrade += 2.5;
 				}
 
 				// bonus: negative change increasing (mid-term)
 				if (changeDay24h < 0 && changeWeekHalf < changeDay24h && changeWeekHalf <= -0.05) {
 					candidateGrade += 2;
-				}else if (change12h < 0 && changeDay24h < change12h && changeDay24h <= -0.05) {
+				}else if (change12h < 0 && changeDay24h < change12h && changeDay24h <= -0.04) {
 					candidateGrade += 1.75;
 				}
 
 				// bonus: negative change increasing (long-term)
-				if (changeWeek < 0 && changeMonthHalf < changeWeek && changeMonthHalf <= -0.05) {
+				if (changeWeek < 0 && changeMonthHalf < changeWeek && changeMonthHalf <= -0.07) {
 					candidateGrade += 1.5;
-				}else if (changeWeekHalf < 0 && changeWeek < changeWeekHalf && changeWeek <= -0.05) {
+				}else if (changeWeekHalf < 0 && changeWeek < changeWeekHalf && changeWeek <= -0.07) {
 					candidateGrade += 1.25;
 				}
 
