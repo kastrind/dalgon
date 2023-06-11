@@ -539,16 +539,20 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let bitcoinAnalysis = analysis.bitcoinAnalysis;
 			if (viberBot && bitcoinAnalysis.result == 'success' && !isEmpty(prevBitcoinAnalysis) && (
 				(Math.abs(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent) >= 0.03) ||
-				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) >= 0.03) ||
-				(analysis.bitcoinAnalysis.isOverSold && !prevBitcoinAnalysis.isOverSold) ||
-				(analysis.bitcoinAnalysis.existsMACDReversal && analysis.bitcoinAnalysis.keptMACDPositive && !prevBitcoinAnalysis.existsMACDReversal) ||
-				(analysis.bitcoinAnalysis.existsMACDReversalLong && analysis.bitcoinAnalysis.keptMACDPositiveLong  && !prevBitcoinAnalysis.existsMACDReversalLong)
+				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) >= 0.03) //||
+				// (analysis.bitcoinAnalysis.isOverSold && !prevBitcoinAnalysis.isOverSold) ||
+				// (analysis.bitcoinAnalysis.existsMACDReversal && analysis.bitcoinAnalysis.keptMACDPositive && !prevBitcoinAnalysis.existsMACDReversal) ||
+				// (analysis.bitcoinAnalysis.existsMACDReversalLong && analysis.bitcoinAnalysis.keptMACDPositiveLong  && !prevBitcoinAnalysis.existsMACDReversalLong)
 			)
 			) {
-				viberBot.sendTextMessage(`BTC status changed:`);
+				viberBot.sendTextMessage(`Significant BTC price drop:`);
 				await sleep(1000);
 				viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
 				await sleep(1000);
+				if (viberBot.canStartTrading) {
+					viberBot.canStartTrading = false;
+					viberBot.sendTextMessage(`Stopped auto-trading.`);
+				}
 			}
 			prevBitcoinAnalysis = JSON.parse(JSON.stringify(bitcoinAnalysis));
 
