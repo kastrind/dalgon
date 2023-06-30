@@ -471,6 +471,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let prevRecommendedAssets = [];
 	let oldOrdersReminderSent = false;
 	let sellingWorker;
+	let shouldSleep = false;
 
 
 	l.i(`Initiated Dalgon selling worker.`);
@@ -516,12 +517,16 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			if (viberBot && viberBot.pauseAnalysis) {
 				l.i("Analysis paused...");
-				await sleep(5 * 60 * 1000);
 				// Close selling worker and sleep
 				sellingWorker.postMessage(`{ "close": true }`);
-				await sleep(5 * 60 * 1000);
 				sellingWorker.removeAllListeners();
+				shouldSleep = true;
 				continue;
+			}
+
+			if (shouldSleep) {
+				await sleep(5 * 60 * 1000); // Sleep for 5 minutes
+				shouldSleep = false;
 			}
 			
 			// Send message to the subscribers every 3 hours that the script is running
@@ -531,6 +536,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				await viberBot.sendTextMessage(`Running evaluation on assets to recommend.${canStartTradingMsg}`);
 				timestampSecondsI = Math.floor(Date.now() / 1000);
 			}
+
 			// Analyse assets to recommend for trading
 			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, ANALYSIS_CURRENCY, l, SIMULATION);
 			recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
@@ -605,8 +611,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				// Close selling worker and sleep
 				sellingWorker.postMessage(`{ "close": true }`);
 				l.i("No recommended assets. Sleeping...");
-				await sleep(5 * 60 * 1000);
 				sellingWorker.removeAllListeners();
+				shouldSleep = true;
 				continue;
 			}
 			
@@ -671,7 +677,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			// Close selling worker and sleep
 			sellingWorker.postMessage(`{ "close": true }`);
 			l.i("Sleeping...");
-			await sleep(5 * 60 * 1000); // Sleep for 5 minutes
+			shouldSleep = true;
 			sellingWorker.removeAllListeners();
 
 		}catch(e) {
