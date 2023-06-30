@@ -67,7 +67,7 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 		priceToMarketSeries = staleResult.priceToMarketSeries;
 		Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
 
-		if (staleResult.report) parentPort.postMessage(staleResult.report);
+		if (staleResult.report && staleResult.tookAction) parentPort.postMessage(staleResult.report);
 
 		if (closeWorker) { break; }
 

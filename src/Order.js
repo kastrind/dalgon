@@ -241,6 +241,7 @@ class Order {
 
 		let openOrdersResponseBody = await Order.request(getOpenOrders, {}, simOpenOrdersObj);
 		let openOrderTxids = [];
+		let tookAction = false;
 
 		if (!isEmpty(openOrdersResponseBody.result.open)) {
 			let dateNow = new Date().getTime();
@@ -352,6 +353,7 @@ class Order {
 						(isEmpty(simOpenOrdersObj) && differencePercent >= staleOrderPriceDifferencePercent + Math.max(0, (1 - (daysDiff / staleOrderDays))) * staleOrderPriceDifferencePercent) ||
 						canSellForProfit) {
 						result = true;
+						tookAction = true;
 						if (!canSellForProfit) {
 							report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 						}else {
@@ -360,7 +362,7 @@ class Order {
 						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
 
 						// if testing, return here
-						if (!isEmpty(simOpenOrdersObj)) return {result: result, report: report, priceToMarketSeries: priceToMarketSeries};
+						if (!isEmpty(simOpenOrdersObj)) return {result: result, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction};
 
 						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
 						await sleep(1000);
@@ -401,14 +403,14 @@ class Order {
 									report += l.err(`Failed to get the number of decimals for pair ${pair}.`, 2, true) + '\n';
 									report += l.err(`Proceed manually.`, 2, true) + '\n';
 									report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
-									return {result: false, report: report, priceToMarketSeries: priceToMarketSeries};
+									return {result: false, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction};
 								}
 
 							}else {
 								report += l.err(`Failed to get ticker for pair ${pair}.`, 2, true) + '\n';
 								report += l.err(`Proceed manually.`, 2, true) + '\n';
 								report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
-								return {result: false, report: report, priceToMarketSeries: priceToMarketSeries};
+								return {result: false, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction};
 							}
 
 							let order = new Order(2, sellOrderType, 'sell', null, null, simAddOrderObj==true, false);
@@ -450,7 +452,7 @@ class Order {
 		});
 
 		report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
-		return {result: result, report: report, priceToMarketSeries: priceToMarketSeries};
+		return {result: result, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction};
 	}
 
 	static readPriceToMarketSeries(priceToMarketSeriesFilePath, logger) {
