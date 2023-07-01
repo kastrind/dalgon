@@ -474,8 +474,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let shouldSleep = false;
 
 
-	l.i(`Initiated Dalgon selling worker.`);
-
 	while(true) {
 
 		l.i(`Entered Dalgon main loop.`);
@@ -503,30 +501,33 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			});
 			// Listen for a message from worker
 			sellingWorker.once("message", result => {
-				//l.i(`${result}`);
-				if (viberBot) {
-					viberBot.sendBigTextMessage(`${result}`);
+				if (viberBot && result.hasOwnProperty('report')) {
+					l.i(`EVENT: Got selling worker report and sending from Viber.`);
+					viberBot.sendBigTextMessage(`${result.report}`);
 				}
 			});
 			sellingWorker.on("error", (error) => {
-				l.err(`Selling worker error: ${error}`, 0, true);
+				l.err(`EVENT: Selling worker error: ${error}`, 0, true);
 			});
 			sellingWorker.on("exit", (exitCode) => {
-				l.i(`Selling worker exitCode: ${exitCode}`, 0, true);
+				l.i(`EVENT: Selling worker exitCode: ${exitCode}. Removing all listeners.`, 0, true);
+				sellingWorker.removeAllListeners();
 			});
+
+			l.i(`Initiated Dalgon selling worker.`);
+
+			if (shouldSleep) {
+				l.i("Sleeping...");
+				await sleep(5 * 60 * 1000); // Sleep for 5 minutes
+				shouldSleep = false;
+			}
 
 			if (viberBot && viberBot.pauseAnalysis) {
 				l.i("Analysis paused...");
 				// Close selling worker and sleep
-				sellingWorker.postMessage(`{ "close": true }`);
-				sellingWorker.removeAllListeners();
+				sellingWorker.postMessage({close: true});
 				shouldSleep = true;
 				continue;
-			}
-
-			if (shouldSleep) {
-				await sleep(5 * 60 * 1000); // Sleep for 5 minutes
-				shouldSleep = false;
 			}
 			
 			// Send message to the subscribers every 3 hours that the script is running
@@ -609,9 +610,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			if (isEmpty(recommendedAssets)) {
 				// Close selling worker and sleep
-				sellingWorker.postMessage(`{ "close": true }`);
-				l.i("No recommended assets. Sleeping...");
-				sellingWorker.removeAllListeners();
+				sellingWorker.postMessage({close: true});
+				l.i("No recommended assets. About to sleep...");
 				shouldSleep = true;
 				continue;
 			}
@@ -675,17 +675,15 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				}
 			}
 			// Close selling worker and sleep
-			sellingWorker.postMessage(`{ "close": true }`);
-			l.i("Sleeping...");
+			sellingWorker.postMessage({close: true});
+			l.i("About to sleep...");
 			shouldSleep = true;
-			sellingWorker.removeAllListeners();
 
 		}catch(e) {
 			let exceptionMsg = l.err(`Exception caught: ${e}`, 0, true);
 			if (viberBot) viberBot.sendTextMessage(`${exceptionMsg}`);
-			sellingWorker.postMessage(`{ "close": true }`);
+			sellingWorker.postMessage({close: true});
 			await sleep(3000);
-			sellingWorker.removeAllListeners();
 		}
 
 	}

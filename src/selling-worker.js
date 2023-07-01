@@ -27,10 +27,8 @@ let closeWorker = false;
 
 // Update variables from parent
 parentPort.once("message", result => {
-	let jsonResult = JSON.parse(result);
-	// profitPercent = parseFloat(jsonResult.profitPercent);
-	// recommendedAssetsLength = parseInt(jsonResult.recommendedAssetsLength);
-	closeWorker = jsonResult.close;
+	if (result.hasOwnProperty('close') && result.close)
+	closeWorker = result.close;
 });
 
 var l = new Logger(VERBOSE, DEBUG);
@@ -48,6 +46,8 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 (async function () {
 
 	while (true) {
+
+		if (closeWorker) { break; }
 
 		// Cancel and sell any take-profit orders that went stale or profitable
 		let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries,
@@ -67,9 +67,7 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 		priceToMarketSeries = staleResult.priceToMarketSeries;
 		Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
 
-		if (staleResult.report && staleResult.tookAction) parentPort.postMessage(staleResult.report);
-
-		if (closeWorker) { break; }
+		if (staleResult.report && staleResult.tookAction) parentPort.postMessage({report: staleResult.report});
 
 		await sleep(90 * 1000); // Sleep for 90 seconds
 
