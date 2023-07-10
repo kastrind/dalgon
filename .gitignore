@@ -28,6 +28,7 @@ creds.js
 dist/
 
 assets/asset_report.txt
+assets/selling_worker_report.txt
 assets/priceToMarketSeries.json
 env/*.properties
 dalgon_start.sh

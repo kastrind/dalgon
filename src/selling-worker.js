@@ -1,3 +1,4 @@
+import fs from 'fs';
 import Logger from './Logger.js';
 import Dalgon from './Dalgon.js';
 import Order from './Order.js';
@@ -18,6 +19,7 @@ var priceToMarketSeriesFilePath = workerData.priceToMarketSeriesFilePath;
 var staleOrderExceptions = workerData.staleOrderExceptions;
 var staleOrderDays = workerData.staleOrderDays;
 var staleOrderPriceDifferencePercent = workerData.staleOrderPriceDifferencePercent;
+var sellingWorkerReportFilePath = workerData.sellingWorkerReportFilePath;
 
 // Initialize variable info from parent
 let profitPercent = workerData.profitPercent;
@@ -67,7 +69,10 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 		priceToMarketSeries = staleResult.priceToMarketSeries;
 		Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
 
-		if (staleResult.report && staleResult.tookAction) parentPort.postMessage({report: staleResult.report});
+		// if there is sth to report and action was taken, write report
+		if (staleResult.report && staleResult.tookAction) {
+			fs.appendFileSync(sellingWorkerReportFilePath, staleResult.report, function (err) { if (err) l.err(err, 0, true); });
+		}
 
 		await sleep(90 * 1000); // Sleep for 90 seconds
 

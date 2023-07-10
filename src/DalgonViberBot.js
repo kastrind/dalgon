@@ -140,6 +140,7 @@ class DalgonViberBot {
 
 	async sendBigTextMessage(message) {
 		let chunkSize = 768;
+		await sleep(1000);
 		for (let i = 0; i < message.length; i += chunkSize) {
 			await this.sendTextMessage(`${message.slice(i, i+chunkSize)}`);
 			await sleep(3000);
@@ -184,7 +185,7 @@ class DalgonViberBot {
 					let candidate = highGradeRecommendedAssets[i];
 					assetsReport += `${candidate.name} grade: ${candidate.candidateGrade.toFixed(3)}, chart: https://cryptowat.ch/charts/KRAKEN:${candidate.name}-${candidate.baseCurrency}\n`;
 				}
-				this.sendBigTextMessage(assetsReport);
+				await this.sendBigTextMessage(assetsReport);
 				return;
 			}
 		}

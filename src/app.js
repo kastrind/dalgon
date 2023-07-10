@@ -93,7 +93,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let priceToMarketSeriesFilePath = properties.get('main.PRICE_TO_MARKET_SERIES_FILE');
 	let staleOrderExceptions = properties.get('main.STALE_ORDER_EXCEPTIONS').split(' ');
 
-	// clean asset report file
+	// clear asset report file
 	let reportFilePath = properties.get('main.ASSET_EVAL_REPORT_FILE');
 	fs.writeFile(reportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
 
@@ -155,8 +155,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			// Analyse assets to recommend for trading
 			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, analysisCurrency, l, SIMULATION);
 			await analysis.recommend(getOHLC, reportFilePath, asset);
-
-			viberBot.sendBigTextMessage(analysis.report);
+			await viberBot.sendBigTextMessage(analysis.report);
 			viberBot.recordHistory(message);
 		});
 
@@ -238,7 +237,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.sendTextMessage('Please wait.');
 			let openOrdersResponseBody = await Order.request(getOpenOrders, {});
 			if (openOrdersResponseBody && openOrdersResponseBody.result) {
-				viberBot.sendBigTextMessage(await Order.reportOpenOrders(openOrdersResponseBody, TIMEZONE, getTicker));
+				await viberBot.sendBigTextMessage(await Order.reportOpenOrders(openOrdersResponseBody, TIMEZONE, getTicker));
 			}else if (openOrdersResponseBody && !isEmpty(openOrdersResponseBody.error)) {
 				viberBot.sendTextMessage(`${openOrdersResponseBody.error}`);
 			}else viberBot.sendTextMessage("Failed to get open orders.");
@@ -471,6 +470,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let prevRecommendedAssets = [];
 	let oldOrdersReminderSent = false;
 	let sellingWorker;
+	let sellingWorkerReportFilePath = properties.get('main.SELLING_WORKER_REPORT_FILE');
 	let shouldSleep = false;
 
 
@@ -479,6 +479,18 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		l.i(`Entered Dalgon main loop.`);
 
 		try {
+
+			let sellingWorkerReport = '';
+			if (fs.existsSync(sellingWorkerReportFilePath)) {
+				sellingWorkerReport = fs.readFileSync(sellingWorkerReportFilePath, {encoding:'utf8', flag:'r'});
+			}
+
+			// if there is sth to report by the selling worker, send report and clear file
+			if (viberBot && sellingWorkerReport.length) {
+				await viberBot.sendBigTextMessage(`${sellingWorkerReport}`);
+			}
+			// clear selling worker report
+			fs.writeFile(sellingWorkerReportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
 
 			// Create a worker to sell stale and profitable Orders
 			sellingWorker = new Worker("./src/selling-worker.js", {
@@ -497,13 +509,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					staleOrderPriceDifferencePercent: staleOrderPriceDifferencePercent,
 					recommendedAssetsLength: recommendedAssets.length,
 					priceToMarketSeriesFilePath: priceToMarketSeriesFilePath,
-				}
-			});
-			// Listen for a message from worker
-			sellingWorker.once("message", result => {
-				if (viberBot && result.hasOwnProperty('report')) {
-					l.i(`EVENT: Got selling worker report and sending from Viber.`);
-					viberBot.sendBigTextMessage(`${result.report}`);
+					sellingWorkerReportFilePath: sellingWorkerReportFilePath
 				}
 			});
 			sellingWorker.on("error", (error) => {
@@ -553,9 +559,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			)
 			) {
 				viberBot.sendTextMessage(`Significant BTC price drop:`);
-				await sleep(1000);
-				viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
-				await sleep(1000);
+				await viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
 				if (viberBot.canStartTrading) {
 					viberBot.canStartTrading = false;
 					viberBot.sendTextMessage(`Stopped auto-trading.`);
@@ -567,11 +571,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			if (!isEmpty(recommendedAssets) && (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(',')) &&
 				!isEmpty(recommendedAssets.filter(elem => elem.candidateGrade > 0))) {
 				viberBot.sendTextMessage(`BTC status:`);
-				await sleep(1000);
 				await viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
-				await sleep(1000);
 				await viberBot.sendTextMessage(`New recommended assets found. Highest: ${recommendedAssets[0].name} grade ${recommendedAssets[0].candidateGrade.toFixed(3)}. Type 'recommend assets' or 'grade GRADE assets' to inspect them.`);
-				await sleep(1000);
 				await viberBot.sendHighGradeRecommendedAssets(recommendedAssets, autoTradeGradeThreshold);
 				// await sleep(3000);
 				// await viberBot.sendRecommendedAssets(reportFilePath);
