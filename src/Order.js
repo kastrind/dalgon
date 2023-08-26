@@ -346,11 +346,11 @@ class Order {
 					}
 
 					// if order eligible for cancellation, that is:
-					// if order too old and the desired market price diverged too much or
+					// INACTIVE: if order too old and the desired market price diverged too much or
 					// price diverged depending on how much time passed or
 					// order is profitabe enough
-					if ((daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
-						(isEmpty(simOpenOrdersObj) && differencePercent >= staleOrderPriceDifferencePercent + Math.max(0, (1 - (daysDiff / staleOrderDays))) * staleOrderPriceDifferencePercent) ||
+					if ( (!isEmpty(simOpenOrdersObj) && daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
+						(isEmpty(simOpenOrdersObj) && differencePercent >= profitPercent + Math.max(0, (1 - (daysDiff / staleOrderDays))) * (staleOrderPriceDifferencePercent - profitPercent)) ||
 						canSellForProfit) {
 						result = true;
 						tookAction = true;
