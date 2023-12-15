@@ -117,7 +117,7 @@ class DalgonViberBot {
 		this.app.listen(port, () => {
 			this.l.i(`Application running on port: ${port}`);
 			this.bot.setWebhook(`${exposeUrl}/viber/webhook`).catch(error => {
-				this.l.err('Can not set webhook on following server. Is it running?', 0, true);
+				this.l.err(`Can not set webhook on the following server: ${exposeUrl}. Is it running?`, 0, true);
 				this.l.err(JSON.stringify(error, null, 2), 0, true);
 				process.exit(1);
 			});
