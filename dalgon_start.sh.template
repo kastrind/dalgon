@@ -9,8 +9,8 @@ exposeUrl=$(curl -s http://localhost:4040/api/tunnels | grep -Eoh 'public_url\"\
 if [[ -z "$exposeUrl" ]]; then
   rm ngrok.log
   nohup ngrok http 3000 --authtoken $NGROK_AUTH_TOKEN_HERE --log=stdout > ngrok.log &
-  sleep 5
-  exposeUrl=$(cat ngrok.log | grep -Eoh "https://.*?")
+  sleep 10
+  exposeUrl=$(cat ngrok.log | grep -Eoh "url=https://.*?" | sed -e 's/^url=//g')
 fi
 
 #echo $exposeUrl
