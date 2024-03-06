@@ -501,11 +501,11 @@ class Analysis {
 				}
 
 				// bonus: negative change increasing (long-term)
-				if (changeWeek < 0 && changeMonthHalf < changeWeek && changeMonthHalf <= -0.07) {
-					candidateGrade += 1.5;
-				}else if (changeWeekHalf < 0 && changeWeek < changeWeekHalf && changeWeek <= -0.07) {
-					candidateGrade += 1.25;
-				}
+				// if (changeWeek < 0 && changeMonthHalf < changeWeek && changeMonthHalf <= -0.07) {
+				// 	candidateGrade += 1.5;
+				// }else if (changeWeekHalf < 0 && changeWeek < changeWeekHalf && changeWeek <= -0.07) {
+				// 	candidateGrade += 1.25;
+				// }
 
 				// bonus: if asset price difference to 8-days EMA <= -3%
 				if 	(latestClosingPriceDiff8DaysEMAPercent <= -0.03) {
@@ -518,7 +518,7 @@ class Analysis {
 				// }
 
 				// exclude too high grades
-				if (candidateGrade > 4) {
+				if (candidateGrade >= 5) {
 					isCandidate = false;
 					if (!onDemandAsset) continue;
 				}
