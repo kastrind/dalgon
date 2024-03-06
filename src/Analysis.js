@@ -517,6 +517,12 @@ class Analysis {
 				// 	candidateGrade += 0.25;
 				// }
 
+				// exclude too high grades
+				if (candidateGrade > 4) {
+					isCandidate = false;
+					if (!onDemandAsset) continue;
+				}
+
 				currAssetResult = new Candidate(
 					asset,
 					this.baseCurrency,
