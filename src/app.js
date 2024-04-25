@@ -547,8 +547,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			// Stop auto-trading depending on bitcoin analysis
 			let bitcoinAnalysis = analysis.bitcoinAnalysis;
 			if (viberBot && bitcoinAnalysis.result == 'success' && !isEmpty(prevBitcoinAnalysis) && (
-				(Math.abs(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent) >= 0.03) ||
-				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) >= 0.03) //||
+				(Math.abs(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent) <= -0.01) ||
+				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) <= -0.01) //||
 				// (analysis.bitcoinAnalysis.isOverSold && !prevBitcoinAnalysis.isOverSold) ||
 				// (analysis.bitcoinAnalysis.existsMACDReversal && analysis.bitcoinAnalysis.keptMACDPositive && !prevBitcoinAnalysis.existsMACDReversal) ||
 				// (analysis.bitcoinAnalysis.existsMACDReversalLong && analysis.bitcoinAnalysis.keptMACDPositiveLong  && !prevBitcoinAnalysis.existsMACDReversalLong)
@@ -559,6 +559,19 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				if (viberBot.canStartTrading) {
 					viberBot.canStartTrading = false;
 					await viberBot.sendTextMessage(`Stopped auto-trading.`);
+				}
+			}
+			// Start auto-trading depending on bitcoin analysis
+			if (viberBot && bitcoinAnalysis.result == 'success' && !isEmpty(prevBitcoinAnalysis) && (
+				(Math.abs(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent) >= 0.02) ||
+				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) >= 0.02)
+			)
+			) {
+				await viberBot.sendTextMessage(`Significant BTC price rise:`);
+				await viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
+				if (!viberBot.canStartTrading) {
+					viberBot.canStartTrading = true;
+					await viberBot.sendTextMessage(`Started auto-trading.`);
 				}
 			}
 			prevBitcoinAnalysis = JSON.parse(JSON.stringify(bitcoinAnalysis));
