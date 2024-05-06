@@ -76,6 +76,11 @@ class Order {
 			this.minBalance = minBalance;
 			this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]) || 0;
 
+			if (this.balance == 0) {
+				buyWith = `${buyWith$}.F`;
+				this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]) || 0;
+			}
+
 			let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
 
 			this.autoTradeReport += l.i(`Attempt to order with ${buyPriceTotal}${buyWith}. Current balance is ${this.balance}${buyWith}.`, 1) + '\n';
