@@ -77,7 +77,7 @@ class Order {
 			this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]) || 0;
 
 			if (this.balance == 0) {
-				buyWith = `${buyWith$}.F`;
+				buyWith = `${buyWith}.F`;
 				this.balance = parseFloat(AccBalance.balanceJsonResponse[buyWith]) || 0;
 			}
 
