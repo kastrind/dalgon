@@ -10,13 +10,13 @@
 			"starttm": 0,
 			"expiretm": 0,
 			"descr": {
-			  "pair": "KNCXBT",
+			  "pair": "XRPXBT",
 			  "type": "sell",
 			  "ordertype": "take-profit",
 			  "price": "0.00006064",
 			  "price2": "0",
 			  "leverage": "none",
-			  "order": "sell 10.09251471 KNCXBT @ take profit 0.00006064",
+			  "order": "sell 10.09251471 XRPXBT @ take profit 0.00006064",
 			  "close": ""
 			},
 			"vol": "10.09251471",
@@ -37,13 +37,13 @@
 		  "starttm": 0,
 		  "expiretm": 0,
 		  "descr": {
-			"pair": "KNCXBT",
+			"pair": "XRPXBT",
 			"type": "sell",
 			"ordertype": "take-profit",
 			"price": "0.00006064",
 			"price2": "0",
 			"leverage": "none",
-			"order": "sell 10.09251471 KNCXBT @ take profit 0.00006064",
+			"order": "sell 10.09251471 XRPXBT @ take profit 0.00006064",
 			"close": ""
 		  },
 		  "vol": "10.09251471",
