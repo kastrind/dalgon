@@ -486,26 +486,26 @@ class Analysis {
 
 			if (isCandidate || onDemandAsset) {
 
-				// bonus: negative change increasing (short-term)
+				// penalty: negative change increasing (short-term)
 				if (change6h < 0 && change12h < change6h && change12h <= -0.03) {
-					candidateGrade += 3;
+					candidateGrade -= 0.2;
 				}else if (change3h < 0 && change6h < change3h && change6h <= -0.03) {
-					candidateGrade += 2.5;
+					candidateGrade -= 0.15;
 				}
 
-				// bonus: negative change increasing (mid-term)
+				// penalty: negative change increasing (mid-term)
 				if (changeDay24h < 0 && changeWeekHalf < changeDay24h && changeWeekHalf <= -0.05) {
-					candidateGrade += 2;
+					candidateGrade -= 0.3;
 				}else if (change12h < 0 && changeDay24h < change12h && changeDay24h <= -0.04) {
-					candidateGrade += 1.75;
+					candidateGrade -= 0.25;
 				}
 
-				// bonus: negative change increasing (long-term)
-				// if (changeWeek < 0 && changeMonthHalf < changeWeek && changeMonthHalf <= -0.07) {
-				// 	candidateGrade += 1.5;
-				// }else if (changeWeekHalf < 0 && changeWeek < changeWeekHalf && changeWeek <= -0.07) {
-				// 	candidateGrade += 1.25;
-				// }
+				// penalty: negative change increasing (long-term)
+				if (changeWeek < 0 && changeMonthHalf < changeWeek && changeMonthHalf <= -0.07) {
+					candidateGrade -= 0.4;
+				}else if (changeWeekHalf < 0 && changeWeek < changeWeekHalf && changeWeek <= -0.07) {
+					candidateGrade -= 0.35;
+				}
 
 				// bonus: if asset price difference to 8-days EMA <= -3%
 				if 	(latestClosingPriceDiff8DaysEMAPercent <= -0.03) {
@@ -513,15 +513,15 @@ class Analysis {
 				}
 
 				// bonus: green hammer
-				// if (existsGreenHammer3h) {
-				// 	candidateGrade += 0.25;
-				// }
-
-				// exclude too high grades
-				if (candidateGrade >= 5) {
-					isCandidate = false;
-					if (!onDemandAsset) continue;
+				if (existsGreenHammer3h) {
+					candidateGrade += 0.25;
 				}
+
+				// // exclude too high grades
+				// if (candidateGrade >= 5) {
+				// 	isCandidate = false;
+				// 	if (!onDemandAsset) continue;
+				// }
 
 				currAssetResult = new Candidate(
 					asset,
