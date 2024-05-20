@@ -236,12 +236,12 @@ class Order {
 		return report;
 	}
 
-	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercent, recommendedAssetsLength, getOpenOrders, timeZone, getTicker, cancelOrder, getTradeableAssetPairs, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, tradeableAssetPairSimObj={}, simAddOrderObj={}) {
+	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercentSequence, recommendedAssetsLength, getOpenOrders, timeZone, getTicker, cancelOrder, getTradeableAssetPairs, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, tradeableAssetPairSimObj={}, simAddOrderObj={}) {
 		let result = false;
 		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
 		report += l.i(`Desired profit percentage: ${profitPercent}%.`) + '\n';
 		report += l.i(`Orders considered stale are >= ${staleOrderDays} days old.`) + '\n';
-		report += l.i(`Orders considered stale are > ${staleOrderPriceDifferencePercent}% to market price.`) + '\n';
+		report += l.i(`Orders considered stale are > ${staleOrderPriceDifferencePercentSequence}% to market price.`) + '\n';
 		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
 
 		let openOrdersResponseBody = await Order.request(getOpenOrders, {}, simOpenOrdersObj);
@@ -351,16 +351,18 @@ class Order {
 					}
 
 					// if order eligible for cancellation, that is:
-					// INACTIVE: if order too old and the desired market price diverged too much or
 					// price diverged depending on how much time passed or
 					// order is profitabe enough
+					let seq_i = Math.min(staleOrderPriceDifferencePercentSequence.length - 1, Math.floor((daysDiff / staleOrderDays) * staleOrderPriceDifferencePercentSequence.length));
+					let staleOrderPriceDifferencePercent = parseFloat(staleOrderPriceDifferencePercentSequence[seq_i]);
+
 					if ( (!isEmpty(simOpenOrdersObj) && daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
-						(isEmpty(simOpenOrdersObj) && differencePercent >= profitPercent + Math.max(0, (1 - (daysDiff / staleOrderDays))) * (staleOrderPriceDifferencePercent - profitPercent)) ||
+						(isEmpty(simOpenOrdersObj) && differencePercent >= staleOrderPriceDifferencePercent) ||
 						canSellForProfit) {
 						result = true;
 						tookAction = true;
 						if (!canSellForProfit) {
-							report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
+							report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price (seq_i=${seq_i}).`, 2) + '\n';
 						}else {
 							report += l.i(`Can sell for profit: ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
 						}

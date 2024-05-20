@@ -54,8 +54,8 @@ var profitPercent = parseFloat(properties.get("main.PROFIT_PERCENT"));
 l.i(`Desired profit percentage: ${profitPercent}`);
 var staleOrderDays = parseFloat(properties.get("main.STALE_ORDER_DAYS"));
 l.i(`Days until a sell take-profit order goes stale: ${staleOrderDays}`);
-var staleOrderPriceDifferencePercent = parseFloat(properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT"));
-l.i(`Price difference percent for a sell take-profit order to go stale: ${staleOrderPriceDifferencePercent}`);
+var staleOrderPriceDifferencePercentSequence = properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT_SEQUENCE").split(',');
+l.i(`Price difference percent sequence for a sell take-profit order to go stale: ${staleOrderPriceDifferencePercentSequence}`);
 
 l.i(`Declaring Kraken and CoinGecko API functions...`);
 
@@ -422,7 +422,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			await viberBot.sendTextMessage(`BUY_WHITELIST=${buyWhiteList}`);
 			await viberBot.sendTextMessage(`PROFIT_PERCENT=${profitPercent}`);
 			await viberBot.sendTextMessage(`STALE_ORDER_DAYS=${staleOrderDays}`);
-			await viberBot.sendTextMessage(`STALE_ORDER_PRICE_DIFFERENCE_PERCENT=${staleOrderPriceDifferencePercent}`);
+			await viberBot.sendTextMessage(`STALE_ORDER_PRICE_DIFFERENCE_PERCENT_SEQUENCE=${staleOrderPriceDifferencePercentSequence}`);
 			viberBot.recordHistory(message);
 		});
 
@@ -502,7 +502,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					profitPercent: profitPercent,
 					staleOrderExceptions: staleOrderExceptions,
 					staleOrderDays: staleOrderDays,
-					staleOrderPriceDifferencePercent: staleOrderPriceDifferencePercent,
+					staleOrderPriceDifferencePercentSequence: staleOrderPriceDifferencePercentSequence,
 					recommendedAssetsLength: recommendedAssets.length,
 					priceToMarketSeriesFilePath: priceToMarketSeriesFilePath,
 					sellingWorkerReportFilePath: sellingWorkerReportFilePath

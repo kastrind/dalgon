@@ -18,7 +18,7 @@ var privateHeaderObj = workerData.privateHeaderObj;
 var priceToMarketSeriesFilePath = workerData.priceToMarketSeriesFilePath;
 var staleOrderExceptions = workerData.staleOrderExceptions;
 var staleOrderDays = workerData.staleOrderDays;
-var staleOrderPriceDifferencePercent = workerData.staleOrderPriceDifferencePercent;
+var staleOrderPriceDifferencePercentSequence = workerData.staleOrderPriceDifferencePercentSequence;
 var sellingWorkerReportFilePath = workerData.sellingWorkerReportFilePath;
 
 // Initialize variable info from parent
@@ -56,7 +56,7 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 															profitPercent,
 															staleOrderExceptions,
 															staleOrderDays,
-															staleOrderPriceDifferencePercent,
+															staleOrderPriceDifferencePercentSequence,
 															recommendedAssetsLength,
 															getOpenOrders,
 															TIMEZONE,
