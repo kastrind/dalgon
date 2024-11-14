@@ -467,6 +467,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let oldOrdersReminderSent = false;
 	let sellingWorker;
 	let sellingWorkerReportFilePath = properties.get('main.SELLING_WORKER_REPORT_FILE');
+	let sellingWorkerHistoryFilePath = properties.get('main.SELLING_WORKER_HISTORY_FILE');
 	let shouldSleep = false;
 
 
@@ -505,7 +506,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					staleOrderPriceDifferencePercentSequence: staleOrderPriceDifferencePercentSequence,
 					recommendedAssetsLength: recommendedAssets.length,
 					priceToMarketSeriesFilePath: priceToMarketSeriesFilePath,
-					sellingWorkerReportFilePath: sellingWorkerReportFilePath
+					sellingWorkerReportFilePath: sellingWorkerReportFilePath,
+					sellingWorkerHistoryFilePath: sellingWorkerHistoryFilePath
 				}
 			});
 			sellingWorker.on("error", (error) => {
@@ -563,8 +565,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			}
 			// Start auto-trading depending on bitcoin analysis
 			if (viberBot && bitcoinAnalysis.result == 'success' && !isEmpty(prevBitcoinAnalysis) && (
-				(Math.abs(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent) >= 0.02) ||
-				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) >= 0.02)
+				(Math.abs(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent) >= 0.01) ||
+				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) >= 0.01)
 			)
 			) {
 				await viberBot.sendTextMessage(`Significant BTC price rise:`);

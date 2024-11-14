@@ -5,6 +5,7 @@ ANALYSIS_CURRENCY=BTC
 TIMEZONE=Europe/Athens
 ASSET_EVAL_REPORT_FILE=assets/asset_report.txt
 SELLING_WORKER_REPORT_FILE=assets/selling_worker_report.txt
+SELLING_WORKER_HISTORY_FILE=assets/selling_worker_history.txt
 PRICE_TO_MARKET_SERIES_FILE=assets/priceToMarketSeries.json
 AUTOTRADE_CURRENCIES={"XETH": {"name": "XETH", "queryAssetName": "ETH", "minBuyAmount": 0.01, "buyPercent": 0, "minBalance": 0}, "XXBT": {"name": "XXBT", "queryAssetName": "BTC", "minBuyAmount": 0.001, "buyPercent": 20, "minBalance": 0.009}}
 AUTOTRADE_GRADE_THRESHOLD=0.99

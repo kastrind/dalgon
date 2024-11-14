@@ -20,6 +20,7 @@ var staleOrderExceptions = workerData.staleOrderExceptions;
 var staleOrderDays = workerData.staleOrderDays;
 var staleOrderPriceDifferencePercentSequence = workerData.staleOrderPriceDifferencePercentSequence;
 var sellingWorkerReportFilePath = workerData.sellingWorkerReportFilePath;
+var sellingWorkerHistoryFilePath = workerData.sellingWorkerHistoryFilePath;
 
 // Initialize variable info from parent
 let profitPercent = workerData.profitPercent;
@@ -72,6 +73,9 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 		// if there is sth to report and action was taken, write report
 		if (staleResult.report && staleResult.tookAction) {
 			fs.appendFileSync(sellingWorkerReportFilePath, staleResult.report, function (err) { if (err) l.err(err, 0, true); });
+			if (staleResult.hasOwnProperty('metadata')) {
+				fs.appendFileSync(sellingWorkerHistoryFilePath, JSON.stringify(staleResult.metadata), function (err) { if (err) l.err(err, 0, true); });
+			}
 		}
 
 		await sleep(90 * 1000); // Sleep for 90 seconds

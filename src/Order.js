@@ -236,7 +236,7 @@ class Order {
 		return report;
 	}
 
-	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercentSequence, recommendedAssetsLength, getOpenOrders, timeZone, getTicker, cancelOrder, getTradeableAssetPairs, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, tradeableAssetPairSimObj={}, simAddOrderObj={}) {
+	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercentSequence, recommendedAssetsLength, getOpenOrders, timeZone, getTicker, cancelOrder, getTradeableAssetPairs, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, tradeableAssetPairSimObj={}, simAddOrderObj={}, simTickerObj={}) {
 		let result = false;
 		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
 		report += l.i(`Desired profit percentage: ${profitPercent}%.`) + '\n';
@@ -247,6 +247,7 @@ class Order {
 		let openOrdersResponseBody = await Order.request(getOpenOrders, {}, simOpenOrdersObj);
 		let openOrderTxids = [];
 		let tookAction = false;
+		let metadata = {};
 
 		if (!isEmpty(openOrdersResponseBody.result.open)) {
 			let dateNow = new Date().getTime();
@@ -271,7 +272,7 @@ class Order {
 					report += l.i(`Took place on ${dateFull}, ${daysDiff.toFixed(2)} days ago.`, 2) + '\n';
 
 					let pair = currOpenOrder.descr.pair;
-					let ticker = await Ticker.request(getTicker, { searchParams: { pair: pair } });
+					let ticker = await Ticker.request(getTicker, { searchParams: { pair: pair } }, l, !isEmpty(simTickerObj), simTickerObj);
 					let differencePercent = 0;
 					let currPrice;
 					let canSellForProfit = false;
@@ -307,7 +308,7 @@ class Order {
 								//gained considerable ground
 								if (differencePercent < lastOne - 1.5) {
 									report += l.d(`canSellForProfit 3A`);
-									report += l.i(`Reason code for selling: 3A`, 2);
+									report += l.i(`Reason code for selling: 3A\n`, 2);
 									canSellForProfit = true;
 								
 								//if only one past price to market in the series,
@@ -317,7 +318,7 @@ class Order {
 									// if current price to market < last one - 1 (price gained ground)
 									if (differencePercent < lastOne - 0.3) {
 										report += l.d(`canSellForProfit 1A`);
-										report += l.i(`Reason code for selling: 1A`, 2);
+										report += l.i(`Reason code for selling: 1A\n`, 2);
 										canSellForProfit = true;
 									}
 								//if more than one past price to market in the series,
@@ -328,12 +329,12 @@ class Order {
 									// if current price to market < last one - 1 (price gained ground)
 									if (differencePercent < lastOne - 0.3) {
 										report += l.d(`canSellForProfit 2A`);
-										report += l.i(`Reason code for selling: 2A`, 2);
+										report += l.i(`Reason code for selling: 2A\n`, 2);
 										canSellForProfit = true;
 									}
 									if (differencePercent < lastOne - 0.1 && lastOne < beforeLastOne - 0.1) {
 										report += l.d(`canSellForProfit 2B`);
-										report += l.i(`Reason code for selling: 2B`, 2);
+										report += l.i(`Reason code for selling: 2B\n`, 2);
 										canSellForProfit = true;
 									}
 								}
@@ -396,13 +397,14 @@ class Order {
 										sellOrderType = 'market';
 										sellOrderPrice = ticker.bidPrice.toFixed(tradeableAssetPairDecimals);
 									}else {
-										sellOrderPrice = (ticker.bidPrice + 0.15 * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
+										sellOrderPrice = (ticker.bidPrice + 0.25 * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
 									}
 
 									// trace back the price of the buy order, to calculate profit
 									let buyOrderPrice = (100 * parseFloat(currOpenOrder.descr.price)) / (100 + profitPercent);
 									let fee = parseFloat(currOpenOrder.fee);
 									let profit = sellOrderPrice - buyOrderPrice - 2*fee;
+									metadata[txid] = { pair: pair, date: dateFull, profit: profit, fee: fee, buyPrice: buyOrderPrice, sellPrice: sellOrderPrice, differencePercent: differencePercent };
 									report += l.i(`Profit: ${profit}`, 2) + '\n';
 
 									sellOrderParamsObj = { volume: vol, price: sellOrderPrice};
@@ -459,7 +461,7 @@ class Order {
 		});
 
 		report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
-		return {result: result, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction};
+		return {result: result, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction, metadata: metadata};
 	}
 
 	static readPriceToMarketSeries(priceToMarketSeriesFilePath, logger) {
