@@ -402,10 +402,10 @@ class Order {
 
 									// trace back the price of the buy order, to calculate profit
 									let buyOrderPrice = (100 * parseFloat(currOpenOrder.descr.price)) / (100 + profitPercent);
-									let fee = parseFloat(currOpenOrder.fee);
-									report += l.i(`Fee: ${fee}`, 2) + '\n';
-									let profit = sellOrderPrice - buyOrderPrice - 2*fee;
-									metadata[txid] = { pair: pair, date: dateFull, profit: profit, fee: fee, buyPrice: buyOrderPrice, sellPrice: sellOrderPrice, differencePercent: differencePercent };
+									let fees = 0.25 * 0.01 * ticker.bidPrice + 0.25 * 0.01 * buyOrderPrice;
+									report += l.i(`Fees: ${fees}`, 2) + '\n';
+									let profit = (vol * sellOrderPrice) - (vol * buyOrderPrice) - fees;
+									metadata[txid] = { pair: pair, date: dateFull, profit: profit, fees: fees, buyPrice: buyOrderPrice, sellPrice: sellOrderPrice, differencePercent: differencePercent };
 									report += l.i(`Profit: ${profit}`, 2) + '\n';
 
 									sellOrderParamsObj = { volume: vol, price: sellOrderPrice};
