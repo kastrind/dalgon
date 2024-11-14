@@ -403,6 +403,7 @@ class Order {
 									// trace back the price of the buy order, to calculate profit
 									let buyOrderPrice = (100 * parseFloat(currOpenOrder.descr.price)) / (100 + profitPercent);
 									let fee = parseFloat(currOpenOrder.fee);
+									report += l.i(`Fee: ${fee}`, 2) + '\n';
 									let profit = sellOrderPrice - buyOrderPrice - 2*fee;
 									metadata[txid] = { pair: pair, date: dateFull, profit: profit, fee: fee, buyPrice: buyOrderPrice, sellPrice: sellOrderPrice, differencePercent: differencePercent };
 									report += l.i(`Profit: ${profit}`, 2) + '\n';
