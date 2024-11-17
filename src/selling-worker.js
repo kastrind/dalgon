@@ -74,7 +74,7 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 		if (staleResult.report && staleResult.tookAction) {
 			fs.appendFileSync(sellingWorkerReportFilePath, staleResult.report, function (err) { if (err) l.err(err, 0, true); });
 			if (staleResult.hasOwnProperty('metadata')) {
-				fs.appendFileSync(sellingWorkerHistoryFilePath, JSON.stringify(staleResult.metadata), function (err) { if (err) l.err(err, 0, true); });
+				fs.appendFileSync(sellingWorkerHistoryFilePath, JSON.stringify(staleResult.metadata)+'\n', function (err) { if (err) l.err(err, 0, true); });
 			}
 		}
 
