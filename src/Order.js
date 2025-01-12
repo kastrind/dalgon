@@ -249,7 +249,7 @@ class Order {
 		let tookAction = false;
 		let metadata = {};
 
-		if (!isEmpty(openOrdersResponseBody.result.open)) {
+		if (!isEmpty(openOrdersResponseBody?.result?.open)) {
 			let dateNow = new Date().getTime();
 			for(let txid in openOrdersResponseBody.result.open) {
 				openOrderTxids.push(txid);
