@@ -52,30 +52,37 @@ var priceToMarketSeries = Order.readPriceToMarketSeries(priceToMarketSeriesFileP
 
 		if (closeWorker) { break; }
 
-		// Cancel and sell any take-profit orders that went stale or profitable
-		let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries,
-															profitPercent,
-															staleOrderExceptions,
-															staleOrderDays,
-															staleOrderPriceDifferencePercentSequence,
-															recommendedAssetsLength,
-															getOpenOrders,
-															TIMEZONE,
-															getTicker,
-															cancelOrder,
-															getTradeableAssetPairs,
-															addOrder,
-															l);
+		try {
 
-		priceToMarketSeries = staleResult.priceToMarketSeries;
-		Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
+			// Cancel and sell any take-profit orders that went stale or profitable
+			let staleResult = await Order.sellStaleProfitOrders(priceToMarketSeries,
+																profitPercent,
+																staleOrderExceptions,
+																staleOrderDays,
+																staleOrderPriceDifferencePercentSequence,
+																recommendedAssetsLength,
+																getOpenOrders,
+																TIMEZONE,
+																getTicker,
+																cancelOrder,
+																getTradeableAssetPairs,
+																addOrder,
+																l);
 
-		// if there is sth to report and action was taken, write report
-		if (staleResult.report && staleResult.tookAction) {
-			fs.appendFileSync(sellingWorkerReportFilePath, staleResult.report, function (err) { if (err) l.err(err, 0, true); });
-			if (staleResult.hasOwnProperty('metadata')) {
-				fs.appendFileSync(sellingWorkerHistoryFilePath, JSON.stringify(staleResult.metadata)+'\n', function (err) { if (err) l.err(err, 0, true); });
+			priceToMarketSeries = staleResult.priceToMarketSeries;
+			Order.writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, l);
+
+			// if there is sth to report and action was taken, write report
+			if (staleResult.report && staleResult.tookAction) {
+				fs.appendFileSync(sellingWorkerReportFilePath, staleResult.report, function (err) { if (err) l.err(err, 0, true); });
+				if (staleResult.hasOwnProperty('metadata')) {
+					fs.appendFileSync(sellingWorkerHistoryFilePath, JSON.stringify(staleResult.metadata)+'\n', function (err) { if (err) l.err(err, 0, true); });
+				}
 			}
+
+		}catch(error) {
+			that.l.err(`Selling worker failed to call Order.sellStaleProfitOrders function`, 0, true);
+			that.l.err(`Error name: ${error.name}, message: ${error.message}, stack: ${error.stack}`, 0, true);
 		}
 
 		await sleep(90 * 1000); // Sleep for 90 seconds
