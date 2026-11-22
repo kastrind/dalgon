@@ -30,7 +30,3 @@ BOT_NAME=
 AVATAR_URL=
 RECIPIENT_PROFILES=[{"id": "", "name": "", "avatar": null, "country":"", "language": "", "apiVersion": 10}]
 START_TRADING=false
-
-[coingecko]
-REMEMBER_USER_TOKEN=
-PORTFOLIO_ID=

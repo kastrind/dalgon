@@ -3,7 +3,6 @@ import { options } from './command.js';
 import PropertiesReader from 'properties-reader';
 import Logger from './Logger.js';
 import Dalgon from './Dalgon.js';
-import CoinGecko from './CoinGecko.js';
 import Ledger from './Ledger.js';
 import Ticker from './Ticker.js';
 import Balance from './Balance.js';
@@ -57,7 +56,7 @@ l.i(`Days until a sell take-profit order goes stale: ${staleOrderDays}`);
 var staleOrderPriceDifferencePercentSequence = properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT_SEQUENCE").split(',');
 l.i(`Price difference percent sequence for a sell take-profit order to go stale: ${staleOrderPriceDifferencePercentSequence}`);
 
-l.i(`Declaring Kraken and CoinGecko API functions...`);
+l.i(`Declaring Kraken API functions...`);
 
 // load persisted properties, if any
 var persistedProperties;
@@ -66,10 +65,6 @@ if (fs.existsSync(`env/${ENV}.persistence.properties`)) {
 }else {
 	fs.writeFile(`env/${ENV}.persistence.properties`, '[persistence]\n', 'utf-8', function(err) { if (err) l.err(err, 0, true); } );
 }
-
-// coingecko instance
-var coingecko = new CoinGecko(l, SIMULATION);
-var getTrendingCoinList = coingecko.createPublicFunction('/search/trending', 'Request for CoinGecko Trending Coins List');
 
 // dalgon instance
 var dalgon = new Dalgon(APIKEY, PRIVATEAPIKEY, l, SIMULATION);
@@ -429,34 +424,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		// Get History
 		viberBot.getBot().onTextMessage(/^history$/i, async (message, response) => {
 			viberBot.sendHistory();
-		});
-
-		// Coingecko Features:
-
-		// Portfolio
-		viberBot.getBot().onTextMessage(/^(my )?(portfolio|holdings)$/i, async (message, response) => {
-			await coingecko.getPortfolio(properties.get('coingecko.REMEMBER_USER_TOKEN'), properties.get('coingecko.PORTFOLIO_ID'), BASE_CURRENCY).then(async cgportfolioResponse => {
-				if (cgportfolioResponse.statusCode>=200 && cgportfolioResponse.statusCode<300) {
-					await viberBot.sendTextMessage(coingecko.reportPortfolio(cgportfolioResponse));
-				}else {
-					let suggestTokenExpired = cgportfolioResponse.statusCode==200 ? ' Perhaps user token cookie expired?' : '';
-					await viberBot.sendTextMessage(`Request failed with status ${cgportfolioResponse.statusCode} and body\n${cgportfolioResponse.body.substring(0, 100)}....\n${suggestTokenExpired}`);
-				}
-			}).catch(async cgportfolioResponse => {
-				let suggestTokenExpired = cgportfolioResponse.statusCode==200 ? ' Perhaps user token cookie expired?' : '';
-				await viberBot.sendTextMessage(`Request failed with status ${cgportfolioResponse.statusCode} and body\n${cgportfolioResponse.body}.${suggestTokenExpired}`);
-			});
-			viberBot.recordHistory(message);
-		});
-
-		// Trending
-		viberBot.getBot().onTextMessage(/^(trending( coins)?)$/i, async (message, response) => {
-			await getTrendingCoinList({searchParams: {}, headers: {accept: 'application/json'}}).then(async cgResponse => {
-				if (cgResponse.statusCode>=200 && cgResponse.statusCode<300) {
-					await viberBot.sendTextMessage(coingecko.reportTrendingCoins(cgResponse));
-				}else { await viberBot.sendTextMessage(`Request failed.`); }
-			});
-			viberBot.recordHistory(message);
 		});
 
 	}

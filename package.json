@@ -35,7 +35,6 @@
     "got": "^11.8.2",
     "properties-reader": "^2.2.0",
     "qs": "^6.10.1",
-    "tough-cookie": "^4.0.0",
     "viber-bot": "^1.0.18"
   },
   "type": "module"
