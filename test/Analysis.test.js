@@ -36,7 +36,8 @@ let maxNumOHLCResults = 5;
 var BASE_CURRENCY = properties.get("main.BASE_CURRENCY");
 
 // Analyse assets to recommend for trading
-let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION);
+// The BTC fixture has a 6% drop, which the market-regime gate would block; this test targets asset metrics
+let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, BASE_CURRENCY, l, SIMULATION, { btcMaxDropPercent: 100 });
 
 const OHLCBTCEURSimResponseJson = require('./assets/OHLC.BTCEUR.sim.response.json');
 const OHLCMANAEURSimResponse1hJson = require('./assets/OHLC.MANAEUR.sim.response.1h.json');
@@ -86,6 +87,13 @@ let recommendedAssets = [];
 			assert.equal(analysis.report.indexOf('priceOverHighestWeek: 0.2727272727272727')>=0, true);
 
 
+		}).timeout(15000);
+
+		it('should build a candidate report for an on-demand asset even without enough MACD history', async () => {
+			await analysis.recommend(getOHLC, reportFilePath, 'MANA');
+
+			assert.equal(analysis.report.indexOf('MANA grade:')>=0, true);
+			assert.equal(analysis.report.indexOf('MANA On-Balance Volume 3h:')>=0, true);
 		}).timeout(15000);
 
 	});

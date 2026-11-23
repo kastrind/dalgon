@@ -56,34 +56,75 @@ class OHLC {
 	}
 
 	getChange() {
-		return ( ( this.ticks[this.ticks.length - 1].close - this.ticks[0].close ) / this.ticks[0].close );
+		let first = this.ticks[0].close;
+		if (!(first > 0)) return 0;
+		return ( ( this.ticks[this.ticks.length - 1].close - first ) / first );
 	}
 
 	getAverage() {
-		return this.ticks.reduce((prev, curr, i) => { if(i===1) prev=prev.close; return prev + curr.close; }) / this.ticks.length;
+		if (!this.ticks.length) return NaN;
+		return this.ticks.reduce((sum, tick) => sum + tick.close, 0) / this.ticks.length;
 	}
 
 	getAverageVol() {
-		return this.ticks.reduce((prev, curr, i) => { if(i===1) prev=prev.vol; return prev + curr.vol; }) / this.ticks.length;
+		if (!this.ticks.length) return NaN;
+		return this.ticks.reduce((sum, tick) => sum + tick.vol, 0) / this.ticks.length;
 	}
 
 	getOnBalanceVol() {
 		let balance = 0;
-		for (let i=0; i < this.ticks.length; i++) {
-			if (i==0) { balance = this.ticks[i].vol; continue; }
-			balance = this.ticks[i].close > this.ticks[i-1].close ? balance + this.ticks[i].vol : balance - this.ticks[i].vol;
+		for (let i=1; i < this.ticks.length; i++) {
+			if (this.ticks[i].close > this.ticks[i-1].close) balance += this.ticks[i].vol;
+			else if (this.ticks[i].close < this.ticks[i-1].close) balance -= this.ticks[i].vol;
 		}
 		return balance;
 	}
 
 	getDerivative() {
-		return ( this.ticks[this.ticks.length - 1].close - this.ticks[0].close ) / ( this.ticks[this.ticks.length - 1].time - this.ticks[0].time );
+		let elapsed = this.ticks[this.ticks.length - 1].time - this.ticks[0].time;
+		if (!(elapsed > 0)) return 0;
+		return ( this.ticks[this.ticks.length - 1].close - this.ticks[0].close ) / elapsed;
+	}
+
+	// Kraken omits candles without trades, so windows must be defined by time and not by candle count.
+	getTicksSince(windowSeconds) {
+		let last = this.getLastTick();
+		if (!last) return [];
+		return this.ticks.filter(tick => tick.time > last.time - windowSeconds);
+	}
+
+	// Kraken returns the still-forming candle last; pattern detection must not read it.
+	getClosed() {
+		let ticks = this.ticks.slice();
+		let last = ticks[ticks.length - 1];
+		if (this.intervalMinutes && last && last.time + this.intervalMinutes * 60 > Date.now() / 1000) ticks.pop();
+		let closed = new OHLC(this.assetPair, this.l, this.simulationMode, null);
+		closed.intervalMinutes = this.intervalMinutes;
+		closed.setTicks(ticks);
+		return closed;
+	}
+
+	// Closes at exact day offsets before the latest candle, oldest first; days without a candle are skipped.
+	getClosesDaysBack(days) {
+		let last = this.getLastTick();
+		let closes = [];
+		if (!last) return closes;
+		for (let k = days; k >= 1; k--) {
+			let target = last.time - k * 86400;
+			let tick = null;
+			for (let i = this.ticks.length - 1; i >= 0; i--) {
+				if (this.ticks[i].time <= target) { tick = this.ticks[i]; break; }
+			}
+			if (tick) closes.push({ close: tick.close });
+		}
+		return closes;
 	}
 
 	getEMA(numPeriods, smoothing, offset=0, property='close') {
 		return this.ticks.getEMA(numPeriods, smoothing, offset, property);
 	}
 
+	// Returns the MACD histogram (MACD line minus signal line); offset 0 is the forming candle, offset 1 the last closed one.
 	getMACD(a, b, c, smoothing, offset=0, property='close') {
 		this.l.d(`Computing MACD(${a}, ${b}, ${c}) until present period with offset ${offset} and smoothing ${smoothing} on property ${property}:`, 1);
 		let macdSeries = [];
@@ -115,6 +156,25 @@ class OHLC {
 		return null;
 	}
 
+	// Fixed interval and candle count, so the indicator timeframe never depends on a result-count setting.
+	static async requestInterval(OHLCRequest, paramAsset, intervalMinutes, numCandles, loggerObj, simulationMode=false, simObj={}, minTicks=3) {
+		let since = Math.floor(Date.now() / 1000) - numCandles * intervalMinutes * 60;
+		let OHLCRequestParamsObj = { searchParams: { pair: paramAsset, since: since, interval: intervalMinutes } };
+		try {
+			let response = await OHLCRequest(OHLCRequestParamsObj, simObj);
+			let responseBody = JSON.parse(response.body);
+			if (!isEmpty(responseBody) && responseBody.result && Object.keys(responseBody.result).length > 0) {
+				let ohlc = new OHLC(paramAsset, loggerObj, simulationMode, responseBody.result);
+				ohlc.intervalMinutes = intervalMinutes;
+				// Fewer candles than the indicators need are treated as no data.
+				if (ohlc.getTicks().length >= minTicks) return ohlc;
+			}
+		} catch (error) {
+			loggerObj.err(`OHLC request for ${paramAsset} (${intervalMinutes}m) failed: ${error.message}`, 0, true);
+		}
+		return null;
+	}
+
 	getCandleStickScore() {
 		let scores = [0.1, 0.1, 0.15, 0.25, 0.4];
 		let score = 0;
@@ -122,25 +182,29 @@ class OHLC {
 		this.l.d(`Last 5 ticks:\n${JSON.stringify(last5Ticks, null, 2)}`, 1);
 		let sumVol = 0;
 		last5Ticks.forEach(tick => sumVol+=tick.vol);
+		if (sumVol === 0) return 0;
+		// With fewer than five candles the newest one keeps the largest weight.
+		let firstWeight = scores.length - last5Ticks.length;
 		for (let i=0; i<last5Ticks.length; i++) {
 			let tick = last5Ticks[i];
+			let weight = scores[firstWeight + i];
 			let candleBody = Math.abs(tick.close - tick.open);
 			if (tick.isGreen() && tick.isCandle()) {
-				score += scores[i] * (candleBody / tick.close) * tick.vol / sumVol;
+				score += weight * (candleBody / tick.close) * tick.vol / sumVol;
 				this.l.d(`Tick ${i} is a green candle with candleBody ${candleBody}.`, 2);
 
 			}else if (tick.isRed() && tick.isCandle()) {
-				score -= scores[i] * (candleBody / tick.close) * tick.vol / sumVol;
+				score -= weight * (candleBody / tick.close) * tick.vol / sumVol;
 				this.l.d(`Tick ${i} is a red candle with candleBody ${candleBody}.`, 2);
 
 			}else if (tick.isGreen() && tick.isHammer()) {
 				let handleBody = tick.open - tick.low;
-				score += scores[i] * (handleBody / tick.close) * tick.vol / sumVol;
+				score += weight * (handleBody / tick.close) * tick.vol / sumVol;
 				this.l.d(`Tick ${i} is a green hammer with handleBody ${handleBody}.`, 2);
 
 			}else if (tick.isRed() && tick.isHammer()) {
 				let handleBody = tick.close - tick.low;
-				score -= scores[i] * (handleBody / tick.close) * tick.vol / sumVol;
+				score -= weight * (handleBody / tick.close) * tick.vol / sumVol;
 				this.l.d(`Tick ${i} is a red hammer with handleBody ${handleBody}.`, 2);
 			}else if (tick.isInvertedHammer()) {
 				let handleBody = 0;
@@ -149,7 +213,7 @@ class OHLC {
 				}else {
 					handleBody = tick.high - tick.close;
 				}
-				score += (scores[i] * (handleBody / tick.close) * tick.vol / sumVol) / 2;
+				score += (weight * (handleBody / tick.close) * tick.vol / sumVol) / 2;
 				this.l.d(`Tick ${i} is an inverted hammer with handleBody ${handleBody}.`, 2);
 			}
 			this.l.d(`Score is ${score}.`, 2);

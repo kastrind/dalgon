@@ -25,6 +25,7 @@ class TradeableAssetPair {
 		this.marginCall = response.margin_call;
 		this.marginStop = response.margin_stop;
 		this.orderMin = response.ordermin;
+		this.costMin = response.costmin;
 
 		this.response = response;
 	}

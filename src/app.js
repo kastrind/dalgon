@@ -13,6 +13,7 @@ import TradeableAssetPair from './TradeableAssetPair.js';
 import Order from './Order.js';
 import OpenRouterClient from './OpenRouterClient.js';
 import TradingDecision from './TradingDecision.js';
+import { loadStrategy } from './Strategy.js';
 import { isEmpty, sleep, persist } from './utils.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
@@ -51,12 +52,8 @@ var ANALYSIS_CURRENCY = properties.get("main.ANALYSIS_CURRENCY");
 l.i(`Analysis currency: ${ANALYSIS_CURRENCY}`);
 var TIMEZONE = properties.get("main.TIMEZONE");
 l.i(`Timezone: ${TIMEZONE}`);
-var profitPercent = parseFloat(properties.get("main.PROFIT_PERCENT"));
-l.i(`Desired profit percentage: ${profitPercent}`);
-var staleOrderDays = parseFloat(properties.get("main.STALE_ORDER_DAYS"));
-l.i(`Days until a sell take-profit order goes stale: ${staleOrderDays}`);
-var staleOrderPriceDifferencePercentSequence = properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT_SEQUENCE").split(',');
-l.i(`Price difference percent sequence for a sell take-profit order to go stale: ${staleOrderPriceDifferencePercentSequence}`);
+var strategy = loadStrategy(properties);
+l.i(`Strategy: ${JSON.stringify(strategy)}`);
 
 var openRouterClient = null;
 var tradingDecision = null;
@@ -115,8 +112,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 	l.suc(`Dalgon started. Initiating selling worker, analysis and auto-trading cycle...`, 0, true);
 
-	let priceToMarketSeriesFilePath = properties.get('main.PRICE_TO_MARKET_SERIES_FILE');
-	let staleOrderExceptions = properties.get('main.STALE_ORDER_EXCEPTIONS').split(' ');
+	let positionsFilePath = properties.get('main.POSITIONS_FILE') || 'assets/positions.json';
 
 	// clear asset report file
 	let reportFilePath = properties.get('main.ASSET_EVAL_REPORT_FILE');
@@ -139,6 +135,15 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	let tradeableAssets = await TradeableAssetPair.findTradeableAssets(assets, getTradeableAssetPairs, autoTradeCurrencies, l, SIMULATION);
 	l.i(`Auto-tradeable assets: ${tradeableAssets}`);
 	l.i(`#Auto-tradeable assets: ${tradeableAssets.length}`);
+
+	// Analysing assets that can never be bought only delays the signals of the ones that can.
+	let buyableAssets = tradeableAssets.filter(asset => !buyExceptions.includes(asset) && (!buyWhiteList || buyWhiteList.split(' ').includes(asset)));
+	l.i(`Assets analysed each cycle: ${buyableAssets}`);
+	for (let currencyName in autoTradeCurrencies) {
+		if (autoTradeCurrencies[currencyName].queryAssetName !== ANALYSIS_CURRENCY) {
+			l.w(`Signals are computed against ${ANALYSIS_CURRENCY} but orders are placed against ${autoTradeCurrencies[currencyName].queryAssetName}; set ANALYSIS_CURRENCY to the traded quote currency.`, 0, true);
+		}
+	}
 
 	let recommendedAssets = [];
 
@@ -178,7 +183,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			await viberBot.sendTextMessage('Please wait.');
 
 			// Analyse assets to recommend for trading
-			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, analysisCurrency, l, SIMULATION);
+			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, analysisCurrency, l, SIMULATION, strategy);
 			await analysis.recommend(getOHLC, reportFilePath, asset);
 			await viberBot.sendBigTextMessage(analysis.report);
 			viberBot.recordHistory(message);
@@ -370,9 +375,21 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			await viberBot.sendTextMessage(`Please wait.`);
 			let assetToInvestIn = message.text.match(/^trade ([A-Z]+)$/i)[1].toUpperCase();
 			if (assetToInvestIn) {
-				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true);
+				// A manual trade overrides the auto-trade switch, never the loss limits or the position cap.
+				let lossLimits = Order.lossLimitStatus(properties.get('main.SELLING_WORKER_HISTORY_FILE'), strategy);
+				let openOrdersBody = await Order.request(getOpenOrders, {});
+				let openPositions = Order.countOpenPositions(openOrdersBody);
+				let blockedReason = lossLimits.blocked ? lossLimits.reason
+					: (openOrdersBody?.result?.open === undefined ? 'open orders are unavailable'
+					: (openPositions >= strategy.maxOpenPositions ? `${openPositions} positions are open, maximum is ${strategy.maxOpenPositions}` : null));
+				if (blockedReason) {
+					await viberBot.sendTextMessage(`Not placing the order: ${blockedReason}.`);
+					viberBot.recordHistory(message);
+					return;
+				}
+				let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, true, strategy);
 				if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
-					await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
+					await order.autoTrade(assetToInvestIn, getTicker, addOrder);
 				}
 			}
 			viberBot.recordHistory(message);
@@ -432,8 +449,12 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 		viberBot.getBot().onTextMessage(/^(set )?profit percent (\S+)$/i, async (message, response) => {
 			let matches = message.text.match(/^(set )?profit percent (\S+)$/i);
 			let newProfitPercent = parseFloat(matches[2]);
-			profitPercent = newProfitPercent;
-			await viberBot.sendTextMessage(`Profit percent set to ${profitPercent}.`);
+			if (!(newProfitPercent > 0)) {
+				await viberBot.sendTextMessage(`Profit percent must be a positive number.`);
+				return;
+			}
+			strategy.takeProfitPercent = newProfitPercent;
+			await viberBot.sendTextMessage(`Profit percent set to ${strategy.takeProfitPercent}.`);
 			viberBot.recordHistory(message);
 		});
 
@@ -445,9 +466,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			}
 			await viberBot.sendTextMessage(`BUY_EXCEPTIONS=${buyExceptions}`);
 			await viberBot.sendTextMessage(`BUY_WHITELIST=${buyWhiteList}`);
-			await viberBot.sendTextMessage(`PROFIT_PERCENT=${profitPercent}`);
-			await viberBot.sendTextMessage(`STALE_ORDER_DAYS=${staleOrderDays}`);
-			await viberBot.sendTextMessage(`STALE_ORDER_PRICE_DIFFERENCE_PERCENT_SEQUENCE=${staleOrderPriceDifferencePercentSequence}`);
+			await viberBot.sendTextMessage(`STRATEGY=${JSON.stringify(strategy)}`);
 			viberBot.recordHistory(message);
 		});
 
@@ -508,9 +527,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 	}
 
 	let timestampSecondsI=0, timestampSecondsF;
-	let prevBitcoinAnalysis;
 	let prevRecommendedAssets = [];
-	let oldOrdersReminderSent = false;
+	let lossLimitNotified = false;
 	let sellingWorker;
 	let sellingWorkerReportFilePath = properties.get('main.SELLING_WORKER_REPORT_FILE');
 	let sellingWorkerHistoryFilePath = properties.get('main.SELLING_WORKER_HISTORY_FILE');
@@ -535,7 +553,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			// clear selling worker report
 			fs.writeFile(sellingWorkerReportFilePath, '', function (err) { if (err) l.err(err, 0, true); });
 
-			// Create a worker to sell stale and profitable Orders
+			// Create a worker that exits positions at their target or time limit
 			sellingWorker = new Worker("./src/selling-worker.js", {
 				workerData: {
 					ENV: ENV,
@@ -546,12 +564,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					SIMULATION: SIMULATION,
 					TIMEZONE: TIMEZONE,
 					privateHeaderObj: privateHeaderObj,
-					profitPercent: profitPercent,
-					staleOrderExceptions: staleOrderExceptions,
-					staleOrderDays: staleOrderDays,
-					staleOrderPriceDifferencePercentSequence: staleOrderPriceDifferencePercentSequence,
-					recommendedAssetsLength: recommendedAssets.length,
-					priceToMarketSeriesFilePath: priceToMarketSeriesFilePath,
+					strategy: strategy,
+					positionsFilePath: positionsFilePath,
 					sellingWorkerReportFilePath: sellingWorkerReportFilePath,
 					sellingWorkerHistoryFilePath: sellingWorkerHistoryFilePath
 				}
@@ -589,40 +603,9 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			}
 
 			// Analyse assets to recommend for trading
-			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, ANALYSIS_CURRENCY, l, SIMULATION);
+			let analysis = new Analysis(buyableAssets, maxNumOHLCResults, ANALYSIS_CURRENCY, l, SIMULATION, strategy);
 			recommendedAssets = await analysis.recommend(getOHLC, reportFilePath);
-
-			// Stop auto-trading depending on bitcoin analysis
 			let bitcoinAnalysis = analysis.bitcoinAnalysis;
-			if (viberBot && bitcoinAnalysis.result == 'success' && !isEmpty(prevBitcoinAnalysis) && (
-				(Math.abs(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent) <= -0.01) ||
-				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) <= -0.01) //||
-				// (analysis.bitcoinAnalysis.isOverSold && !prevBitcoinAnalysis.isOverSold) ||
-				// (analysis.bitcoinAnalysis.existsMACDReversal && analysis.bitcoinAnalysis.keptMACDPositive && !prevBitcoinAnalysis.existsMACDReversal) ||
-				// (analysis.bitcoinAnalysis.existsMACDReversalLong && analysis.bitcoinAnalysis.keptMACDPositiveLong  && !prevBitcoinAnalysis.existsMACDReversalLong)
-			)
-			) {
-				await viberBot.sendTextMessage(`Significant BTC price drop:`);
-				await viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
-				if (viberBot.canStartTrading) {
-					viberBot.canStartTrading = false;
-					await viberBot.sendTextMessage(`Stopped auto-trading.`);
-				}
-			}
-			// Start auto-trading depending on bitcoin analysis
-			if (viberBot && bitcoinAnalysis.result == 'success' && !isEmpty(prevBitcoinAnalysis) && (
-				(Math.abs(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent - prevBitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent) >= 0.01) ||
-				(Math.abs(bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent - prevBitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent) >= 0.01)
-			)
-			) {
-				await viberBot.sendTextMessage(`Significant BTC price rise:`);
-				await viberBot.sendBigTextMessage(analysis.bitcoinAnalysisReport);
-				if (!viberBot.canStartTrading) {
-					viberBot.canStartTrading = true;
-					await viberBot.sendTextMessage(`Started auto-trading.`);
-				}
-			}
-			prevBitcoinAnalysis = JSON.parse(JSON.stringify(bitcoinAnalysis));
 
 			// If there are recommended assets and different than previous, then send recommended assets
 			if (!isEmpty(recommendedAssets) && (recommendedAssets.map(asset => asset.name).join(',') != prevRecommendedAssets.map(asset => asset.name).join(',')) &&
@@ -639,7 +622,6 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 			// Get the Open Orders
 			let openOrderAssetPairs = [];
-			let existOldOrders = false;
 			let openOrdersResponseBody = await Order.request(getOpenOrders, {});
 			await sleep(1000);
 			if (openOrdersResponseBody && openOrdersResponseBody.result) {
@@ -647,23 +629,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					for(let txid in openOrdersResponseBody.result.open) {
 						let openOrderAssetPair = openOrdersResponseBody.result.open[txid].descr.pair;
 						openOrderAssetPairs.push(openOrderAssetPair);
-
-						let dateNow = new Date().getTime();
-						let date = new Date(Math.round(Math.floor(parseFloat(openOrdersResponseBody.result.open[txid].opentm)*1000))).getTime();
-						let daysDiff = (dateNow - date)/(1000*60*60*24);
-						if (daysDiff >= staleOrderDays -1) {
-							existOldOrders = true;
-						}
 					}
 				}
-			}
-
-			// Remind of old orders to monitor
-			if (viberBot && existOldOrders && (new Date()).getHours() == 12 && oldOrdersReminderSent == false) {
-				await viberBot.sendTextMessage(l.i(`Reminder: there are open orders older than ${Math.max(staleOrderDays - 1, 0)} days old remaining. Monitor for selling opportunities.`, 1));
-				oldOrdersReminderSent = true;
-			}else if ((new Date()).getHours() != 12) {
-				oldOrdersReminderSent = false;
 			}
 
 			let latestTradingDecision = null;
@@ -688,6 +655,8 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 							macdReversal: candidate.existsMACDReversal,
 							macdReversalShort: candidate.existsMACDReversalShort,
 							macdReversalLong: candidate.existsMACDReversalLong,
+							timeframesAligned: candidate.timeframesAligned,
+							atrPercent: candidate.atrPercent,
 							isOverbought: candidate.isOverbought
 						})),
 						openOrders: openOrderAssetPairs
@@ -713,8 +682,21 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			if (viberBot && viberBot.canStartTrading) {
 
 				let assetToInvestIn;
+				let lossLimits = Order.lossLimitStatus(sellingWorkerHistoryFilePath, strategy);
+				let openPositions = Order.countOpenPositions(openOrdersResponseBody);
+				let canOpenPosition = openOrdersResponseBody?.result?.open !== undefined && !lossLimits.blocked && openPositions < strategy.maxOpenPositions;
+				if (lossLimits.blocked) {
+					l.w(`Will not open new positions: ${lossLimits.reason}.`, 0, true);
+					if (viberBot && !lossLimitNotified) {
+						await viberBot.sendTextMessage(`No new positions: ${lossLimits.reason}.`);
+						lossLimitNotified = true;
+					}
+				}else {
+					lossLimitNotified = false;
+					if (!canOpenPosition) l.i(`Will not open new positions: ${openPositions} open (maximum ${strategy.maxOpenPositions}) or open orders unavailable.`, 0, true);
+				}
 				// Attempt to auto-trade each recommended asset, starting from the best recommendation
-				for (let i=0; i<recommendedAssets.length; i++) {
+				for (let i=0; canOpenPosition && i<recommendedAssets.length; i++) {
 
 					assetToInvestIn = recommendedAssets[i].name;
 					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
@@ -747,27 +729,22 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 						}
 					}
 
-					let userRef = 1;
-					let prevProfitPercent = profitPercent;
-					// For candidates with long MACD reversal, setup a conditional take-profit with fixed profit
-					if (recommendedAssets[i].existsMACDReversalLong && recommendedAssets[i].changeWeekHalf <= -0.03) {
-						userRef = 3;
-						profitPercent = Math.max(Math.abs(recommendedAssets[i].changeWeekHalf)*60, 5);
-					}
-
 					// Create a new Order
-					let order = new Order(userRef, 'limit', 'buy', viberBot, l, SIMULATION);
-					// If prerequisites to auto-trade are met, submit the limit Order with conditional take-profit
+					let order = new Order(1, 'limit', 'buy', viberBot, l, SIMULATION, false, strategy);
+					// If prerequisites to auto-trade are met, submit the post-only limit Order with its protective stop-loss
 					if (await order.autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies)) {
-						let autoTradeResult = await order.autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder);
-						if (!autoTradeResult) {
+						let autoTradeResult = await order.autoTrade(assetToInvestIn, getTicker, addOrder);
+						if (autoTradeResult === false) {
 							viberBot.canStartTrading = false;
 							persist(ENV, 'START_TRADING', 'false', l);
 							await viberBot.sendTextMessage(`I stopped auto-trading. Awaiting instructions.`);
 							break;
 						}
+						if (autoTradeResult === true) {
+							openPositions++;
+							canOpenPosition = openPositions < strategy.maxOpenPositions;
+						}
 					}
-					profitPercent = prevProfitPercent;
 					await sleep(1000);
 					l.i(`Completed auto-trading for asset ${assetToInvestIn}`, 0, true);
 				}
@@ -781,6 +758,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let exceptionMsg = l.err(`Exception caught: ${e}`, 0, true);
 			if (viberBot) await viberBot.sendTextMessage(`${exceptionMsg}`);
 			sellingWorker.postMessage({close: true});
+			shouldSleep = true;
 			await sleep(3000);
 		}
 

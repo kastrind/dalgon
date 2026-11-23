@@ -2,18 +2,27 @@ import fs from 'fs';
 import Ticker from './Ticker.js';
 import Balance from './Balance.js';
 import TradeableAssetPair from './TradeableAssetPair.js';
+import { DEFAULTS, netEconomics } from './Strategy.js';
 import { isEmpty, sleep } from './utils.js';
+
+// userref tags orders: 1 = entry and its protective stop, 2 = bot-initiated exit.
+const ENTRY_USERREF = 1;
+const EXIT_USERREF = 2;
+// A remainder below this share of the position is treated as filled.
+const DUST_RATIO = 0.001;
 
 class Order {
 
-	constructor(userRef, orderType, type, viberBot, loggerObj, simulationMode, forceAllowTrade=false) {
+	constructor(userRef, orderType, type, viberBot, loggerObj, simulationMode, forceAllowTrade=false, strategy={}) {
 		this.userRef = userRef;
 		this.orderType = orderType;
 		this.type = type;
 		this.viberBot = viberBot;
 		this.l = loggerObj;
 		this.simulationMode = simulationMode;
+		this.strategy = { ...DEFAULTS, ...strategy };
 		this.tradeAbleAssetPairId = '';
+		this.tradeableAssetPair = null;
 		this.tradeableAssetPairDecimals = -1;
 		this.autoTradeReport = "";
 		this.balanceSimObj = {};
@@ -21,6 +30,7 @@ class Order {
 		this.tradeableAssetPairSimObj = {};
 		this.orderSimObj = {};
 		this.forceAllowTrade = forceAllowTrade;
+		this.pauseMs = 1000;
 	}
 
 	setSims(balanceSimObj, tickerSimObj, tradeableAssetPairSimObj, orderSimObj) {
@@ -33,8 +43,8 @@ class Order {
 	async autoTradePreConditions(getBalance, getTradeableAssetPairs, assetToInvestIn, buyExceptions, buyWhiteList, autoTradeCurrencies) {
 		let l = this.l;
 		this.autoTradeCurrencies = autoTradeCurrencies;
-		this.autoTradeReport += l.i(`BUY ${assetToInvestIn} ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - START`) + '\n';
-		let autoTradeReportEnd = `BUY ${assetToInvestIn} ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - END`;
+		this.autoTradeReport += l.i(`BUY ${assetToInvestIn} ORDER ATTEMPT WITH PROTECTIVE STOP-LOSS - START`) + '\n';
+		let autoTradeReportEnd = `BUY ${assetToInvestIn} ORDER ATTEMPT WITH PROTECTIVE STOP-LOSS - END`;
 
 		// Only if allowed to trade
 		if (!this.viberBot.canStartTrading && !this.forceAllowTrade) {
@@ -83,7 +93,7 @@ class Order {
 
 			let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
 
-			this.autoTradeReport += l.i(`Attempt to order with ${buyPriceTotal}${buyWith}. Current balance is ${this.balance}${buyWith}.`, 1) + '\n';
+			this.autoTradeReport += l.i(`Attempt to order with up to ${buyPriceTotal}${buyWith}. Current balance is ${this.balance}${buyWith}.`, 1) + '\n';
 
 			// Must have enough balance
 			if (this.balance < buyPriceTotal) {
@@ -101,6 +111,7 @@ class Order {
 			let assetPairQuery = assetToInvestIn + queryAssetName;
 			let tradeableAssetPairs = await TradeableAssetPair.request(getTradeableAssetPairs, { searchParams: { pair: assetPairQuery } }, l, this.simulationMode, this.tradeableAssetPairSimObj);
 			if (!isEmpty(tradeableAssetPairs)) {
+				this.tradeableAssetPair = tradeableAssetPairs[0];
 				this.tradeAbleAssetPairId = tradeableAssetPairs[0].assetPair;
 				this.tradeableAssetPairDecimals = tradeableAssetPairs[0].pairDecimals;
 				this.autoTradeReport += l.i(`Asset pair id is ${this.tradeAbleAssetPairId} with ${this.tradeableAssetPairDecimals} decimals.`, 1) + '\n';
@@ -118,19 +129,44 @@ class Order {
 		return false;
 	}
 
-	async autoTrade(profitPercent, assetToInvestIn, getTicker, addOrder) {
+	static roundDown(value, decimals) {
+		let factor = Math.pow(10, decimals);
+		return (Math.floor(value * factor + 1e-9) / factor).toFixed(decimals);
+	}
+
+	// The pair's first fee tier is the highest rate, so it is the conservative estimate.
+	pairFeePercents() {
+		let pair = this.tradeableAssetPair;
+		let taker = pair && Array.isArray(pair.fees) && pair.fees.length ? parseFloat(pair.fees[0][1]) : NaN;
+		let maker = pair && Array.isArray(pair.makerFees) && pair.makerFees.length ? parseFloat(pair.makerFees[0][1]) : NaN;
+		return {
+			taker: Number.isFinite(taker) ? taker : this.strategy.takerFeePercent,
+			maker: Number.isFinite(maker) ? maker : this.strategy.makerFeePercent
+		};
+	}
+
+	// Returns true when the entry was placed, false on a failure that should stop auto-trading, null when the setup is skipped.
+	async autoTrade(assetToInvestIn, getTicker, addOrder) {
 		let l = this.l;
-		let autoTradeReportEnd = `BUY ${assetToInvestIn} ORDER ATTEMPT WITH CONDITIONAL CLOSE: TAKE PROFIT - END`;
+		let s = this.strategy;
+		let autoTradeReportEnd = `BUY ${assetToInvestIn} ORDER ATTEMPT WITH PROTECTIVE STOP-LOSS - END`;
+		let skip = async (reason) => {
+			this.autoTradeReport += l.w(`Will not proceed to order ${assetToInvestIn}: ${reason}`, 1, true) + '\n';
+			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
+			this.autoTradeCurrency = undefined;
+			return null;
+		};
 
 		if (!this.autoTradeCurrency) {
 			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: no currency to trade with. Should call method autoTradePreConditions first, to meet preconditions. `, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
 			return false;
 		}
+		// A post-only limit fills exactly at its price, which is what keeps the stop exactly stopLossPercent below the real entry.
+		if (this.orderType != 'limit') return await skip(`only post-only limit entries are supported, not ${this.orderType}.`);
 
-		// Determine amount to buy
 		let ticker = await (Ticker.request(getTicker, { searchParams: { pair: this.tradeAbleAssetPairId } }, l, this.simulationMode, this.tickerSimObj));
-		await sleep(1000);
+		await sleep(this.pauseMs);
 		if (isEmpty(ticker)) {
 			this.autoTradeReport += l.err(`Will not proceed to order ${assetToInvestIn}: failed to get Ticker.`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
@@ -139,35 +175,44 @@ class Order {
 			return false;
 		}
 
+		let spreadPercent = (ticker.askPrice - ticker.bidPrice) / ticker.askPrice * 100;
+		if (spreadPercent > s.maxSpreadPercent) return await skip(`spread ${spreadPercent.toFixed(2)}% exceeds ${s.maxSpreadPercent}%.`);
+
+		let fees = this.pairFeePercents();
+		let economics = netEconomics(s, fees.maker, fees.taker);
+		this.autoTradeReport += l.i(`Fees maker ${fees.maker}% taker ${fees.taker}%: net reward/risk ${economics.rewardRisk.toFixed(2)}, break-even win rate ${(economics.breakEvenWinRate * 100).toFixed(1)}%.`, 1) + '\n';
+		if (economics.rewardRisk < s.minNetRewardRisk) return await skip(`net reward/risk ${economics.rewardRisk.toFixed(2)} is below ${s.minNetRewardRisk}.`);
+
 		let buyWith = this.autoTradeCurrency.name;
 		let minBuyAmount = parseFloat(this.autoTradeCurrency.minBuyAmount);
 		let buyBalancePercent = parseFloat(this.autoTradeCurrency.buyPercent);
+		let requestedTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
+		// The position is sized so a stop-out, including fees, costs at most maxRiskAmount.
+		let riskCappedTotal = s.maxRiskAmount / (economics.netRiskPercent / 100);
+		let buyPriceTotal = Math.min(requestedTotal, riskCappedTotal, this.balance - this.minBalance);
 
-		let buyPriceTotal = Math.max( minBuyAmount, this.balance * buyBalancePercent / 100 );
+		let pricePrecision = parseInt(this.tradeableAssetPairDecimals);
+		let lotPrecision = parseInt(this.tradeableAssetPair.lotDecimals);
+		let buyPriceUnit = (ticker.bidPrice * (1 - s.entryOffsetPercent / 100)).toFixed(pricePrecision);
+		let buyVolume = Order.roundDown(buyPriceTotal / buyPriceUnit, lotPrecision);
+		let stopPrice = (parseFloat(buyPriceUnit) * (1 - s.stopLossPercent / 100)).toFixed(pricePrecision);
+		let targetPrice = (parseFloat(buyPriceUnit) * (1 + s.takeProfitPercent / 100)).toFixed(pricePrecision);
 
-		// Determine price per unit and volume to buy from total buying price
-		let buyPriceUnit = parseFloat(ticker.askPrice - 0.3 * 0.01 * ticker.askPrice).toFixed(this.tradeableAssetPairDecimals);
-		let buyVolume = (buyPriceTotal / buyPriceUnit).toFixed(this.tradeableAssetPairDecimals);
-		this.autoTradeReport += l.i(`Total amount to purchase is ${buyPriceTotal} ${buyWith}`, 1) + '\n';
-		this.autoTradeReport += l.i(`Total amount to purchase breaks down to ${buyPriceUnit} ${buyWith} price per unit, times ${buyVolume} volume.`, 1) + '\n';
+		if (parseFloat(buyVolume) < parseFloat(this.tradeableAssetPair.orderMin || 0)) return await skip(`volume ${buyVolume} is below the pair minimum ${this.tradeableAssetPair.orderMin}.`);
+		if (parseFloat(buyVolume) * parseFloat(buyPriceUnit) < parseFloat(this.tradeableAssetPair.costMin || 0)) return await skip(`cost is below the pair minimum ${this.tradeableAssetPair.costMin}.`);
 
-		// Set the desired selling price for profit
-		let profitPrice = parseFloat(buyPriceUnit) + profitPercent * buyPriceUnit / 100;
-		profitPrice = profitPrice.toFixed(this.tradeableAssetPairDecimals);
-		this.autoTradeReport += l.i(`Conditional close to take ${profitPercent}% profit: ${profitPrice} ${buyWith} price per unit.`, 1) + '\n';
+		let cost = parseFloat(buyVolume) * parseFloat(buyPriceUnit);
+		let maxLoss = cost * economics.netRiskPercent / 100;
+		this.autoTradeReport += l.i(`Spread ${spreadPercent.toFixed(2)}%. Buying ${buyVolume} at ${buyPriceUnit}, cost ${cost.toFixed(2)} ${buyWith} (requested ${requestedTotal.toFixed(2)}, risk cap ${riskCappedTotal.toFixed(2)}).`, 1) + '\n';
+		this.autoTradeReport += l.i(`Protective stop-loss ${stopPrice} (-${s.stopLossPercent}%), worst-case loss incl. fees ${maxLoss.toFixed(2)} ${buyWith}. Target ${targetPrice} (+${s.takeProfitPercent}%), managed by the bot.`, 1) + '\n';
 
-		let optionalParamsObj = { price: buyPriceUnit, volume: buyVolume, expiretm: '+3600', 'close[ordertype]': 'take-profit', 'close[price]': profitPrice };
-		// market orders get the market price, and they execute immediately
-		if (this.orderType == 'market') {
-			delete optionalParamsObj.price;
-			delete optionalParamsObj.expiretm;
-		}
+		// Spot allows one conditional close, so the stop is the exchange-side order and the bot handles the target.
+		let optionalParamsObj = { price: buyPriceUnit, volume: buyVolume, expiretm: `+${s.entryTimeoutSeconds}`, oflags: 'post', 'close[ordertype]': 'stop-loss', 'close[price]': stopPrice };
 
 		let orderResponse = await addOrder(this.prepareOrderParamsObj(this.tradeAbleAssetPairId, optionalParamsObj), this.orderSimObj);
-		await sleep(1000);
+		await sleep(this.pauseMs);
 		let orderResponseBody = JSON.parse(orderResponse.body);
 
-		// Order failed
 		if (!isEmpty(orderResponseBody.error)) {
 			this.autoTradeReport += l.err(`Order failed with error: ${orderResponseBody.error}`, 1, true) + '\n';
 			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
@@ -175,15 +220,11 @@ class Order {
 			this.autoTradeCurrency = undefined;
 			return false;
 		}
-		// Order succeeded
-		else {
-			this.autoTradeReport += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 1, true) + '\n'; 
-			this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
-			await this.viberBot.sendTextMessage(`I just bought ${assetToInvestIn}. Buy Order report:\n${this.autoTradeReport}`);
-			this.autoTradeCurrency = undefined;
-			return true;
-		}
-
+		this.autoTradeReport += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 1, true) + '\n';
+		this.autoTradeReport += l.i(`${autoTradeReportEnd}`) + '\n';
+		await this.viberBot.sendTextMessage(`Entry order placed for ${assetToInvestIn}. It is cancelled automatically if unfilled after ${s.entryTimeoutSeconds}s. Buy Order report:\n${this.autoTradeReport}`);
+		this.autoTradeCurrency = undefined;
+		return true;
 	}
 
 	prepareOrderParamsObj(tradeableAssetPairId, optionalParamsObj={} ) {
@@ -236,247 +277,303 @@ class Order {
 		return report;
 	}
 
-	static async sellStaleProfitOrders(priceToMarketSeries, profitPercent, staleOrderExceptions, staleOrderDays, staleOrderPriceDifferencePercentSequence, recommendedAssetsLength, getOpenOrders, timeZone, getTicker, cancelOrder, getTradeableAssetPairs, addOrder, l, simOpenOrdersObj={}, simCancelOrderObj={}, tradeableAssetPairSimObj={}, simAddOrderObj={}, simTickerObj={}) {
-		let result = false;
-		let report = l.i('SELL STALE PROFIT ORDERS - START') + '\n';
-		report += l.i(`Desired profit percentage: ${profitPercent}%.`) + '\n';
-		report += l.i(`Orders considered stale are >= ${staleOrderDays} days old.`) + '\n';
-		report += l.i(`Orders considered stale are > ${staleOrderPriceDifferencePercentSequence}% to market price.`) + '\n';
-		let options = { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+	// Pending entries count too: they become positions as soon as they fill.
+	static countOpenPositions(openOrdersResponseBody) {
+		let open = openOrdersResponseBody?.result?.open;
+		if (isEmpty(open)) return 0;
+		return Object.values(open).filter(order => parseInt(order.userref) === ENTRY_USERREF).length;
+	}
 
-		let openOrdersResponseBody = await Order.request(getOpenOrders, {}, simOpenOrdersObj);
-		let openOrderTxids = [];
-		let tookAction = false;
-		let metadata = {};
+	static async queryOrder(requests, txid) {
+		let body = await Order.request(requests.queryOrders, { txid: txid });
+		if (!body || !isEmpty(body.error) || !body.result || !body.result[txid]) return null;
+		return body.result[txid];
+	}
 
-		if (!isEmpty(openOrdersResponseBody?.result?.open)) {
-			let dateNow = new Date().getTime();
-			for(let txid in openOrdersResponseBody.result.open) {
-				openOrderTxids.push(txid);
+	// Executed volume, average price and fee (quote currency) as reported by the exchange.
+	static fillOf(info) {
+		return { volume: parseFloat(info.vol_exec) || 0, price: parseFloat(info.price) || 0, fee: parseFloat(info.fee) || 0 };
+	}
 
-				if (staleOrderExceptions.includes(txid)) {
-					report += l.i(`Skipping order ${txid} because it is excepted.`, 1) + '\n';
-					continue;
-				}
+	static journalEntry(ctx, position, volume, price, fee, reason) {
+		let exitFee = fee > 0 ? fee : volume * price * ctx.strategy.takerFeePercent / 100;
+		let entryFee = position.entryFee * volume / position.volume;
+		return {
+			closedAt: new Date(ctx.nowMs).toISOString(),
+			pair: position.pair,
+			reason,
+			entryPrice: position.entryPrice,
+			exitPrice: price,
+			volume,
+			netPnl: volume * (price - position.entryPrice) - entryFee - exitFee,
+			estimated: !(position.entryFeeActual && fee > 0)
+		};
+	}
 
-				let currOpenOrder = openOrdersResponseBody.result.open[txid];
-				let userref = parseInt(openOrdersResponseBody.result.open[txid].userref);
-				let type = currOpenOrder.descr.type;
-				let orderType = currOpenOrder.descr.ordertype;
-				let description = currOpenOrder.descr.order;
-				if (userref == 1 && type == 'sell' && orderType == 'take-profit') {
-					let dateFull = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).toLocaleString("en-US", options);
-					let date = new Date(Math.round(Math.floor(parseFloat(currOpenOrder.opentm)*1000))).getTime();
-					let daysDiff = (dateNow - date)/(1000*60*60*24);
-					report += '\n' + l.i(`\nOrder ${txid}: ${description}`, 1) + '\n';
-					report += l.i(`Took place on ${dateFull}, ${daysDiff.toFixed(2)} days ago.`, 2) + '\n';
+	// Position state comes from the exchange: the stop's refid points at the entry order, whose fill is the true cost basis.
+	static async describePosition(ctx, order, previous) {
+		let stopPrice = parseFloat(order.descr.price);
+		let volume = parseFloat(order.vol);
+		let current = { pair: order.descr.pair, volumeText: order.vol, volume, stopPriceText: order.descr.price, stopPrice };
+		if (previous) {
+			let position = { ...previous, ...current };
+			delete position.exitTxid;
+			delete position.exitReason;
+			return position;
+		}
+		let position = {
+			...current,
+			entryTxid: order.refid || null,
+			entryPrice: stopPrice / (1 - ctx.strategy.stopLossPercent / 100),
+			entryFee: 0,
+			entryActual: false,
+			entryFeeActual: false,
+			openedAtMs: Math.round(parseFloat(order.opentm) * 1000)
+		};
+		position.entryFee = volume * position.entryPrice * ctx.strategy.makerFeePercent / 100;
+		if (order.refid) {
+			let entry = await Order.queryOrder(ctx.requests, order.refid);
+			await sleep(ctx.pause);
+			let fill = entry ? Order.fillOf(entry) : null;
+			if (fill && fill.volume > 0 && fill.price > 0) {
+				position.entryPrice = fill.price;
+				position.entryActual = true;
+				position.entryFeeActual = fill.fee > 0;
+				position.entryFee = fill.fee > 0 ? fill.fee * Math.min(1, volume / fill.volume) : volume * fill.price * ctx.strategy.makerFeePercent / 100;
+			}
+		}
+		return position;
+	}
 
-					let pair = currOpenOrder.descr.pair;
-					let ticker = await Ticker.request(getTicker, { searchParams: { pair: pair } }, l, !isEmpty(simTickerObj), simTickerObj);
-					let differencePercent = 0;
-					let currPrice;
-					let canSellForProfit = false;
+	static async placeStop(ctx, position, volumeText) {
+		let stop = new Order(ENTRY_USERREF, 'stop-loss', 'sell', null, ctx.l, false);
+		let body = await Order.request(ctx.requests.addOrder, stop.prepareOrderParamsObj(position.pair, { volume: volumeText, price: position.stopPriceText }));
+		await sleep(ctx.pause);
+		return body && isEmpty(body.error) && body.result && body.result.txid ? body.result.txid[0] : null;
+	}
 
-					// not for testing
-					if (isEmpty(simOpenOrdersObj)) await sleep(1000);
+	// Puts the stop back on volume that is still held; keeps the position tracked as unprotected when that fails.
+	static async protectRemainder(ctx, txid, position, remaining) {
+		let decimals = (position.volumeText.split('.')[1] || '').length;
+		let volumeText = remaining.toFixed(decimals);
+		let next = { ...position, volume: remaining, volumeText, entryFee: position.entryFee * remaining / position.volume };
+		delete next.exitTxid;
+		delete next.exitReason;
+		delete next.unprotected;
+		delete ctx.updated[txid];
+		let newTxid = await Order.placeStop(ctx, position, volumeText);
+		ctx.tookAction = true;
+		if (newTxid) {
+			ctx.updated[newTxid] = next;
+			ctx.report += ctx.l.i(`Stop restored for ${volumeText} ${position.pair} as ${newTxid}.`, 2) + '\n';
+		} else {
+			ctx.updated[txid] = { ...next, unprotected: true };
+			ctx.report += ctx.l.err(`UNPROTECTED POSITION: could not restore the stop for ${volumeText} ${position.pair}. Protect it manually.`, 2, true) + '\n';
+		}
+	}
 
-					if (ticker) {
-						let price = parseFloat(currOpenOrder.descr.price);
-						currPrice = parseFloat(ticker.bidPrice);
-						differencePercent = (price - currPrice)*100/currPrice;
+	// Journals the executed part of an exit and re-protects whatever was not sold.
+	static async bookFill(ctx, txid, position, fill, reason) {
+		let sold = Math.min(fill.volume, position.volume);
+		if (sold > 0) {
+			let entry = Order.journalEntry(ctx, position, sold, fill.price, fill.fee, reason);
+			ctx.journal.push(entry);
+			ctx.tookAction = true;
+			ctx.report += ctx.l.i(`${position.pair} ${reason}: sold ${sold} at ${fill.price}, net ${entry.netPnl.toFixed(2)}${entry.estimated ? ' (estimated)' : ''}.`, 2) + '\n';
+		}
+		let remaining = position.volume - sold;
+		if (remaining > position.volume * DUST_RATIO) await Order.protectRemainder(ctx, txid, position, remaining);
+	}
 
-						// only for testing
-						if (!isEmpty(simOpenOrdersObj)){
-							if (txid =="11O6Z4CS-S5LIA-IOU4TR") { differencePercent = 61; }
-							if (txid =="1O6Z4CS-S5LIA-IOU4TR") { differencePercent = 48.5; }
-							if (txid =="1OW27RX-YWQBE-2ZZYP7") { differencePercent = 48.5; }
-							if (txid =="1OOV7GI-OVXI2-KKPO2V") { differencePercent = 48.5; }
-							if (txid =="1O7TBWY-TZ2FA-2JS27W") { differencePercent = 48.5; }
-							if (txid =="11O7TBWY-TZ2FA-2JS27W") { differencePercent = 41; }
-							if (txid =="21O7TBWY-TZ2FA-2JS27W") { differencePercent = 49.2; }
-						}
-						report += l.d(`differencePercent ${differencePercent} profitPercent ${profitPercent} `, 0);
+	// An accepted exit order is not an executed one: the position is only closed once the exchange reports the fill.
+	static async settleExit(ctx, txid, position, info) {
+		if (!info) {
+			ctx.updated[txid] = position;
+			ctx.tookAction = true;
+			ctx.report += ctx.l.err(`Cannot verify exit order ${position.exitTxid} for ${position.pair}; will retry.`, 2, true) + '\n';
+			return;
+		}
+		if (info.status === 'open' || info.status === 'pending') {
+			ctx.updated[txid] = position;
+			ctx.report += ctx.l.i(`Exit order ${position.exitTxid} for ${position.pair} is still ${info.status}.`, 2) + '\n';
+			return;
+		}
+		delete ctx.updated[txid];
+		await Order.bookFill(ctx, txid, position, Order.fillOf(info), position.exitReason || 'exit');
+	}
 
-						report += l.i(`Curr price is ${currPrice}, ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
+	// null when the balance cannot be verified.
+	static async holdsBalance(ctx, position) {
+		let pairs = await TradeableAssetPair.request(ctx.requests.getTradeableAssetPairs, { searchParams: { pair: position.pair } }, ctx.l);
+		let base = pairs && pairs.length ? pairs[0].base : null;
+		let body = base ? await Order.request(ctx.requests.getBalance, {}) : null;
+		await sleep(ctx.pause);
+		if (!body || !isEmpty(body.error) || !body.result) return null;
+		let held = parseFloat(body.result[base]) || parseFloat(body.result[`${base}.F`]) || 0;
+		return held >= position.volume * 0.99;
+	}
 
-						// if selling is profitable
-						if (differencePercent <= profitPercent -0.6) {
-							if (!isEmpty(priceToMarketSeries[txid]) && priceToMarketSeries[txid].length >= 1) {
-								let lastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -1];
-								report += l.d("selling is profitable and series exists and has >=1 length");
+	// The stop disappeared without the bot cancelling it: the coins may be sitting unprotected.
+	static async handleOrphan(ctx, txid, position, status) {
+		ctx.tookAction = true;
+		let holds = await Order.holdsBalance(ctx, position);
+		if (holds === null) {
+			ctx.updated[txid] = position;
+			ctx.report += ctx.l.err(`Stop ${txid} for ${position.pair} was ${status} outside the bot and the balance could not be verified; will retry.`, 2, true) + '\n';
+			return;
+		}
+		if (!holds) {
+			ctx.journal.push({ closedAt: new Date(ctx.nowMs).toISOString(), pair: position.pair, reason: `stop ${status} outside the bot, no balance found: assumed closed manually`, entryPrice: position.entryPrice, exitPrice: null, volume: position.volume, netPnl: 0, estimated: true });
+			ctx.report += ctx.l.i(`Stop ${txid} for ${position.pair} was ${status} and no balance remains; assumed closed manually.`, 2) + '\n';
+			return;
+		}
+		ctx.report += ctx.l.err(`URGENT: stop ${txid} for ${position.pair} was ${status} outside the bot while the coins are still held. Restoring protection.`, 2, true) + '\n';
+		await Order.protectRemainder(ctx, txid, position, position.volume);
+	}
 
-								//gained considerable ground
-								if (differencePercent < lastOne - 1.5) {
-									report += l.d(`canSellForProfit 3A`);
-									report += l.i(`Reason code for selling: 3A\n`, 2);
-									canSellForProfit = true;
-								
-								//if only one past price to market in the series,
-								}else if (priceToMarketSeries[txid].length == 1) {
-									report += l.d("series has one");
-									report += l.d(`lastOne ${lastOne}`);
-									// if current price to market < last one - 1 (price gained ground)
-									if (differencePercent < lastOne - 0.3) {
-										report += l.d(`canSellForProfit 1A`);
-										report += l.i(`Reason code for selling: 1A\n`, 2);
-										canSellForProfit = true;
-									}
-								//if more than one past price to market in the series,
-								}else if (priceToMarketSeries[txid].length > 1) {
-									let beforeLastOne = priceToMarketSeries[txid][priceToMarketSeries[txid].length -2];
-									report += l.d("series has more than one");
-									report += l.d(`lastOne ${lastOne} beforeLastOne ${beforeLastOne}`);
-									// if current price to market < last one - 1 (price gained ground)
-									if (differencePercent < lastOne - 0.3) {
-										report += l.d(`canSellForProfit 2A`);
-										report += l.i(`Reason code for selling: 2A\n`, 2);
-										canSellForProfit = true;
-									}
-									if (differencePercent < lastOne - 0.1 && lastOne < beforeLastOne - 0.1) {
-										report += l.d(`canSellForProfit 2B`);
-										report += l.i(`Reason code for selling: 2B\n`, 2);
-										canSellForProfit = true;
-									}
-								}
-								//else keep waiting, in attempt to maximize profit
-							}
+	static async exitPosition(ctx, txid, position, reason) {
+		let requests = ctx.requests;
+		let cancelBody = await Order.request(requests.cancelOrder, { txid: txid });
+		await sleep(ctx.pause);
+		if (!cancelBody || !isEmpty(cancelBody.error) || !(cancelBody.result && cancelBody.result.count > 0)) {
+			ctx.report += ctx.l.err(`Could not cancel stop ${txid}; it may have triggered. Re-checking next cycle.`, 2, true) + '\n';
+			return;
+		}
+		let sell = new Order(EXIT_USERREF, 'market', 'sell', null, ctx.l, false);
+		let sellBody = await Order.request(requests.addOrder, sell.prepareOrderParamsObj(position.pair, { volume: position.volumeText }));
+		await sleep(ctx.pause);
+		let sellTxid = sellBody && isEmpty(sellBody.error) && sellBody.result && sellBody.result.txid ? sellBody.result.txid[0] : null;
+		if (!sellTxid) {
+			ctx.report += ctx.l.err(`Market sell failed: ${sellBody ? sellBody.error : 'no response'}. Restoring the stop.`, 2, true) + '\n';
+			await Order.protectRemainder(ctx, txid, position, position.volume);
+			return;
+		}
+		let exiting = { ...position, exitTxid: sellTxid, exitReason: reason };
+		ctx.updated[txid] = exiting;
+		let info = null;
+		for (let attempt = 0; attempt < 3; attempt++) {
+			info = await Order.queryOrder(requests, sellTxid);
+			await sleep(ctx.pause);
+			if (info && info.status !== 'open' && info.status !== 'pending') break;
+		}
+		await Order.settleExit(ctx, txid, exiting, info);
+	}
 
-						}
-					}
+	// known: stop txid -> position remembered from the previous cycle; returns the updated map, a report and closed-trade journal entries.
+	static async managePositions(known, strategy, requests, l, nowMs=Date.now()) {
+		let ctx = { strategy, requests, l, nowMs, pause: requests.pauseMs ?? 1000, updated: {}, journal: [], report: l.i('MANAGE POSITIONS - START') + '\n', tookAction: false };
 
-					// if not testing, update the price to market series
-					if (isEmpty(simOpenOrdersObj)) {
-						if (!Object.keys(priceToMarketSeries).includes(txid)) priceToMarketSeries[txid] = [differencePercent];
-						else priceToMarketSeries[txid].push(differencePercent);
-						if (priceToMarketSeries[txid].length>2) priceToMarketSeries[txid].shift();
-					}
+		let openOrdersBody = await Order.request(requests.getOpenOrders, {});
+		if (!openOrdersBody || !isEmpty(openOrdersBody.error) || !openOrdersBody.result || !openOrdersBody.result.open) {
+			ctx.report += l.err(`Failed to get open orders${openOrdersBody && openOrdersBody.error ? ': ' + openOrdersBody.error : ''}. Positions left untouched.`, 1, true) + '\n';
+			return { known, report: ctx.report, tookAction: false, journal: [] };
+		}
 
-					// if order eligible for cancellation, that is:
-					// price diverged depending on how much time passed or
-					// order is profitabe enough
-					let seq_i = Math.min(staleOrderPriceDifferencePercentSequence.length - 1, Math.floor((daysDiff / staleOrderDays) * staleOrderPriceDifferencePercentSequence.length));
-					let staleOrderPriceDifferencePercent = parseFloat(staleOrderPriceDifferencePercentSequence[seq_i]);
+		let stops = {};
+		for (let txid in openOrdersBody.result.open) {
+			let order = openOrdersBody.result.open[txid];
+			if (parseInt(order.userref) === ENTRY_USERREF && order.descr.type === 'sell' && order.descr.ordertype === 'stop-loss') stops[txid] = order;
+		}
 
-					if ( (!isEmpty(simOpenOrdersObj) && daysDiff >= staleOrderDays && differencePercent >= staleOrderPriceDifferencePercent) ||
-						(isEmpty(simOpenOrdersObj) && differencePercent >= staleOrderPriceDifferencePercent) ||
-						canSellForProfit) {
-						result = true;
-						tookAction = true;
-						if (!canSellForProfit) {
-							report += l.i(`Order is stale: ${daysDiff} days old, ${differencePercent.toFixed(2)}% to market price (seq_i=${seq_i}).`, 2) + '\n';
-						}else {
-							report += l.i(`Can sell for profit: ${differencePercent.toFixed(2)}% to market price.`, 2) + '\n';
-						}
-						report += l.i(`Cancelling order ${txid}...`, 2) + '\n';
-
-						// if testing, return here
-						if (!isEmpty(simOpenOrdersObj)) return {result: result, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction};
-
-						let cancelOrderResponseBody = await Order.request(cancelOrder, {txid: txid}, simCancelOrderObj);
-						await sleep(1000);
-						// Cancel order succeeded
-						if (cancelOrderResponseBody && !cancelOrderResponseBody.result.pending) {
-							report += l.suc(`Order ${txid} cancelled.`, 2, true) + '\n';
-							let vol = currOpenOrder.vol;
-							let sellOrderType = 'limit';
-							let sellOrderParamsObj;
-							let sellOrderPrice;
-
-							if (ticker) {
-								report += l.i(`Placing limit sell order...`, 2) + '\n';
-
-								// get number of decimals for the asset pair of the Order and set the price
-								let tradeableAssetPairs = await TradeableAssetPair.request(getTradeableAssetPairs, { searchParams: { pair: pair } }, l, !isEmpty(tradeableAssetPairSimObj), tradeableAssetPairSimObj);
-								if (!isEmpty(tradeableAssetPairs)) {
-									let tradeableAssetPairId = tradeableAssetPairs[0].assetPair;
-									let tradeableAssetPairDecimals = parseInt(tradeableAssetPairs[0].pairDecimals);
-									report += l.i(`Asset pair id is ${tradeableAssetPairId} with ${tradeableAssetPairDecimals} decimals.`, 2) + '\n';
-
-									if (!canSellForProfit) {
-										report += l.i(`Switching to market sell order due to non-profitability...`, 2) + '\n';
-										sellOrderType = 'market';
-										sellOrderPrice = ticker.bidPrice.toFixed(tradeableAssetPairDecimals);
-									}else {
-										sellOrderPrice = (ticker.bidPrice + 0.25 * 0.01 * ticker.bidPrice).toFixed(tradeableAssetPairDecimals);
-									}
-
-									// trace back the price of the buy order, to calculate profit
-									let buyOrderPrice = (100 * parseFloat(currOpenOrder.descr.price)) / (100 + profitPercent);
-									let fees = 0.25 * 0.01 * ticker.bidPrice + 0.25 * 0.01 * buyOrderPrice;
-									report += l.i(`Fees: ${fees}`, 2) + '\n';
-									let profit = (vol * sellOrderPrice) - (vol * buyOrderPrice) - fees;
-									metadata[txid] = { pair: pair, date: dateFull, profit: profit, fees: fees, buyPrice: buyOrderPrice, sellPrice: sellOrderPrice, differencePercent: differencePercent };
-									report += l.i(`Profit: ${profit}`, 2) + '\n';
-
-									sellOrderParamsObj = { volume: vol, price: sellOrderPrice};
-								}else {
-									report += l.err(`Failed to get the number of decimals for pair ${pair}.`, 2, true) + '\n';
-									report += l.err(`Proceed manually.`, 2, true) + '\n';
-									report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
-									return {result: false, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction};
-								}
-
-							}else {
-								report += l.err(`Failed to get ticker for pair ${pair}.`, 2, true) + '\n';
-								report += l.err(`Proceed manually.`, 2, true) + '\n';
-								report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
-								return {result: false, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction};
-							}
-
-							let order = new Order(2, sellOrderType, 'sell', null, null, simAddOrderObj==true, false);
-							let orderResponse = await addOrder(order.prepareOrderParamsObj(pair, sellOrderParamsObj ), simAddOrderObj);
-							await sleep(1000);
-							let orderResponseBody = JSON.parse(orderResponse.body);
-							// Order failed
-							if (!isEmpty(orderResponseBody.error)) {
-								report += l.err(`Sell order failed with error: ${orderResponseBody.error}`, 2, true) + '\n';
-								report += l.err(`Proceed manually.`, 2, true) + '\n';
-								result = false;
-							}
-							// Order succeeded
-							else {
-								report += l.suc(`Sell order placed.`, 2, true) + '\n'; 
-								report += l.suc(`${JSON.stringify(orderResponseBody.result, null, 2)}`, 2, true) + '\n';
-								if (canSellForProfit) {
-									delete priceToMarketSeries[txid];
-								}
-							}
-						// Cancel order failed
-						}else {
-							report += l.err(`Order was not cancelled.`, 2, true) + '\n';
-							if (cancelOrderResponseBody) {
-								report += l.err(`Response: ${JSON.stringify(cancelOrderResponseBody, null, 2)}`, 2, true) + '\n';
-							}
-							report += l.err(`Proceed manually.`, 2, true) + '\n';
-							result = false;
-						}
-					}
+		for (let txid of Object.keys(known)) {
+			let position = known[txid];
+			if (position.exitTxid) {
+				let info = await Order.queryOrder(requests, position.exitTxid);
+				await sleep(ctx.pause);
+				await Order.settleExit(ctx, txid, position, info);
+			} else if (!stops[txid]) {
+				let info = await Order.queryOrder(requests, txid);
+				await sleep(ctx.pause);
+				if (!info || info.status === 'open' || info.status === 'pending') {
+					ctx.updated[txid] = position;
+					ctx.tookAction = true;
+					ctx.report += l.err(`Cannot confirm what happened to stop ${txid} for ${position.pair}; will retry.`, 2, true) + '\n';
+				} else if (info.status === 'closed') {
+					let fill = Order.fillOf(info);
+					if (!(fill.price > 0)) fill.price = position.stopPrice;
+					if (!(fill.volume > 0)) fill.volume = position.volume;
+					await Order.bookFill(ctx, txid, position, fill, 'stop-loss');
+				} else {
+					await Order.handleOrphan(ctx, txid, position, info.status);
 				}
 			}
 		}
 
-		Object.keys(priceToMarketSeries).forEach(txid => {
-			if (!openOrderTxids.includes(txid)) {
-				delete priceToMarketSeries[txid];
-			}
-		});
+		for (let txid in stops) {
+			let position = await Order.describePosition(ctx, stops[txid], known[txid]);
+			ctx.updated[txid] = position;
 
-		report += l.i('SELL STALE PROFIT ORDERS - END') + '\n';
-		return {result: result, report: report, priceToMarketSeries: priceToMarketSeries, tookAction: tookAction, metadata: metadata};
+			let ticker = await Ticker.request(requests.getTicker, { searchParams: { pair: position.pair } }, l);
+			await sleep(ctx.pause);
+			if (!ticker) {
+				ctx.report += l.err(`No ticker for ${position.pair}; skipping ${txid}.`, 1, true) + '\n';
+				continue;
+			}
+			let bid = ticker.bidPrice;
+			let target = position.entryPrice * (1 + strategy.takeProfitPercent / 100);
+			let ageHours = (nowMs - position.openedAtMs) / 3600000;
+			ctx.report += l.i(`${position.pair} ${txid}: entry ${position.entryPrice.toPrecision(6)}${position.entryActual ? '' : ' (derived)'}, bid ${bid}, ${((bid / position.entryPrice - 1) * 100).toFixed(2)}%, stop ${position.stopPriceText}, target ${target.toPrecision(6)}, held ${ageHours.toFixed(1)}h.`, 1) + '\n';
+
+			let reason = bid >= target ? 'target' : (ageHours >= strategy.maxHoldHours ? 'time' : null);
+			if (!reason) continue;
+
+			ctx.report += l.i(`Exit (${reason}) for ${position.pair}.`, 2) + '\n';
+			ctx.tookAction = true;
+			await Order.exitPosition(ctx, txid, position, reason);
+		}
+
+		ctx.report += l.i('MANAGE POSITIONS - END') + '\n';
+		return { known: ctx.updated, report: ctx.report, tookAction: ctx.tookAction, journal: ctx.journal };
 	}
 
-	static readPriceToMarketSeries(priceToMarketSeriesFilePath, logger) {
-		let priceToMarketSeries = {};
+	static realizedPnl(historyFilePath, sinceMs) {
+		let lines;
 		try {
-			priceToMarketSeries = JSON.parse(fs.readFileSync(priceToMarketSeriesFilePath, {encoding:'utf8', flag:'r'}));
-		}catch(error) {
-			logger.err(error, 0, true);
+			lines = fs.readFileSync(historyFilePath, { encoding: 'utf8', flag: 'r' }).split('\n');
+		} catch (error) {
+			return 0;
 		}
-		return priceToMarketSeries;
+		let total = 0;
+		for (let line of lines) {
+			if (!line.trim()) continue;
+			try {
+				let entry = JSON.parse(line);
+				if (typeof entry.netPnl === 'number' && Date.parse(entry.closedAt) >= sinceMs) total += entry.netPnl;
+			} catch (error) {
+				continue;
+			}
+		}
+		return total;
 	}
 
-	static writePriceToMarketSeries(priceToMarketSeriesFilePath, priceToMarketSeries, logger) {
-		fs.writeFileSync(priceToMarketSeriesFilePath, JSON.stringify(priceToMarketSeries, null, 2), function(err) { if (err) logger.err(err, 0, true); } );
+	// Day starts at local midnight and the week on Monday.
+	static lossLimitStatus(historyFilePath, strategy, now=new Date()) {
+		let dayStart = new Date(now);
+		dayStart.setHours(0, 0, 0, 0);
+		let weekStart = new Date(dayStart);
+		weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+		let dayPnl = Order.realizedPnl(historyFilePath, dayStart.getTime());
+		let weekPnl = Order.realizedPnl(historyFilePath, weekStart.getTime());
+		let reasons = [];
+		if (dayPnl <= -strategy.dailyMaxLoss) reasons.push(`daily loss ${dayPnl.toFixed(2)} reached the ${strategy.dailyMaxLoss} limit`);
+		if (weekPnl <= -strategy.weeklyMaxLoss) reasons.push(`weekly loss ${weekPnl.toFixed(2)} reached the ${strategy.weeklyMaxLoss} limit`);
+		return { blocked: reasons.length > 0, reason: reasons.join('; '), dayPnl, weekPnl };
+	}
+
+	static readPositions(positionsFilePath, logger) {
+		try {
+			return JSON.parse(fs.readFileSync(positionsFilePath, {encoding:'utf8', flag:'r'}));
+		}catch(error) {
+			if (error.code !== 'ENOENT') logger.err(error, 0, true);
+			return {};
+		}
+	}
+
+	// Written to a temp file and renamed so a crash never leaves a truncated state file.
+	static writePositions(positionsFilePath, positions) {
+		let temp = `${positionsFilePath}.tmp`;
+		fs.writeFileSync(temp, JSON.stringify(positions, null, 2));
+		fs.renameSync(temp, positionsFilePath);
 	}
 
 }

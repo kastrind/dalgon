@@ -1,16 +1,30 @@
-import fs, { exists } from 'fs';
+import fs from 'fs';
 import OHLC from './OHLC.js';
 import Candidate from './Candidate.js';
+import { atrSeries } from './Indicators.js';
+import { DEFAULTS } from './Strategy.js';
 import { sleep, prcnt, isEmpty } from './utils.js';
+
+// [interval in minutes, candle count] per timeframe, so MACD timeframes never depend on MAX_NUM_RESULTS.
+const FRAMES = {
+	pastHour: [1, 60],
+	hours6: [1, 360],
+	hours24: [5, 288],
+	week: [15, 672],
+	month: [60, 720],
+	month4h: [240, 180],
+	sixMonthsDaily: [1440, 180]
+};
 
 class Analysis {
 
-	constructor(assets, maxNumOHLCResults, baseCurrency, loggerObj, simulationMode=false) {
+	constructor(assets, maxNumOHLCResults, baseCurrency, loggerObj, simulationMode=false, strategy={}) {
 		this.assets = assets;
 		this.maxNumOHLCResults = maxNumOHLCResults;
 		this.baseCurrency = baseCurrency;
 		this.l = loggerObj;
 		this.report = '';
+		this.strategy = { ...DEFAULTS, ...strategy };
 		this.simulationMode = simulationMode;
 		this.simObjOHLCPastHour = {};
 		this.simObjOHLC6h = {};
@@ -35,18 +49,14 @@ class Analysis {
 	}
 
 	async analyseBitcoin(getOHLC) {
-		let pastHour = new Date();
-		pastHour.setHours(pastHour.getHours() - 1);
-		let ohlcPastHour = await (OHLC.request(getOHLC, 'BTCEUR', pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
+		let ohlcPastHour = await (OHLC.requestInterval(getOHLC, this.strategy.btcPair, ...FRAMES.pastHour, this.l, this.simulationMode, this.simObjOHLCBitcoin));
 		if (!ohlcPastHour) return { result: 'failure' };
 		
 		let latestClosingPrice = ohlcPastHour.getTicks()[ohlcPastHour.getTicks().length - 1].close;
 		await sleep(this.sleepMillis);
 
-		let month = new Date();
-		month.setHours(month.getHours() - 24*30);
 		// get OHLC for month in 4h intervals, to calculate MACD further back in the past
-		let ohlcMonth4hIntervals = await (OHLC.request(getOHLC, 'BTCEUR', month.toISOString(), Math.ceil(this.maxNumOHLCResults/4), this.l, this.simulationMode, this.simObjOHLCMonth));
+		let ohlcMonth4hIntervals = await (OHLC.requestInterval(getOHLC, this.strategy.btcPair, ...FRAMES.month4h, this.l, this.simulationMode, this.simObjOHLCMonth));
 		if (!ohlcMonth4hIntervals) return { result: 'failure' };
 
 		let macd_a = 12;
@@ -85,7 +95,7 @@ class Analysis {
 				);
 		}
 
-		let ohlcMonth = await (OHLC.request(getOHLC, 'BTCEUR', month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCMonth));
+		let ohlcMonth = await (OHLC.requestInterval(getOHLC, this.strategy.btcPair, ...FRAMES.month, this.l, this.simulationMode, this.simObjOHLCMonth));
 		if (!ohlcMonth) return { result: "failure" };
 		await sleep(this.sleepMillis);
 
@@ -103,18 +113,21 @@ class Analysis {
 			keptMACDPositive = existsMACDReversal && macdLatest > 0; // && macd2ndLatest > 0;
 		}
 
-		let sixMonths = new Date();
-		sixMonths.setHours(sixMonths.getHours() - 6*24*30);
-		let ohlc6Months = await (OHLC.request(getOHLC, 'BTCEUR', sixMonths.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
+		let ohlc6Months = await (OHLC.requestInterval(getOHLC, this.strategy.btcPair, ...FRAMES.sixMonthsDaily, this.l, this.simulationMode, this.simObjOHLCBitcoin));
 		if (!ohlc6Months) return { result: "failure" };
 		await sleep(this.sleepMillis);
 
-		let day24Hours = new Date();
-		day24Hours.setHours(day24Hours.getHours() - 24);
-		let ohlc24Hours = await (OHLC.request(getOHLC, 'BTCEUR', day24Hours.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCBitcoin));
+		let ohlc24Hours = await (OHLC.requestInterval(getOHLC, this.strategy.btcPair, ...FRAMES.hours24, this.l, this.simulationMode, this.simObjOHLCBitcoin));
 		if (!ohlc24Hours) return { result: "failure" };
 
-		let eightDaysEMA = ohlc6Months.getEMA(8, null, 0, 'close');
+		// Same reference as for assets: the 8-day EMA of the closes 1 to 8 days back
+		let btcDailyCloses = ohlc6Months.getClosesDaysBack(8);
+		let eightDaysEMA = latestClosingPrice;
+		if (btcDailyCloses.length >= 8) {
+			let ohlcBtcPerDay = new OHLC(this.strategy.btcPair, this.l, this.simulationMode);
+			ohlcBtcPerDay.setTicks(btcDailyCloses);
+			eightDaysEMA = ohlcBtcPerDay.getEMA(8, null, 0, 'close');
+		}
 		let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 
 		await sleep(this.sleepMillis);
@@ -122,6 +135,7 @@ class Analysis {
 				eightDaysEMA: eightDaysEMA,
 				latestClosingPriceDiff8DaysEMAPercent: latestClosingPriceDiff8DaysEMAPercent,
 				latestClosingPriceDiffYesterdaysPercent: ohlc24Hours.getChange(),
+				allowsEntries: ohlc24Hours.getChange() > -this.strategy.btcMaxDropPercent / 100,
 				isOverSold: isOverSold,
 				existsMACDReversal: existsMACDReversal,
 				keptMACDPositive: keptMACDPositive,
@@ -142,8 +156,11 @@ class Analysis {
 		let report = onDemandAsset ? this.l.i(`ON-DEMAND ASSET RECOMMENDATION ANALYSIS - START`) + '\n' : this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - START`) + '\n';
 		let bitcoinAnalysis = await this.analyseBitcoin(getOHLC);
 		this.bitcoinAnalysis = bitcoinAnalysis;
-		let isBTCBullish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 0.01);
-		let isBTCBearish = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent <= -0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent <= -0.01);
+		let btcPositive = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent >= 0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent >= 0.01);
+		let btcNegative = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.latestClosingPriceDiff8DaysEMAPercent <= -0.01 || bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent <= -0.01);
+		// Conflicting readings are neutral, not both bullish and bearish.
+		let isBTCBullish = btcPositive && !btcNegative;
+		let isBTCBearish = btcNegative && !btcPositive;
 		let isBTCOverSold = bitcoinAnalysis.result == 'success' && bitcoinAnalysis.isOverSold;
 		let existsBTCMACDReversal = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.existsMACDReversal || bitcoinAnalysis.existsMACDReversalLong);
 		let keptBTCMACDPositive = bitcoinAnalysis.result == 'success' && (bitcoinAnalysis.keptMACDPositive || bitcoinAnalysis.keptMACDPositiveLong);
@@ -163,21 +180,19 @@ class Analysis {
 		}
 		this.bitcoinAnalysisReport = bitcoinAnalysisReportPart;
 
+		// A market-wide drop makes alt dip-buys fail together, so no entries until it settles.
+		if (bitcoinAnalysis.result == 'success' && !bitcoinAnalysis.allowsEntries) {
+			bitcoinAnalysisReportPart += this.l.w(`${this.strategy.btcPair} fell ${prcnt(bitcoinAnalysis.latestClosingPriceDiffYesterdaysPercent)}% in 24h: market-wide drop, no entries.`, 1, true) + '\n';
+			this.bitcoinAnalysisReport = bitcoinAnalysisReportPart;
+			if (!onDemandAsset) {
+				this.report = report + bitcoinAnalysisReportPart;
+				fs.writeFile(reportFilePath, '', err => { if (err) this.l.err(err, 0, true); });
+				return [];
+			}
+		}
+
 		report += bitcoinAnalysisReportPart;
 		
-		let pastHour = new Date();
-		pastHour.setHours(pastHour.getHours() - 1);
-		let past6h = new Date();
-		past6h.setHours(past6h.getHours() - 6);
-		let day24h = new Date();
-		day24h.setHours(day24h.getHours() - 24);
-		let week = new Date();
-		week.setHours(week.getHours() - 24*7);
-		let month = new Date();
-		month.setHours(month.getHours() - 24*30);
-		let quarter = new Date();
-		quarter.setHours(quarter.getHours() - 24*30*3);
-
 		let assetResults = [];
 
 		for (let i=0; i < this.assets.length; i++) {
@@ -186,7 +201,7 @@ class Analysis {
 
 			report += this.l.i(`EVALUATING ASSET: ${asset} - START`, 1) + '\n';
 
-			let ohlcPastHour = await (OHLC.request(getOHLC, assetPair, pastHour.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCPastHour));
+			let ohlcPastHour = await (OHLC.requestInterval(getOHLC, assetPair, ...FRAMES.pastHour, this.l, this.simulationMode, this.simObjOHLCPastHour));
 			if (!ohlcPastHour) {
 				await sleep(this.sleepMillis);
 				report += this.l.err(`Failed to get ohlcPastHour!`, 2, true) + '\n';
@@ -203,7 +218,7 @@ class Analysis {
 
 			 await sleep(this.sleepMillis);
 
-			let ohlc6h = await (OHLC.request(getOHLC, assetPair, past6h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLC6h));
+			let ohlc6h = await (OHLC.requestInterval(getOHLC, assetPair, ...FRAMES.hours6, this.l, this.simulationMode, this.simObjOHLC6h));
 			if (!ohlc6h) {
 				await sleep(this.sleepMillis);
 				report += this.l.err(`Failed to get ohlc6h!`, 2, true) + '\n';
@@ -217,7 +232,7 @@ class Analysis {
 			report += this.simulationMode ? this.l.d(`derivative6h: ${derivative6h}`, 2) + '\n' : '';
 
 			let ohlc3h = new OHLC(assetPair, this.l, this.simulationMode, null);
-			ohlc3h.setTicks(ohlc6h.getTicks().slice(Math.ceil(ohlc6h.getTicks().length/2), ohlc6h.getTicks().length));
+			ohlc3h.setTicks(ohlc6h.getTicksSince(3 * 3600));
 			let change3h = ohlc3h.getChange();
 			let derivative3h = ohlc3h.getDerivative();
 			let onBalanceVol3h = ohlc3h.getOnBalanceVol();
@@ -226,7 +241,7 @@ class Analysis {
 
 			await sleep(this.sleepMillis);
 
-			let ohlcDay24h = await (OHLC.request(getOHLC, assetPair, day24h.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCDay24h));
+			let ohlcDay24h = await (OHLC.requestInterval(getOHLC, assetPair, ...FRAMES.hours24, this.l, this.simulationMode, this.simObjOHLCDay24h));
 			if (!ohlcDay24h) {
 				await sleep(this.sleepMillis);
 				report += this.l.err(`Failed to get ohlcDay24h!`, 2, true) + '\n';
@@ -239,13 +254,13 @@ class Analysis {
 			report += this.simulationMode ? this.l.d(`changeDay24h: ${changeDay24h}`, 2) + '\n' : '';
 
 			let ohlc12h = new OHLC(assetPair, this.l, this.simulationMode);
-			ohlc12h.setTicks(ohlcDay24h.getTicks().slice(Math.ceil(ohlcDay24h.getTicks().length/2), ohlcDay24h.getTicks().length));
+			ohlc12h.setTicks(ohlcDay24h.getTicksSince(12 * 3600));
 			let change12h = ohlc12h.getChange();
 			let derivative12h = ohlc12h.getDerivative();
 
 			await sleep(this.sleepMillis);
 
-			let ohlcWeek = await (OHLC.request(getOHLC, assetPair, week.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCWeek));
+			let ohlcWeek = await (OHLC.requestInterval(getOHLC, assetPair, ...FRAMES.week, this.l, this.simulationMode, this.simObjOHLCWeek));
 			if (!ohlcWeek) {
 				await sleep(this.sleepMillis);
 				report += this.l.err(`Failed to get ohlcWeek!`, 2, true) + '\n';
@@ -288,13 +303,13 @@ class Analysis {
 			report += this.simulationMode ? this.l.d(`changeWeek: ${changeWeek}`, 2) + '\n' : '';
 
 			let ohlcWeekHalf = new OHLC(assetPair, this.l, this.simulationMode);
-			ohlcWeekHalf.setTicks(ohlcWeek.getTicks().slice(Math.ceil(ohlcWeek.getTicks().length/2), ohlcWeek.getTicks().length));
+			ohlcWeekHalf.setTicks(ohlcWeek.getTicksSince(3.5 * 86400));
 			let changeWeekHalf = ohlcWeekHalf.getChange();
 			let derivativeWeekHalf = ohlcWeekHalf.getDerivative();
 
 			await sleep(this.sleepMillis);
 
-			let ohlcMonth = await (OHLC.request(getOHLC, assetPair, month.toISOString(), this.maxNumOHLCResults, this.l, this.simulationMode, this.simObjOHLCMonth));
+			let ohlcMonth = await (OHLC.requestInterval(getOHLC, assetPair, ...FRAMES.month, this.l, this.simulationMode, this.simObjOHLCMonth));
 			if (!ohlcMonth) {
 				await sleep(this.sleepMillis);
 				report += this.l.err(`Failed to get ohlcMonth!`, 2, true) + '\n';
@@ -329,15 +344,14 @@ class Analysis {
 			report += this.l.i(`MACD latest ${macdLatest}`, 2) + '\n';
 			report += this.l.i(`MACD reversal: ${existsMACDReversal}`, 2) + '\n';
 
-			let ohlcMonthPerDay = new OHLC(assetPair, this.l, this.simulationMode);
-			let ohlcMonthTicks = ohlcMonth.getTicks();
-			let ohlcMonthPerDayTicks = [];
-			for(let i=0; i<ohlcMonthTicks.length; i+=24) {
-				if (i<ohlcMonthTicks.length) ohlcMonthPerDayTicks.push(ohlcMonthTicks[i]);
+			// 8-day EMA of the closes 1 to 8 days back, so the reference excludes the current day
+			let dailyCloses = ohlcMonth.getClosesDaysBack(8);
+			let eightDaysEMA = latestClosingPrice;
+			if (dailyCloses.length >= 8) {
+				let ohlcMonthPerDay = new OHLC(assetPair, this.l, this.simulationMode);
+				ohlcMonthPerDay.setTicks(dailyCloses);
+				eightDaysEMA = ohlcMonthPerDay.getEMA(8, null, 0, 'close');
 			}
-			ohlcMonthPerDay.setTicks(ohlcMonthPerDayTicks);
-
-			let eightDaysEMA = ohlcMonthPerDay.getEMA(8, null, 0, 'close');
 			let latestClosingPriceDiff8DaysEMAPercent = (latestClosingPrice - eightDaysEMA) / eightDaysEMA;
 
 			// for testing
@@ -345,23 +359,17 @@ class Analysis {
 			report += this.simulationMode ? this.l.d(`macdCurrent: ${macdCurrent}`, 2) + '\n' : '';
 			report += this.simulationMode ? this.l.d(`eightDaysEMA: ${eightDaysEMA}`, 2) + '\n' : '';
 
-			// look for a green hammer, inverted or normal, in the past 3 hours
-			let ohlcMonthLastTick = ohlcMonth.getLastTick();
-			let isGreenHammer = ohlcMonthLastTick.isGreen() && ( ohlcMonthLastTick.isHammer() || ohlcMonthLastTick.isInvertedHammer() );
-
-			let ohlcMonth2ndLastTick = ohlcMonth.getTicks()[ohlcMonth.getTicks().length - 2];
-			let isGreenHammer2 = ohlcMonth2ndLastTick.isGreen() && ( ohlcMonth2ndLastTick.isHammer() || ohlcMonth2ndLastTick.isInvertedHammer() );
-
-			let ohlcMonth3rdLastTick = ohlcMonth.getTicks()[ohlcMonth.getTicks().length - 3];
-			let isGreenHammer3 = ohlcMonth3rdLastTick.isGreen() && ( ohlcMonth3rdLastTick.isHammer() || ohlcMonth3rdLastTick.isInvertedHammer() );
-
-			let existsGreenHammer3h = isGreenHammer || isGreenHammer2 || isGreenHammer3;
+			// look for a green hammer, inverted or normal, in the last three closed candles
+			let isHammerTick = tick => tick.isGreen() && ( tick.isHammer() || tick.isInvertedHammer() );
+			let recentClosedTicks = ohlcMonth.getClosed().getTicks().slice(-3);
+			let isGreenHammer = recentClosedTicks.length > 0 && isHammerTick(recentClosedTicks[recentClosedTicks.length - 1]);
+			let existsGreenHammer3h = recentClosedTicks.some(isHammerTick);
 
 			// for testing
 			report += this.simulationMode ? this.l.d(`isGreenHammer: ${isGreenHammer}`, 2) + '\n' : '';
 
 			let ohlcMonthHalf = new OHLC(assetPair, this.l, this.simulationMode);
-			ohlcMonthHalf.setTicks(ohlcMonth.getTicks().slice(Math.ceil(ohlcMonth.getTicks().length/2), ohlcMonth.getTicks().length));
+			ohlcMonthHalf.setTicks(ohlcMonth.getTicksSince(15 * 86400));
 			let changeMonthHalf = ohlcMonthHalf.getChange();
 
 			await sleep(this.sleepMillis);
@@ -380,7 +388,7 @@ class Analysis {
 			let keptMACDPositiveLong = false;
 
 			// get OHLC for month in 4h intervals, to calculate MACD further back in the past
-			let ohlcMonth4hIntervals = await (OHLC.request(getOHLC, assetPair, month.toISOString(), Math.ceil(this.maxNumOHLCResults/4), this.l, this.simulationMode, this.simObjOHLCMonth));
+			let ohlcMonth4hIntervals = await (OHLC.requestInterval(getOHLC, assetPair, ...FRAMES.month4h, this.l, this.simulationMode, this.simObjOHLCMonth));
 			if (!ohlcMonth4hIntervals) {
 				await sleep(this.sleepMillis);
 				report += this.l.err(`Failed to get ohlcMonth4hIntervals!`, 2, true) + '\n';
@@ -459,6 +467,18 @@ class Analysis {
 			let currAssetReport = '';
 			let currAssetResult = {};
 
+			// Risk filters, independent of the MACD/OBV signal: they protect the stop-loss sizing and avoid chasing or illiquid pairs.
+			let atrValues = atrSeries(ohlcMonth.getTicks(), 14);
+			let latestAtr = atrValues[atrValues.length - 1];
+			let atrPercent = typeof latestAtr === 'number' && latestClosingPrice > 0 ? latestAtr / latestClosingPrice * 100 : null;
+			let dailyQuoteVolume = ohlcDay24h.getTicks().reduce((sum, tick) => sum + tick.vol * (tick.volWavgPrice > 0 ? tick.volWavgPrice : tick.close), 0);
+			let riskFilterFailures = [];
+			if (changeDay24h * 100 >= this.strategy.maxSurgePercent) riskFilterFailures.push(`already up ${prcnt(changeDay24h)}% in 24h`);
+			if (this.strategy.atrStopMultiple > 0 && atrPercent !== null && atrPercent > this.strategy.stopLossPercent / this.strategy.atrStopMultiple) {
+				riskFilterFailures.push(`1H ATR ${atrPercent.toFixed(2)}% is too large for a ${this.strategy.stopLossPercent}% stop-loss`);
+			}
+			if (dailyQuoteVolume < this.strategy.minDailyQuoteVolume) riskFilterFailures.push(`24h traded volume ${dailyQuoteVolume.toFixed(0)} is below ${this.strategy.minDailyQuoteVolume}`);
+
 			// Recommendation Conditions
 
 			// On-Balance Vol > 0 AND
@@ -467,19 +487,21 @@ class Analysis {
 			// price not the highest of the week AND
 			// MACD went positive
 
-			if (
+			let meetsSignalRules = (
 				(!isOverbought) &&
 				(onBalanceVol3h > 0) &&
 				(
 					(change3h < 0 && change6h < 0) ||
 					(change6h < 0 && change12h < 0)
 				) &&
-				// (priceOverHighestMonth >= 0.04) &&
-				// (priceOverLowestMonth >= 0.04) &&
-				// (priceOverHighestWeek >= 0.04) &&
 				(existsMACDReversal || existsMACDReversalShort) &&
 				(keptMACDPositive || keptMACDPositiveShort)
-			) {
+			);
+
+			if (meetsSignalRules && riskFilterFailures.length) {
+				report += this.l.w(`${asset} has a MACD/OBV signal but is blocked by risk filters: ${riskFilterFailures.join('; ')}.`, 2, true) + '\n';
+			}
+			if (meetsSignalRules && !riskFilterFailures.length) {
 				isCandidate = true;
 				candidateGrade = 1;
 			}
@@ -512,9 +534,15 @@ class Analysis {
 					candidateGrade += 0.41;
 				}
 
-				// bonus: green hammer
-				if (existsGreenHammer3h) {
+				// bonus: green hammer, only when price sits near the week's low, where a hammer has meaning
+				if (existsGreenHammer3h && priceOverLowestWeek <= this.strategy.hammerSupportPercent / 100) {
 					candidateGrade += 0.25;
+				}
+
+				// bonus: MACD reversal confirmed on several timeframes ranks first when only one position is allowed
+				let timeframesAligned = [existsMACDReversalShort && keptMACDPositiveShort, existsMACDReversal && keptMACDPositive, existsMACDReversalLong && keptMACDPositiveLong].filter(Boolean).length;
+				if (timeframesAligned > 1) {
+					candidateGrade += 0.1 * (timeframesAligned - 1);
 				}
 
 				// // exclude too high grades
@@ -523,9 +551,9 @@ class Analysis {
 				// 	if (!onDemandAsset) continue;
 				// }
 
-				currAssetResult = new Candidate(
-					asset,
-					this.baseCurrency,
+				currAssetResult = new Candidate({
+					name: asset,
+					baseCurrency: this.baseCurrency,
 					latestClosingPrice,
 					eightDaysEMA,
 					onBalanceVol3h,
@@ -557,8 +585,10 @@ class Analysis {
 					priceOverHighestWeek,
 					priceOverLowestMonth,
 					priceOverHighestMonth,
-					""
-				);
+					atrPercent,
+					timeframesAligned,
+					report: ""
+				});
 
 				report += isCandidate ? this.l.suc(`It's a candidate!`, 2, true) + '\n' : '';
 				report += this.l.suc(`Candidate grade: ${currAssetResult.candidateGrade.toFixed(3)}`, 2, true) + '\n';
@@ -570,7 +600,7 @@ class Analysis {
 				currAssetReport += this.l.i(`${asset} grade: ${currAssetResult.candidateGrade.toFixed(3)}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD short/regular/long reversal: ${currAssetResult.existsMACDReversalShort}/${currAssetResult.existsMACDReversal}/${currAssetResult.existsMACDReversalLong}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} MACD short/regular/long kept + : ${currAssetResult.keptMACDPositiveShort}/${currAssetResult.keptMACDPositive}/${currAssetResult.keptMACDPositiveLong}`, 2) + '\n';
-				currAssetReport += this.l.i(`${asset} On-Balance Volume 3h: ${currAssetResult.onBalanceVol3h}`, 2) + '\n';
+				currAssetReport += this.l.i(`${asset} On-Balance Volume 3h: ${currAssetResult.onBalanceVol3h.toFixed(3)}`, 2) + '\n';
 				currAssetReport += this.l.i(`${asset} is overbought: ${currAssetResult.isOverbought}`, 2) + '\n';
 
 				currAssetResult.report = currAssetReport;
@@ -591,7 +621,7 @@ class Analysis {
 						writtenReport += element.report;
 					});
 
-					fs.writeFile(reportFilePath, writtenReport, function(err) { if (err) this.l.err(err, 0, true); } );
+					fs.writeFile(reportFilePath, writtenReport, err => { if (err) this.l.err(err, 0, true); });
 				}
 			}
 			report += this.l.i(`EVALUATING ASSET: ${asset} - END`, 1) + '\n';
@@ -600,7 +630,7 @@ class Analysis {
 		report += onDemandAsset ? this.l.i(`ON-DEMAND ASSET RECOMMENDATION ANALYSIS - END`) + '\n' : this.l.i(`ASSET RECOMMENDATION ANALYSIS CYCLE - END`) + '\n';
 
 		if (isEmpty(assetResults) && !onDemandAsset) {
-			fs.writeFile(reportFilePath, '', function(err) { if (err) this.l.err(err, 0, true); } );
+			fs.writeFile(reportFilePath, '', err => { if (err) this.l.err(err, 0, true); });
 		}
 
 		this.report = report;

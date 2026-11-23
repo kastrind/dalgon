@@ -30,6 +30,8 @@ dist/
 assets/asset_report.txt
 assets/selling_worker_report.txt
 assets/priceToMarketSeries.json
+assets/positions.json
+assets/selling_worker_history.txt
 env/*.properties
 dalgon_start.sh
 secrets.sh
