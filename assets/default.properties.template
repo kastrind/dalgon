@@ -30,3 +30,12 @@ BOT_NAME=
 AVATAR_URL=
 RECIPIENT_PROFILES=[{"id": "", "name": "", "avatar": null, "country":"", "language": "", "apiVersion": 10}]
 START_TRADING=false
+
+[openrouter]
+ENABLED=false
+MODE=shadow
+MODEL=qwen/qwen3.7-flash
+BASE_URL=https://openrouter.ai/api/v1
+REASONING=low
+MAX_TOKENS=1500
+SESSION_ID=

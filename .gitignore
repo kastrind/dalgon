@@ -32,5 +32,6 @@ assets/selling_worker_report.txt
 assets/priceToMarketSeries.json
 env/*.properties
 dalgon_start.sh
+secrets.sh
 dalgon.log
 ngrok.log

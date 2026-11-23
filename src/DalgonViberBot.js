@@ -26,12 +26,25 @@ class DalgonViberBot {
 		this.pauseAnalysis = false;
 		this.canStartTrading = false;
 
-		this.userProfiles = recipientProfiles;
-
-		this.sendTextMessage(`I rise again.`);
+		this.recipientFile = `env/${env}.viber-recipients.json`;
+		this.userProfiles = this.loadRecipientProfiles(recipientProfiles);
 
 		this.bot.on(BotEvents.SUBSCRIBED, response => {
+			this.rememberUserProfile(response.userProfile);
 			response.send(new TextMessage(`You are ${response.userProfile.name}. I am ${this.bot.name}. You may ask me about crypto. Type help.`));
+		});
+
+		this.bot.on(BotEvents.MESSAGE_RECEIVED, (message, response) => {
+			if (response && response.userProfile) this.rememberUserProfile(response.userProfile);
+		});
+
+		this.bot.on(BotEvents.UNSUBSCRIBED, userId => {
+			this.userProfiles = this.userProfiles.filter(profile => profile.id !== userId);
+			this.saveRecipientProfiles();
+		});
+
+		this.sendTextMessage(`I rise again.`).catch(error => {
+			this.l.err(`Failed to send startup Viber message: ${JSON.stringify(error)}`, 0, true);
 		});
 
 		this.bot.onTextMessage(/^(hi|hello)(\s|$)/i, async (message, response) => {
@@ -67,7 +80,11 @@ class DalgonViberBot {
 			"set trading percent ASSET_SYMBOL AMOUNT": set ASSET_SYMBOL trading percent to the given percent\n
 			"set profit percent AMOUNT": set profit to the given percent\n
 			"[get] [auto-]trading config[uration]": get auto trading configuration\n
-			"history": get recent messages history\n`
+			"history": get recent messages history\n
+			"ai ask MESSAGE": chat with the configured OpenRouter model\n
+			"ai status": OpenRouter mode and session status\n
+			"ai memo": current OpenRouter session memo\n
+			"ai reset": start a new OpenRouter session\n`
 			);
 			this.recordHistory(message);
 		});
@@ -126,11 +143,42 @@ class DalgonViberBot {
 		return this.bot;
 	}
 
+	loadRecipientProfiles(fallbackProfiles) {
+		try {
+			if (fs.existsSync(this.recipientFile)) {
+				let savedProfiles = JSON.parse(fs.readFileSync(this.recipientFile, 'utf8'));
+				if (Array.isArray(savedProfiles)) return savedProfiles;
+			}
+		} catch (error) {
+			this.l.err(`Failed to load Viber recipients: ${error.message}`, 0, true);
+		}
+		return Array.isArray(fallbackProfiles) ? fallbackProfiles : [];
+	}
+
+	saveRecipientProfiles() {
+		try {
+			fs.writeFileSync(this.recipientFile, JSON.stringify(this.userProfiles, null, 2));
+		} catch (error) {
+			this.l.err(`Failed to save Viber recipients: ${error.message}`, 0, true);
+		}
+	}
+
+	rememberUserProfile(userProfile) {
+		if (!userProfile || !userProfile.id) return;
+		let remainingProfiles = this.userProfiles.filter(profile => profile.id !== userProfile.id);
+		this.userProfiles = [userProfile, ...remainingProfiles];
+		this.saveRecipientProfiles();
+	}
+
 	async sendTextMessage(message) {
 		if (!isEmpty(this.userProfiles)) {
 			for (let i=0; i<this.userProfiles.length; i++) {
 				let userProfile = this.userProfiles[i];
-				await this.bot.sendMessage(userProfile, new TextMessage(message));
+				try {
+					await this.bot.sendMessage(userProfile, new TextMessage(message));
+				} catch (error) {
+					this.l.err(`Failed to send Viber message to ${userProfile.id}: ${JSON.stringify(error)}`, 0, true);
+				}
 				await sleep(1000);
 			}
 		}

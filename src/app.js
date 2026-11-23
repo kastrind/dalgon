@@ -11,6 +11,8 @@ import DalgonViberBot from './DalgonViberBot.js';
 import Analysis from './Analysis.js';
 import TradeableAssetPair from './TradeableAssetPair.js';
 import Order from './Order.js';
+import OpenRouterClient from './OpenRouterClient.js';
+import TradingDecision from './TradingDecision.js';
 import { isEmpty, sleep, persist } from './utils.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
@@ -55,6 +57,34 @@ var staleOrderDays = parseFloat(properties.get("main.STALE_ORDER_DAYS"));
 l.i(`Days until a sell take-profit order goes stale: ${staleOrderDays}`);
 var staleOrderPriceDifferencePercentSequence = properties.get("main.STALE_ORDER_PRICE_DIFFERENCE_PERCENT_SEQUENCE").split(',');
 l.i(`Price difference percent sequence for a sell take-profit order to go stale: ${staleOrderPriceDifferencePercentSequence}`);
+
+var openRouterClient = null;
+var tradingDecision = null;
+var openRouterMode = 'shadow';
+var openRouterEnabledValue = properties.get('openrouter.ENABLED');
+var openRouterEnabled = openRouterEnabledValue === true || String(openRouterEnabledValue).toLowerCase() === 'true';
+l.i(`OpenRouter enabled: ${openRouterEnabled}`);
+if (openRouterEnabled) {
+	let openRouterApiKey = process.env.OPENROUTER_API_KEY;
+	if (!openRouterApiKey) {
+		l.w('OpenRouter enabled but OPENROUTER_API_KEY is not set. AI analysis is disabled.', 0, true);
+	}else {
+		openRouterMode = (properties.get('openrouter.MODE') || 'shadow').toLowerCase();
+		if (!['shadow', 'advisory', 'auto'].includes(openRouterMode)) openRouterMode = 'shadow';
+		openRouterClient = new OpenRouterClient(openRouterApiKey,
+			properties.get('openrouter.MODEL'),
+			properties.get('openrouter.BASE_URL'),
+			l,
+			{
+				sessionId: properties.get('openrouter.SESSION_ID') || undefined,
+				reasoning: properties.get('openrouter.REASONING') || '',
+				maxTokens: properties.get('openrouter.MAX_TOKENS') || undefined,
+				sessionFile: `env/${ENV}.openrouter-session.json`
+			});
+		tradingDecision = new TradingDecision(openRouterClient, l);
+		l.i(`OpenRouter trading analysis enabled in ${openRouterMode} mode with model ${properties.get('openrouter.MODEL')}.`);
+	}
+}
 
 l.i(`Declaring Kraken API functions...`);
 
@@ -146,7 +176,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			let analysisCurrency = matches[4] ? matches[4].toUpperCase() : ANALYSIS_CURRENCY;
 
 			await viberBot.sendTextMessage('Please wait.');
-			
+
 			// Analyse assets to recommend for trading
 			let analysis = new Analysis(tradeableAssets, maxNumOHLCResults, analysisCurrency, l, SIMULATION);
 			await analysis.recommend(getOHLC, reportFilePath, asset);
@@ -421,6 +451,55 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 			viberBot.recordHistory(message);
 		});
 
+		// OpenRouter conversation and session controls
+		viberBot.getBot().onTextMessage(/^ai ask\s+(.+)$/i, async (message, response) => {
+			if (!openRouterClient) {
+				await viberBot.sendTextMessage('OpenRouter is disabled. Set ENABLED=true and OPENROUTER_API_KEY.');
+				viberBot.recordHistory(message);
+				return;
+			}
+
+			let prompt = message.text.replace(/^ai ask\s+/i, '').trim().slice(0, 4000);
+			if (!prompt) {
+				await viberBot.sendTextMessage('Ask me a message after: ai ask');
+				viberBot.recordHistory(message);
+				return;
+			}
+
+			await viberBot.sendTextMessage('Please wait.');
+			try {
+				let systemPrompt = 'You are Dalgon, a concise cryptocurrency trading assistant. Use the supplied conversation context and explain uncertainty clearly. Do not claim to have executed an order, access live Kraken data, or know private balances. Never emit an exchange order or modify trading settings; explain that the bot must perform those actions through validated local controls.';
+				let answer = await openRouterClient.chat(systemPrompt, prompt);
+				await viberBot.sendBigTextMessage(answer);
+			} catch (error) {
+				l.err(`OpenRouter conversation failed: ${error.message}`, 0, true);
+				await viberBot.sendTextMessage('OpenRouter conversation failed. Please try again later.');
+			}
+			viberBot.recordHistory(message);
+		});
+
+		viberBot.getBot().onTextMessage(/^ai status$/i, async (message, response) => {
+			let status = openRouterClient
+				? `OpenRouter ${openRouterMode} mode. Session ${openRouterClient.sessionId}. Model ${properties.get('openrouter.MODEL')}.`
+				: 'OpenRouter is disabled.';
+			await viberBot.sendTextMessage(status);
+			viberBot.recordHistory(message);
+		});
+
+		viberBot.getBot().onTextMessage(/^ai memo$/i, async (message, response) => {
+			await viberBot.sendTextMessage(openRouterClient?.memo || 'No OpenRouter session memo yet.');
+			viberBot.recordHistory(message);
+		});
+
+		viberBot.getBot().onTextMessage(/^ai reset$/i, async (message, response) => {
+			if (!openRouterClient) await viberBot.sendTextMessage('OpenRouter is disabled.');
+			else {
+				openRouterClient.resetSession();
+				await viberBot.sendTextMessage(`OpenRouter session reset. New session ${openRouterClient.sessionId}.`);
+			}
+			viberBot.recordHistory(message);
+		});
+
 		// Get History
 		viberBot.getBot().onTextMessage(/^history$/i, async (message, response) => {
 			viberBot.sendHistory();
@@ -500,7 +579,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				shouldSleep = true;
 				continue;
 			}
-			
+
 			// Send message to the subscribers every 3 hours that the script is running
 			timestampSecondsF = Math.floor(Date.now() / 1000);
 			if (viberBot && timestampSecondsF - timestampSecondsI >= 3 * 60 * 60) {
@@ -578,13 +657,48 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 					}
 				}
 			}
-			
+
 			// Remind of old orders to monitor
 			if (viberBot && existOldOrders && (new Date()).getHours() == 12 && oldOrdersReminderSent == false) {
 				await viberBot.sendTextMessage(l.i(`Reminder: there are open orders older than ${Math.max(staleOrderDays - 1, 0)} days old remaining. Monitor for selling opportunities.`, 1));
 				oldOrdersReminderSent = true;
 			}else if ((new Date()).getHours() != 12) {
 				oldOrdersReminderSent = false;
+			}
+
+			let latestTradingDecision = null;
+			if (tradingDecision && !isEmpty(recommendedAssets)) {
+				try {
+					latestTradingDecision = await tradingDecision.evaluate({
+						bitcoin: bitcoinAnalysis,
+						candidates: recommendedAssets.map(candidate => ({
+							name: candidate.name,
+							baseCurrency: candidate.baseCurrency,
+							grade: candidate.candidateGrade,
+							latestClosingPrice: candidate.latestClosingPrice,
+							changes: {
+								pastHour: candidate.changePastHour,
+								past3Hours: candidate.change3h,
+								past6Hours: candidate.change6h,
+								past12Hours: candidate.change12h,
+								past24Hours: candidate.changeDay24h,
+								pastWeek: candidate.changeWeek,
+								pastMonth: candidate.changeMonth
+							},
+							macdReversal: candidate.existsMACDReversal,
+							macdReversalShort: candidate.existsMACDReversalShort,
+							macdReversalLong: candidate.existsMACDReversalLong,
+							isOverbought: candidate.isOverbought
+						})),
+						openOrders: openOrderAssetPairs
+					});
+					l.i(`OpenRouter decision: ${latestTradingDecision.action} confidence ${latestTradingDecision.confidence} horizon ${latestTradingDecision.horizon}. ${latestTradingDecision.reason}`, 0, true);
+					if (viberBot && openRouterMode !== 'shadow') {
+						await viberBot.sendTextMessage(`AI trading analysis: ${latestTradingDecision.action}, confidence ${latestTradingDecision.confidence.toFixed(2)}, ${latestTradingDecision.reason}`);
+					}
+				} catch (error) {
+					l.err(`OpenRouter trading analysis failed: ${error.message}`, 0, true);
+				}
 			}
 
 			if (isEmpty(recommendedAssets)) {
@@ -594,7 +708,7 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 				shouldSleep = true;
 				continue;
 			}
-			
+
 			// If allowed to auto-trade
 			if (viberBot && viberBot.canStartTrading) {
 
@@ -604,6 +718,11 @@ var cancelOrder       = dalgon.createPrivateFunction('/0/private/CancelOrder',  
 
 					assetToInvestIn = recommendedAssets[i].name;
 					l.i(`Initiating auto-trading for asset ${assetToInvestIn}`, 0, true);
+
+					if (openRouterMode === 'auto' && latestTradingDecision?.action !== 'BUY') {
+						l.w(`OpenRouter vetoed auto-trade for ${assetToInvestIn}: decision is ${latestTradingDecision?.action || 'HOLD'}.`, 1, true);
+						continue;
+					}
 
 					// Asset should have high enough grade
 					if (recommendedAssets[i].candidateGrade < autoTradeGradeThreshold) {
