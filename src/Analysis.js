@@ -179,7 +179,7 @@ class Analysis {
 				continue;
 			}
 			let change = latest.close / reference.close - 1;
-			let isCandidate = change * 100 <= -s.capitulationDropPercent;
+			let isCandidate = change * 100 <= -s.capitulationDropPercent && change * 100 >= -s.capitulationMaxDropPercent;
 			report += this.l.i(`${asset}: ${prcnt(change)}% over ${s.capitulationWindowHours}h${isCandidate ? ' - capitulation candidate' : ''}`, 1) + '\n';
 			if (!isCandidate && !onDemandAsset) continue;
 

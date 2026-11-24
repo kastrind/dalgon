@@ -116,7 +116,7 @@ for (let [window, thresholds] of [[1, [2.5, 4, 6]], [4, [3, 5, 7, 10]], [12, [5,
 function mean(a) { return a.reduce((s, v) => s + v, 0) / a.length; }
 
 // t-statistic over per-day averages, since assets move together and events on one day are not independent.
-function clusteredT(events, k) {
+export function clusteredT(events, k) {
 	let days = new Map();
 	for (let e of events) { if (Number.isNaN(e.fwd[k])) continue; let d = Math.floor(e.i / 24); (days.get(d) || days.set(d, []).get(d)).push(e.fwd[k]); }
 	let means = [...days.values()].map(mean);

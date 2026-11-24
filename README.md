@@ -199,6 +199,8 @@ Findings on 10 liquid coins (USDT pairs, 2022 to 2026):
 - After large drops, forward returns rose with the size of the drop: gross +4.6% over 72h after a fall of 15% in 24h (195 events, positive in all three time blocks), against about 0% for random entries.
 - Through the real analysis code with fills, stops and fees, a 20% drop with the exits above made 33 trades in 4.8 years: 73% wins, +4.5% per trade (standard error 2.0), positive in every year. The 15% threshold was about break-even (+0.2% to +1.2% per trade, depending on the decision time grid).
 - At the default risk limits that is about +€47 on a €500 account over 4.8 years, or +€189 with a €125 position and a €20 risk budget. Buy and hold of the same coins lost 51%.
+- `CAPITULATION_MAX_DROP_PERCENT` ignores deeper drops. Allowing only drops of 5% to 20% lost money in every variant (-3% to -56% of traded capital), because the profit came from drops of 20% or more.
+- Volatility-normalised drops, coin-specific versus market-wide drops, bounce confirmation and weakest-coin rules (19 rules, 17 coins) produced no candidate that cleared a pre-set significance bar. With fills, stops and fees, none of 72 to 240 exit settings per signal family was profitable in all three time blocks, apart from a few noise-sized ones.
 
 Treat this as a lead, not proof: the threshold and exits were chosen after looking at the results, only about 7 trades happen per year, and the standard error is large. Results moved noticeably with small changes of the decision timing and threshold. Coins that collapsed to zero are missing from the data, which flatters any dip-buying rule.
 

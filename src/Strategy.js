@@ -3,6 +3,8 @@ const DEFAULTS = {
 	// 'macd' is the original MACD/OBV dip signal; 'capitulation' buys coins after a deep drop in a short window.
 	signalMode: 'macd',
 	capitulationDropPercent: 15,
+	// Drops deeper than this are ignored; 100 means no upper bound.
+	capitulationMaxDropPercent: 100,
 	capitulationWindowHours: 24,
 	maxSurgePercent: 10,
 	atrStopMultiple: 1.5,
@@ -43,6 +45,7 @@ function loadStrategy(properties) {
 	if (strategy.maxRiskAmount <= 0 || strategy.maxOpenPositions < 1) throw new Error('strategy maxRiskAmount and maxOpenPositions must be positive');
 	if (!['macd', 'capitulation'].includes(strategy.signalMode)) throw new Error(`strategy signalMode must be macd or capitulation, is ${strategy.signalMode}`);
 	if (strategy.capitulationDropPercent <= 0 || strategy.capitulationWindowHours <= 0) throw new Error('strategy capitulation drop and window must be positive');
+	if (strategy.capitulationMaxDropPercent < strategy.capitulationDropPercent) throw new Error('strategy capitulationMaxDropPercent must not be below capitulationDropPercent');
 	return strategy;
 }
 

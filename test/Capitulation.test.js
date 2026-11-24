@@ -43,6 +43,11 @@ describe('Capitulation signal', () => {
 		assert.deepStrictEqual(result, []);
 	});
 
+	it('should ignore drops deeper than the configured maximum', async () => {
+		let result = await build({ capitulationDropPercent: 5, capitulationMaxDropPercent: 20 }).recommend(exchange({ XRPUSDC: candles(110, 1, 0.7), ADAUSDC: candles(110, 1, 0.9) }), '/dev/null');
+		assert.deepStrictEqual(result.map(c => c.name), ['ADA']);
+	});
+
 	it('should measure the window by time, not by candle count', async () => {
 		// 30 candles cover under 8 hours, so a 24h change cannot be measured yet.
 		let result = await build().recommend(exchange({ XRPUSDC: candles(30, 1, 0.5) }), '/dev/null');
