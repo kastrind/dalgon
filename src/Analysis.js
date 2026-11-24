@@ -75,7 +75,8 @@ class Analysis {
 		let macdLongOffset4;
 		let macdLongOffset5;
 		let isOverSold = false;
-		if (Math.max(macd_a, macd_b) + macd_c + 2 <= ohlcMonth4hIntervals.getTicks().length) {
+		// the overbought/oversold check reads the MACD down to offset 5
+		if (Math.max(macd_a, macd_b) + macd_c + 4 <= ohlcMonth4hIntervals.getTicks().length) {
 			macdCurrentLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
 			macdPreviousLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
 			macdLatestLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));
@@ -395,7 +396,8 @@ class Analysis {
 				continue;
 			}
 			// if there is enough ohlc data to calculate MACD
-			if (!this.simulationMode && Math.max(macd_a, macd_b) + macd_c + 2 <= ohlcMonth4hIntervals.getTicks().length) {
+			// the overbought/oversold check reads the MACD down to offset 5
+			if (!this.simulationMode && Math.max(macd_a, macd_b) + macd_c + 4 <= ohlcMonth4hIntervals.getTicks().length) {
 				macdCurrentLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 1, 'close'));
 				macdPreviousLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 2, 'close'));
 				macdLatestLong = parseFloat(ohlcMonth4hIntervals.getMACD(macd_a, macd_b, macd_c, null, 0, 'close'));

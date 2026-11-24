@@ -37,3 +37,6 @@ dalgon_start.sh
 secrets.sh
 dalgon.log
 ngrok.log
+backtest/data/
+backtest/cache/
+backtest/results/

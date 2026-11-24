@@ -2,7 +2,7 @@
 
 Dalgon is a Node.js short-term trading bot for Kraken spot markets. It scans a small set of coins for dip-reversal setups, buys with a protective stop-loss already attached, exits at a target or time limit, enforces loss limits, and is controlled through Viber.
 
-It buys a short-term dip and sells the rebound, risking a small fixed amount per trade. It does not predict the market, and nothing here has been backtested or proven profitable. See [Limitations](#limitations).
+It buys a short-term dip and sells the rebound, risking a small fixed amount per trade. It does not predict the market, and a backtest on 2022 to 2026 data found no profitable setting: see [Backtesting](#backtesting) and [Limitations](#limitations).
 
 ## How it works
 
@@ -59,7 +59,7 @@ These sit on top of the signal and protect the stop sizing:
 - **Stop-loss:** Kraken allows one conditional close per order and no OCO, so the stop is the exchange-side conditional close, and it protects the position even if Dalgon is down.
 - **Target and time exit:** managed by Dalgon. To sell, it cancels the stop, sells at market, and restores the stop if the sell fails.
 - **State:** positions are tracked in `POSITIONS_FILE` and reconciled against Kraken each cycle. Unknown stop outcomes are retried, never assumed.
-- **Fees:** read from each pair's tier on Kraken (falling back to the configured fees) and included in the position size and the reward/risk check.
+- **Fees:** Kraken's public pair data no longer includes fee tiers, so sizing and the reward/risk check use `MAKER_FEE_PERCENT` and `TAKER_FEE_PERCENT` from `[strategy]`. Set them to your real tier. If a pair does report fees, those are used instead.
 
 At the default 0.25% maker and 0.40% taker fees, a 5% target against a 2.5% stop is about 1.4:1 net of fees, so the strategy has to win more than about 42% of its trades to break even. At 0.40% maker and 0.80% taker it drops to about 1.03:1 and 49%. The log prints the figures for every order.
 
@@ -168,9 +168,29 @@ npm test
 
 The tests use simulated responses and place no orders. `OHLC Test › should have 720 ticks for 1 month interval` calls the live Kraken API and fails when the number of returned candles differs.
 
+## Backtesting
+
+Kraken's API returns at most 720 candles per interval, so the backtest uses Binance's public monthly 1-minute archives as a price proxy (`data.binance.vision`). It runs the real `Analysis` code against candles as they looked at each past moment, then simulates the orders:
+
+```bash
+node backtest/download.js --quote USDT --assets XRP,ADA,SOL --from 2022-01 --to 2026-10
+node backtest/run.js --quote USDT --assets XRP,ADA,SOL --gradeThreshold 0.7 --nullRuns 5
+node backtest/tune.js --quote USDT --assets XRP,ADA,SOL
+node backtest/edge.js --quote USDT --assets XRP,ADA,SOL
+```
+
+- `run.js` prints the trade statistics, buy and hold, and a random-entry benchmark that uses the same execution model. Any strategy parameter can be overridden, for example `--takeProfitPercent 12`.
+- `tune.js` searches a parameter grid on the first two time blocks and reports the third as an unseen holdout, with the median of all sets for comparison.
+- `edge.js` measures raw forward returns after each signal, independent of the exit rules.
+- Downloads and results are cached in `backtest/data`, `backtest/cache` and `backtest/results` (gitignored). The signal cache is keyed to the analysis source, so it recomputes after code changes.
+
+Execution is deliberately pessimistic: the post-only entry fills only when price trades below it, the stop is checked before the target within a minute, a target needs a 1-minute close at or above it, and spread, stop slippage and fees are charged.
+
+**Result on 2022-01 to 2026-10 (BTC, ETH, SOL, XRP, LINK in EUR, and XRP, ADA, SOL in USDT):** the strategy lost money in every year and for every asset, and its entries performed no better than random ones (about -0.7% to -0.9% per trade, which is the cost of fees and spread). Across 2,160 parameter sets (grade threshold, target 5 to 15%, stop 2.5% to none, hold 48 to 168h, target step-down, volatility and BTC filters), none was reliably profitable on the held-out period.
+
 ## Limitations
 
-- **Not backtested.** Kraken returns at most 720 candles per interval (about 30 days of 1h, 7.5 days of 15m), so a long multi-timeframe backtest cannot come from the API alone. The history file is the best source of evidence: run small first and review it.
+- **No profitable setting found.** See [Backtesting](#backtesting). The Binance proxy differs from Kraken in liquidity and wicks, and the backtest cannot reproduce real order-book queues, so the numbers are estimates and not a guarantee in either direction.
 - **Unverified on a live account:** that the stop created with the entry is linked to it as the code expects, and what happens to a partly filled entry that expires. Test with a tiny order before real size.
 - **Older orders:** take-profit sells created by earlier versions (`userref` 1) are not managed and count as open positions until they close.
 - **Reported profits and losses are estimates** from configured fees, not Kraken's final accounting.
