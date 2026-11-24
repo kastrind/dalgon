@@ -2,7 +2,7 @@
 
 Dalgon is a Node.js short-term trading bot for Kraken spot markets. It scans a small set of coins for dip-reversal setups, buys with a protective stop-loss already attached, exits at a target or time limit, enforces loss limits, and is controlled through Viber.
 
-It buys a short-term dip and sells the rebound, risking a small fixed amount per trade. It does not predict the market, and a backtest on 2022 to 2026 data found no profitable setting: see [Backtesting](#backtesting) and [Limitations](#limitations).
+It buys a short-term dip and sells the rebound, risking a small fixed amount per trade. It does not predict the market. Backtests on 2022 to 2026 data found no profit in the original MACD/OBV signal, and only weak, unproven evidence for the optional capitulation signal: see [Backtesting](#backtesting) and [Limitations](#limitations).
 
 ## How it works
 
@@ -182,15 +182,29 @@ node backtest/edge.js --quote USDT --assets XRP,ADA,SOL
 - `run.js` prints the trade statistics, buy and hold, and a random-entry benchmark that uses the same execution model. Any strategy parameter can be overridden, for example `--takeProfitPercent 12`.
 - `tune.js` searches a parameter grid on the first two time blocks and reports the third as an unseen holdout, with the median of all sets for comparison.
 - `edge.js` measures raw forward returns after each signal, independent of the exit rules.
+- `backtest/research.js` measures raw forward returns after 18 signal ideas, and `backtest/explore.js` searches exit settings for the drop-reversal family.
 - Downloads and results are cached in `backtest/data`, `backtest/cache` and `backtest/results` (gitignored). The signal cache is keyed to the analysis source, so it recomputes after code changes.
 
 Execution is deliberately pessimistic: the post-only entry fills only when price trades below it, the stop is checked before the target within a minute, a target needs a 1-minute close at or above it, and spread, stop slippage and fees are charged.
 
-**Result on 2022-01 to 2026-10 (BTC, ETH, SOL, XRP, LINK in EUR, and XRP, ADA, SOL in USDT):** the strategy lost money in every year and for every asset, and its entries performed no better than random ones (about -0.7% to -0.9% per trade, which is the cost of fees and spread). Across 2,160 parameter sets (grade threshold, target 5 to 15%, stop 2.5% to none, hold 48 to 168h, target step-down, volatility and BTC filters), none was reliably profitable on the held-out period.
+**Result for the MACD/OBV signal, 2022-01 to 2026-10 (BTC, ETH, SOL, XRP, LINK in EUR, and XRP, ADA, SOL in USDT):** it lost money in every year and for every asset, and its entries performed no better than random ones (about -0.7% to -0.9% per trade, which is the cost of fees and spread). Across 2,160 parameter sets (grade threshold, target 5 to 15%, stop 2.5% to none, hold 48 to 168h, target step-down, volatility and BTC filters), none was reliably profitable on the held-out period.
+
+### Other signals
+
+`SIGNAL_MODE=capitulation` buys a coin that fell at least `CAPITULATION_DROP_PERCENT` (default 20) within `CAPITULATION_WINDOW_HOURS` (24). The config template lists the settings it was tested with: 15% stop, 12% target, 24h maximum hold, `MIN_NET_REWARD_RISK=0.7`.
+
+Findings on 10 liquid coins (USDT pairs, 2022 to 2026):
+
+- Trend, breakout, momentum, relative-strength and volume-spike entries had no gross edge over costs.
+- After large drops, forward returns rose with the size of the drop: gross +4.6% over 72h after a fall of 15% in 24h (195 events, positive in all three time blocks), against about 0% for random entries.
+- Through the real analysis code with fills, stops and fees, a 20% drop with the exits above made 33 trades in 4.8 years: 73% wins, +4.5% per trade (standard error 2.0), positive in every year. The 15% threshold was about break-even (+0.2% to +1.2% per trade, depending on the decision time grid).
+- At the default risk limits that is about +€47 on a €500 account over 4.8 years, or +€189 with a €125 position and a €20 risk budget. Buy and hold of the same coins lost 51%.
+
+Treat this as a lead, not proof: the threshold and exits were chosen after looking at the results, only about 7 trades happen per year, and the standard error is large. Results moved noticeably with small changes of the decision timing and threshold. Coins that collapsed to zero are missing from the data, which flatters any dip-buying rule.
 
 ## Limitations
 
-- **No profitable setting found.** See [Backtesting](#backtesting). The Binance proxy differs from Kraken in liquidity and wicks, and the backtest cannot reproduce real order-book queues, so the numbers are estimates and not a guarantee in either direction.
+- **No reliably profitable setting found for the MACD/OBV signal, and the capitulation signal is unproven.** See [Backtesting](#backtesting). The Binance proxy differs from Kraken in liquidity and wicks, and the backtest cannot reproduce real order-book queues, so the numbers are estimates and not a guarantee in either direction.
 - **Unverified on a live account:** that the stop created with the entry is linked to it as the code expects, and what happens to a partly filled entry that expires. Test with a tiny order before real size.
 - **Older orders:** take-profit sells created by earlier versions (`userref` 1) are not managed and count as open positions until they close.
 - **Reported profits and losses are estimates** from configured fees, not Kraken's final accounting.

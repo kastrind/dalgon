@@ -1,5 +1,9 @@
 // Percent values are in percent (2.5 = 2.5%); amounts are in the quote currency.
 const DEFAULTS = {
+	// 'macd' is the original MACD/OBV dip signal; 'capitulation' buys coins after a deep drop in a short window.
+	signalMode: 'macd',
+	capitulationDropPercent: 15,
+	capitulationWindowHours: 24,
 	maxSurgePercent: 10,
 	atrStopMultiple: 1.5,
 	minDailyQuoteVolume: 0,
@@ -37,6 +41,8 @@ function loadStrategy(properties) {
 	}
 	if (strategy.stopLossPercent <= 0 || strategy.takeProfitPercent <= 0) throw new Error('strategy stop-loss and take-profit percents must be positive');
 	if (strategy.maxRiskAmount <= 0 || strategy.maxOpenPositions < 1) throw new Error('strategy maxRiskAmount and maxOpenPositions must be positive');
+	if (!['macd', 'capitulation'].includes(strategy.signalMode)) throw new Error(`strategy signalMode must be macd or capitulation, is ${strategy.signalMode}`);
+	if (strategy.capitulationDropPercent <= 0 || strategy.capitulationWindowHours <= 0) throw new Error('strategy capitulation drop and window must be positive');
 	return strategy;
 }
 

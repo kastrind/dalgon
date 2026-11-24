@@ -146,7 +146,66 @@ class Analysis {
 
 	}
 
+	// Buys coins that fell far in a short window: in 2022-2026 data such capitulation drops were followed by rebounds larger than the trading costs, unlike the MACD/OBV signal.
+	async recommendCapitulation(getOHLC, reportFilePath, onDemandAsset=null) {
+		let s = this.strategy;
+		if (onDemandAsset && !this.assets.includes(onDemandAsset)) {
+			this.report = this.l.err(`ASSET: ${onDemandAsset} NOT FOUND.`) + '\n';
+			return [];
+		}
+		this.bitcoinAnalysis = {};
+		this.bitcoinAnalysisReport = '';
+		let report = this.l.i(`CAPITULATION ANALYSIS - START (drop of ${s.capitulationDropPercent}% or more within ${s.capitulationWindowHours}h)`) + '\n';
+		let windowSec = s.capitulationWindowHours * 3600;
+		let assetResults = [];
+
+		for (let asset of (onDemandAsset ? [onDemandAsset] : this.assets)) {
+			let pair = `${asset}${this.baseCurrency}`;
+			let ohlc = await OHLC.requestInterval(getOHLC, pair, 15, s.capitulationWindowHours * 4 + 8, this.l, this.simulationMode, this.simObjOHLCDay24h);
+			await sleep(this.sleepMillis);
+			if (!ohlc) {
+				report += this.l.err(`Failed to get 15m candles for ${pair}!`, 1, true) + '\n';
+				continue;
+			}
+			let ticks = ohlc.getTicks();
+			let latest = ticks[ticks.length - 1];
+			// Reference is the close of the last candle that ended at least one window before the newest candle ends.
+			let reference = null;
+			for (let i = ticks.length - 1; i >= 0; i--) {
+				if (ticks[i].time + 900 <= latest.time + 900 - windowSec) { reference = ticks[i]; break; }
+			}
+			if (!reference || !(reference.close > 0)) {
+				report += this.l.w(`${asset}: not enough history to measure a ${s.capitulationWindowHours}h change.`, 1) + '\n';
+				continue;
+			}
+			let change = latest.close / reference.close - 1;
+			let isCandidate = change * 100 <= -s.capitulationDropPercent;
+			report += this.l.i(`${asset}: ${prcnt(change)}% over ${s.capitulationWindowHours}h${isCandidate ? ' - capitulation candidate' : ''}`, 1) + '\n';
+			if (!isCandidate && !onDemandAsset) continue;
+
+			// Deeper drops rebounded more in the data, so they rank first.
+			let grade = 1 + (-change * 100 - s.capitulationDropPercent) / s.capitulationDropPercent;
+			let candidate = new Candidate({
+				name: asset, baseCurrency: this.baseCurrency, latestClosingPrice: latest.close, candidateGrade: grade,
+				changeDay24h: change, atrPercent: null, timeframesAligned: 0, report: `${asset}: ${prcnt(change)}% over ${s.capitulationWindowHours}h, grade ${grade.toFixed(3)}\n`
+			});
+			if (isCandidate) {
+				report += this.l.suc(`It's a candidate! Grade ${grade.toFixed(3)}`, 2, true) + '\n';
+				assetResults.push(candidate);
+			}
+		}
+		assetResults.sort((a, b) => b.candidateGrade - a.candidateGrade);
+		report += this.l.i(`CAPITULATION ANALYSIS - END`) + '\n';
+		this.report = report;
+		if (!onDemandAsset) {
+			fs.writeFile(reportFilePath, assetResults.map(c => c.report).join(''), err => { if (err) this.l.err(err, 0, true); });
+		}
+		return assetResults;
+	}
+
 	async recommend(getOHLC, reportFilePath, onDemandAsset=null) {
+
+		if (this.strategy.signalMode === 'capitulation') return await this.recommendCapitulation(getOHLC, reportFilePath, onDemandAsset);
 
 		if (onDemandAsset && !this.assets.includes(onDemandAsset)) {
 			let report = this.l.err(`ASSET: ${onDemandAsset} NOT FOUND.`) + '\n';

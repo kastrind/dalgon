@@ -23,6 +23,7 @@ function sourceHash(strategy, scope) {
 export async function computeSignals(args, log = console.log) {
 	let strategy = { ...FILTERS_OFF, btcPair: `BTC${args.quote}` };
 	if (args.hammerSupportPercent !== undefined) strategy.hammerSupportPercent = args.hammerSupportPercent;
+	for (let key of ['signalMode', 'capitulationDropPercent', 'capitulationWindowHours']) if (args[key] !== undefined) strategy[key] = args[key];
 	let assets = assetsOf(args);
 	let key = `${sourceHash(strategy, assets.join('-'))}-step${args.step}`;
 	let dir = path.join(cacheDir(args), key);
