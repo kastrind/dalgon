@@ -84,7 +84,7 @@ node backtest/explore2.js --quote USDT --assets XRP,ADA,SOL,ETH,LINK,DOGE,AVAX,L
 node backtest/run.js --quote USDT --assets XRP,ADA,SOL,ETH,LINK,DOGE,AVAX,LTC,DOT --signalMode capitulation --capitulationDropPercent 20 --capitulationWindowHours 24 --gradeThreshold 0 --btcMaxDropPercent 100000 --atrStopMultiple 0 --minNetRewardRisk 0.7 --stopLossPercent 15 --takeProfitPercent 12 --maxHoldHours 24 --nullRuns 5
 ```
 
-Downloads (`backtest/data`), signal caches (`backtest/cache`) and result files (`backtest/results`) are gitignored. The data set is about 1.6 GB for 26 pairs.
+Downloads (`backtest/data`), signal caches (`backtest/cache`) and result files (`backtest/results`) are gitignored. The data set is about 4 GB.
 
 ## Recommendation
 
